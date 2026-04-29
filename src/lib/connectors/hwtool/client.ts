@@ -27,7 +27,9 @@ function getConfig(): HwToolClientConfig | null {
   const baseUrl = process.env.HWTOOL_ANALYTICS_API_URL;
   const apiKey = process.env.HWTOOL_ANALYTICS_API_KEY;
   if (!baseUrl || !apiKey) return null;
-  return { baseUrl, apiKey, timeoutMs: 8000 };
+  // 15s para acomodar cold starts de Edge Functions; medidas reales de la API
+  // están en torno a 0.5–0.9s desde España y desde Vercel CDG.
+  return { baseUrl, apiKey, timeoutMs: 15000 };
 }
 
 function formatDate(d: Date): string {
@@ -144,7 +146,7 @@ export async function fetchHwToolRawMetrics(
     return { ok: true, data: parsed.data };
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return { ok: false, error: "Timeout: la API de HW Tool tardó >8s" };
+      return { ok: false, error: "Timeout: la API de HW Tool tardó >15s" };
     }
     return {
       ok: false,
