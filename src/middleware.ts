@@ -23,8 +23,12 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // Bypass total (entorno cerrado). El layout (portal) inyecta admin sintético.
+  // Modo abierto (default): deja pasar todo y, si alguien entra a /login,
+  // lo redirige a la home (no hay form que rellenar).
   if (AUTH_BYPASS_ENABLED) {
+    if (request.nextUrl.pathname === "/login") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next();
   }
 

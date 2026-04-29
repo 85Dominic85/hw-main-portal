@@ -18,8 +18,9 @@ interface UserMenuProps {
   email: string;
   fullName: string | null;
   role: "admin" | "viewer";
-  /** Si true, el botón "Cerrar sesión" se deshabilita (no hay sesión que cerrar). */
-  bypass?: boolean;
+  /** Si true, el portal está en modo abierto (sin auth real). El badge
+   *  "demo" aparece junto al rol y el botón cerrar sesión se deshabilita. */
+  openMode?: boolean;
 }
 
 function getInitials(email: string, fullName: string | null): string {
@@ -39,7 +40,7 @@ function getInitials(email: string, fullName: string | null): string {
   return local.slice(0, 2).toUpperCase() || "U";
 }
 
-export function UserMenu({ email, fullName, role, bypass = false }: UserMenuProps) {
+export function UserMenu({ email, fullName, role, openMode = false }: UserMenuProps) {
   const [isPending, startTransition] = React.useTransition();
   const initials = getInitials(email, fullName);
 
@@ -55,26 +56,36 @@ export function UserMenu({ email, fullName, role, bypass = false }: UserMenuProp
       >
         {initials}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
           {fullName && <span className="font-semibold">{fullName}</span>}
           <span className="truncate text-xs text-muted-foreground" title={email}>
             {email}
           </span>
-          <span className="mt-1 inline-flex w-fit items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-            <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-            {role}
-          </span>
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <span className="inline-flex w-fit items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+              {role}
+            </span>
+            {openMode && (
+              <span
+                className="inline-flex w-fit items-center rounded bg-muted/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+                title="Portal abierto — sin autenticación real"
+              >
+                demo
+              </span>
+            )}
+          </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {bypass ? (
+        {openMode ? (
           <DropdownMenuItem
             disabled
             className="cursor-not-allowed text-muted-foreground"
-            title="Auth bypass activado — no hay sesión que cerrar"
+            title="Portal abierto — no hay sesión que cerrar"
           >
             <LogOut className="h-4 w-4 opacity-50" aria-hidden="true" />
-            Auth bypass activo
+            Portal abierto
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem

@@ -1,20 +1,22 @@
 /**
- * Bypass de autenticación para entornos cerrados de producción/staging.
+ * Modo abierto del portal — control de auth con env var.
  *
- * Cuando `PORTAL_AUTH_BYPASS=true` está en las env vars:
- *   - El middleware no exige sesión Supabase.
- *   - `getCurrentUser()` devuelve un usuario admin sintético.
- *   - El topbar muestra un banner amarillo claramente visible.
- *   - El botón "Cerrar sesión" del UserMenu queda deshabilitado.
+ * Por defecto el portal es **abierto** (sin login). Cualquiera con la URL
+ * accede directo a la home con un usuario admin sintético.
  *
- * El bypass NO debe usarse cuando el portal sea accesible al exterior.
- * Está pensado solo como medida temporal mientras arreglamos config de
- * Supabase Auth o cuando estamos iterando contra producción cerrada.
+ * Para activar el flujo magic link de Supabase: setear la env var
+ *   PORTAL_AUTH_REQUIRED=true
+ * en Vercel (o `.env.local` en dev) y redeploy. Eso re-engancha el
+ * middleware, el form de /login y la lectura de sesión real.
  *
- * Para desactivar: borrar la env var en Vercel y redeploy.
+ * Esta inversión permite iterar sobre producción cerrada sin tener que
+ * configurar el Site URL/Redirect URLs en Supabase Auth.
  */
 
-export const AUTH_BYPASS_ENABLED = process.env.PORTAL_AUTH_BYPASS === "true";
+const AUTH_REQUIRED = process.env.PORTAL_AUTH_REQUIRED === "true";
+
+/** True si el portal está en modo abierto (sin auth). */
+export const AUTH_BYPASS_ENABLED = !AUTH_REQUIRED;
 
 interface BypassUser {
   id: string;
@@ -25,6 +27,10 @@ interface BypassUser {
 
 const BYPASS_USER_ID = "00000000-0000-0000-0000-000000000000";
 
+/**
+ * Devuelve el usuario sintético que se inyecta en modo abierto.
+ * En modo "auth requerida" devuelve null (la sesión real la maneja Supabase).
+ */
 export function getBypassUser(): BypassUser | null {
   if (!AUTH_BYPASS_ENABLED) return null;
 
@@ -32,12 +38,12 @@ export function getBypassUser(): BypassUser | null {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  const email = adminEmails[0] ?? "bypass@qamarero.com";
+  const email = adminEmails[0] ?? "demo@qamarero.com";
 
   return {
     id: BYPASS_USER_ID,
     email,
-    fullName: "Bypass admin",
+    fullName: "Demo admin",
     role: "admin",
   };
 }

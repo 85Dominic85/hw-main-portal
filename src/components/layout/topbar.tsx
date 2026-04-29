@@ -31,8 +31,9 @@ interface TopbarProps {
     fullName: string | null;
     role: "admin" | "viewer";
   };
-  /** Si true, deshabilita el botón "Cerrar sesión" del UserMenu. */
-  bypass?: boolean;
+  /** Si true, el portal está en modo abierto (sin auth real). El UserMenu
+   *  muestra un badge "demo" y el botón cerrar sesión queda deshabilitado. */
+  openMode?: boolean;
 }
 
 /**
@@ -40,7 +41,7 @@ interface TopbarProps {
  * Recibe el `user` como prop desde el layout (Server Component) para no
  * tener que volver a leer la sesión en cliente.
  */
-export function Topbar({ user, bypass = false }: TopbarProps) {
+export function Topbar({ user, openMode = false }: TopbarProps) {
   const pathname = usePathname();
   const title = getTitle(pathname);
 
@@ -66,7 +67,7 @@ export function Topbar({ user, bypass = false }: TopbarProps) {
           email={user.email}
           fullName={user.fullName}
           role={user.role}
-          bypass={bypass}
+          openMode={openMode}
         />
       </div>
     </header>
