@@ -6,8 +6,27 @@ import type {
 } from "./types";
 
 /**
+ * Normaliza un valor que la API devuelve como porcentaje (0-100) a ratio (0-1).
+ *
+ * Contexto: el doc canónico `HW_MAIN_PORTAL_API.md` declara estos campos como
+ * "ratio 0-1", pero la implementación real (29-04-2026) devuelve `55.2`, `100`,
+ * `34.4`... → claramente 0-100. Aceptamos ambos para no romper si MainOps
+ * arregla la implementación. Si v > 1, asumimos 0-100; si v ≤ 1, ya es ratio.
+ *
+ * Caso degenerado: v exactamente 1 podría ser "100%" (en escala 0-1) o "1%"
+ * (en escala 0-100). Asumimos lo primero (más probable: completed_rate=1.0
+ * significa 100%).
+ */
+function normalizeRate(value: number): number {
+  return value > 1 ? value / 100 : value;
+}
+
+/**
  * Convierte el response crudo de la API (snake_case + ISO strings) al
  * shape interno del portal (camelCase + Date).
+ *
+ * Los campos `*_pct` y `*_rate` se normalizan a ratio 0-1 internamente
+ * (el banner / pestaña los multiplican por 100 al renderizar).
  */
 export function mapMainOpsResponse(raw: MainOpsApiResponse): MainOpsMetrics {
   return {
@@ -20,14 +39,14 @@ export function mapMainOpsResponse(raw: MainOpsApiResponse): MainOpsMetrics {
       totalOrders: raw.kpis.total_orders,
       totalRevenueEur: raw.kpis.total_revenue,
       avgOrderValueEur: raw.kpis.avg_order_value,
-      completedRate: raw.kpis.completed_rate,
+      completedRate: normalizeRate(raw.kpis.completed_rate),
     },
     comparison: raw.comparison
       ? {
           prevTotalOrders: raw.comparison.prev_total_orders,
           prevTotalRevenueEur: raw.comparison.prev_total_revenue,
           prevAvgOrderValueEur: raw.comparison.prev_avg_order_value,
-          prevCompletedRate: raw.comparison.prev_completed_rate,
+          prevCompletedRate: normalizeRate(raw.comparison.prev_completed_rate),
         }
       : null,
     timeSeries: {
@@ -56,14 +75,14 @@ export function mapMainOpsResponse(raw: MainOpsApiResponse): MainOpsMetrics {
     sla: {
       totalDelivered: raw.sla.total_delivered,
       avgDeliveryDays: raw.sla.avg_delivery_days,
-      onTimePct: raw.sla.on_time_pct,
+      onTimePct: normalizeRate(raw.sla.on_time_pct),
       breachedCount: raw.sla.breached_count,
       activeAtRisk: raw.sla.active_at_risk,
       byWeek: raw.sla.sla_by_week.map((w) => ({
         weekStart: w.week_start,
         count: w.count,
         avgDays: w.avg_days,
-        onTimePct: w.on_time_pct,
+        onTimePct: normalizeRate(w.on_time_pct),
       })),
     },
     recentOrders: raw.recent_orders.map((o) => ({

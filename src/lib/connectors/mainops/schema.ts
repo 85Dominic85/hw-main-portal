@@ -39,14 +39,16 @@ export const mainOpsApiResponseSchema = z.object({
     total_orders: z.number().int().nonnegative(),
     total_revenue: z.number().nonnegative(),
     avg_order_value: z.number().nonnegative(),
-    completed_rate: z.number().min(0).max(1),
+    // Doc canónico dice ratio 0-1 pero la implementación real devuelve 0-100.
+    // Relajamos a 0-100 y el mapper normaliza a ratio interno.
+    completed_rate: z.number().min(0).max(100),
   }),
   comparison: z
     .object({
       prev_total_orders: z.number().nonnegative(),
       prev_total_revenue: z.number().nonnegative(),
       prev_avg_order_value: z.number().nonnegative(),
-      prev_completed_rate: z.number().min(0).max(1),
+      prev_completed_rate: z.number().min(0).max(100),
     })
     .nullable(),
   time_series: z.object({
@@ -83,7 +85,7 @@ export const mainOpsApiResponseSchema = z.object({
   sla: z.object({
     total_delivered: z.number().int().nonnegative(),
     avg_delivery_days: z.number().nonnegative(),
-    on_time_pct: z.number().min(0).max(1),
+    on_time_pct: z.number().min(0).max(100),
     breached_count: z.number().int().nonnegative(),
     active_at_risk: z.number().int().nonnegative(),
     sla_by_week: z.array(
@@ -91,7 +93,7 @@ export const mainOpsApiResponseSchema = z.object({
         week_start: z.string(),
         count: z.number().int().nonnegative(),
         avg_days: z.number().nonnegative(),
-        on_time_pct: z.number().min(0).max(1),
+        on_time_pct: z.number().min(0).max(100),
       }),
     ),
   }),

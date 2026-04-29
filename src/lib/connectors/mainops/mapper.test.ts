@@ -131,10 +131,77 @@ describe("mainops mapper", () => {
     expect(m.breakdowns.byProduct[0]?.productName).toBe("TPV bartec 9.5");
   });
 
-  it("preserva el orden y datos de sla.byWeek", () => {
+  it("preserva el orden y datos de sla.byWeek (formato ratio 0-1)", () => {
     const m = mapMainOpsResponse(SAMPLE_PAYLOAD);
     expect(m.sla.byWeek).toHaveLength(2);
     expect(m.sla.byWeek[0]?.weekStart).toBe("2026-04-20");
     expect(m.sla.byWeek[0]?.onTimePct).toBe(0.94);
+  });
+});
+
+describe("mainops mapper — normalización rate/pct (0-100 vs 0-1)", () => {
+  // Payload real de prod (29-04-2026) — la API devuelve 0-100 a pesar de que
+  // el doc canónico dice 0-1. El mapper debe normalizar a 0-1 internamente.
+  const PROD_PAYLOAD_0_TO_100 = {
+    ...SAMPLE_PAYLOAD,
+    kpis: {
+      ...SAMPLE_PAYLOAD.kpis,
+      completed_rate: 0, // mismo en ambas escalas
+    },
+    comparison: { ...SAMPLE_PAYLOAD.comparison!, prev_completed_rate: 0 },
+    sla: {
+      ...SAMPLE_PAYLOAD.sla,
+      on_time_pct: 55.2, // claramente 0-100
+      sla_by_week: [
+        { week_start: "2026-04-06", count: 3, avg_days: 1.6, on_time_pct: 100 },
+        { week_start: "2026-04-13", count: 32, avg_days: 17.1, on_time_pct: 34.4 },
+        { week_start: "2026-04-20", count: 22, avg_days: 7.4, on_time_pct: 63.6 },
+        { week_start: "2026-04-27", count: 10, avg_days: 3.9, on_time_pct: 90 },
+      ],
+    },
+  };
+
+  it("acepta payload con on_time_pct en 0-100 (formato real de prod)", () => {
+    const m = mapMainOpsResponse(PROD_PAYLOAD_0_TO_100);
+    // 55.2 → 0.552 (ratio interno)
+    expect(m.sla.onTimePct).toBeCloseTo(0.552, 4);
+  });
+
+  it("normaliza on_time_pct=100 a 1.0 (caso máximo)", () => {
+    const m = mapMainOpsResponse(PROD_PAYLOAD_0_TO_100);
+    expect(m.sla.byWeek[0]?.onTimePct).toBe(1);
+  });
+
+  it("normaliza valores intermedios de byWeek correctamente", () => {
+    const m = mapMainOpsResponse(PROD_PAYLOAD_0_TO_100);
+    expect(m.sla.byWeek[1]?.onTimePct).toBeCloseTo(0.344, 4);
+    expect(m.sla.byWeek[2]?.onTimePct).toBeCloseTo(0.636, 4);
+    expect(m.sla.byWeek[3]?.onTimePct).toBe(0.9);
+  });
+
+  it("mantiene compat retroactiva con formato ratio 0-1 (doc canónico)", () => {
+    // SAMPLE_PAYLOAD tiene 0.92, 0.94, 0.89 — ya son ratios.
+    const m = mapMainOpsResponse(SAMPLE_PAYLOAD);
+    expect(m.sla.onTimePct).toBe(0.92);
+    expect(m.sla.byWeek[0]?.onTimePct).toBe(0.94);
+  });
+
+  it("normaliza completed_rate cuando viene en 0-100", () => {
+    const payload = {
+      ...SAMPLE_PAYLOAD,
+      kpis: { ...SAMPLE_PAYLOAD.kpis, completed_rate: 78 },
+    };
+    const m = mapMainOpsResponse(payload);
+    expect(m.kpis.completedRate).toBe(0.78);
+  });
+
+  it("trata `1` exacto como ratio (no como 1%)", () => {
+    // Caso degenerado: v=1 puede ser "100%" o "1%". Asumimos 100%.
+    const payload = {
+      ...SAMPLE_PAYLOAD,
+      sla: { ...SAMPLE_PAYLOAD.sla, on_time_pct: 1 },
+    };
+    const m = mapMainOpsResponse(payload);
+    expect(m.sla.onTimePct).toBe(1);
   });
 });
