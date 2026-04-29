@@ -5,8 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-
-export type HwToolPeriod = "today" | "7d" | "30d" | "month";
+import {
+  HWTOOL_DEFAULT_PERIOD,
+  isValidPeriod,
+  type HwToolPeriod,
+} from "@/lib/hwtool/period";
 
 const PRESETS: { id: HwToolPeriod; label: string; description: string }[] = [
   { id: "today", label: "Hoy", description: "Solo el día de hoy" },
@@ -14,8 +17,6 @@ const PRESETS: { id: HwToolPeriod; label: string; description: string }[] = [
   { id: "30d", label: "30d", description: "Últimos 30 días" },
   { id: "month", label: "Mes", description: "Mes actual" },
 ];
-
-const DEFAULT_PERIOD: HwToolPeriod = "month";
 
 interface HwToolPeriodSelectorProps {
   className?: string;
@@ -25,20 +26,19 @@ interface HwToolPeriodSelectorProps {
  * Selector de periodo simple para la pestaña /hwtool.
  * Sincroniza el preset con `?period=` en la URL.
  *
- * No tiene rango custom todavía — se añadirá en una iteración posterior
- * con un calendar (shadcn `Calendar` + popover).
+ * Los helpers `periodToFilter`/`isValidPeriod`/`HwToolPeriod` viven en
+ * `@/lib/hwtool/period` (módulo neutro server/client) — antes vivían
+ * aquí y rompían el SSR cuando el page.tsx (server) los importaba.
  */
 export function HwToolPeriodSelector({ className }: HwToolPeriodSelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const current = (searchParams.get("period") as HwToolPeriod | null) ?? DEFAULT_PERIOD;
-  const validCurrent: HwToolPeriod = PRESETS.some((p) => p.id === current)
-    ? current
-    : DEFAULT_PERIOD;
+  const raw = searchParams.get("period");
+  const current: HwToolPeriod = isValidPeriod(raw) ? raw : HWTOOL_DEFAULT_PERIOD;
 
   function setPeriod(next: HwToolPeriod) {
     const params = new URLSearchParams(searchParams.toString());
-    if (next === DEFAULT_PERIOD) {
+    if (next === HWTOOL_DEFAULT_PERIOD) {
       params.delete("period");
     } else {
       params.set("period", next);
@@ -57,7 +57,7 @@ export function HwToolPeriodSelector({ className }: HwToolPeriodSelectorProps) {
       )}
     >
       {PRESETS.map((p) => {
-        const active = p.id === validCurrent;
+        const active = p.id === current;
         return (
           <Button
             key={p.id}
@@ -76,32 +76,4 @@ export function HwToolPeriodSelector({ className }: HwToolPeriodSelectorProps) {
       })}
     </div>
   );
-}
-
-export function periodToFilter(period: HwToolPeriod | null | undefined): {
-  from?: Date;
-  to?: Date;
-} {
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-  switch (period) {
-    case "today":
-      return { from: today, to: now };
-    case "7d": {
-      const from = new Date(today);
-      from.setUTCDate(from.getUTCDate() - 6);
-      return { from, to: now };
-    }
-    case "30d": {
-      const from = new Date(today);
-      from.setUTCDate(from.getUTCDate() - 29);
-      return { from, to: now };
-    }
-    case "month":
-    default: {
-      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      return { from, to: now };
-    }
-  }
 }

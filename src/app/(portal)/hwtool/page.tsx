@@ -4,26 +4,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/kpi/stat-card";
 import { PieChartCard, type PieChartSlice } from "@/components/charts/pie-chart-card";
-import {
-  HwToolPeriodSelector,
-  periodToFilter,
-  type HwToolPeriod,
-} from "@/components/shared/hwtool-period-selector";
+import { HwToolPeriodSelector } from "@/components/shared/hwtool-period-selector";
 import { getHwToolSummary } from "@/server/queries/hwtool";
 import { colorForProblem } from "@/lib/connectors/hwtool";
+import {
+  HWTOOL_DEFAULT_PERIOD,
+  isValidPeriod,
+  periodToFilter,
+  type HwToolPeriod,
+} from "@/lib/hwtool/period";
 
 interface PageProps {
   searchParams: Promise<{ period?: string }>;
 }
 
-const VALID_PERIODS: HwToolPeriod[] = ["today", "7d", "30d", "month"];
-
 export default async function HwToolPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const periodParam = params.period as HwToolPeriod | undefined;
-  const period: HwToolPeriod = VALID_PERIODS.includes(periodParam as HwToolPeriod)
-    ? (periodParam as HwToolPeriod)
-    : "month";
+  const period: HwToolPeriod = isValidPeriod(params.period)
+    ? params.period
+    : HWTOOL_DEFAULT_PERIOD;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
