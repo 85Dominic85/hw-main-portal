@@ -1,6 +1,6 @@
 import "server-only";
 
-import { hwToolApiResponseSchema, hwToolHealthSchema } from "./schema";
+import { hwToolApiResponseSchema, hwToolHealthSchema, type HwToolApiResponse } from "./schema";
 import { mapHwToolResponse } from "./mapper";
 import type { HwToolMetrics, HwToolPeriodFilter } from "./types";
 import type { Result } from "@/lib/connectors/types";
@@ -94,11 +94,13 @@ export async function healthcheckHwTool(): Promise<
 }
 
 /**
- * Llama a la API de métricas con filtros opcionales y devuelve `HwToolMetrics`.
+ * Llama a la API y devuelve el shape RAW (snake_case + ISO strings).
+ * 100% JSON-serializable → seguro para meter en `unstable_cache` sin
+ * perder tipos como Date al deserializar.
  */
-export async function fetchHwToolMetrics(
+export async function fetchHwToolRawMetrics(
   filter: HwToolPeriodFilter = {},
-): Promise<Result<HwToolMetrics>> {
+): Promise<Result<HwToolApiResponse>> {
   const config = getConfig();
   if (!config) return { ok: false, error: "HWTOOL_ANALYTICS_API_URL/KEY no configuradas" };
 
@@ -129,7 +131,6 @@ export async function fetchHwToolMetrics(
     const json = await res.json();
     const parsed = hwToolApiResponseSchema.safeParse(json);
     if (!parsed.success) {
-      // No leakeamos el body completo (puede traer datos sensibles); solo el path del error.
       const issues = parsed.error.issues
         .slice(0, 3)
         .map((i) => `${i.path.join(".")}: ${i.message}`)
@@ -137,7 +138,7 @@ export async function fetchHwToolMetrics(
       return { ok: false, error: `Shape inesperado — ${issues}` };
     }
 
-    return { ok: true, data: mapHwToolResponse(parsed.data) };
+    return { ok: true, data: parsed.data };
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
       return { ok: false, error: "Timeout: la API de HW Tool tardó >8s" };
@@ -147,4 +148,20 @@ export async function fetchHwToolMetrics(
       error: err instanceof Error ? err.message : "Error desconocido",
     };
   }
+}
+
+/**
+ * Variante "lista para UI": fetchea el raw + aplica el mapper a `HwToolMetrics`
+ * con campos camelCase y `Date` reales.
+ *
+ * **NO usar dentro de `unstable_cache`** — los Date que crea el mapper se
+ * serializan a string al cachear y rompen el render. Cachea la versión
+ * raw (`fetchHwToolRawMetrics`) y mapea fuera del cache.
+ */
+export async function fetchHwToolMetrics(
+  filter: HwToolPeriodFilter = {},
+): Promise<Result<HwToolMetrics>> {
+  const raw = await fetchHwToolRawMetrics(filter);
+  if (!raw.ok) return raw;
+  return { ok: true, data: mapHwToolResponse(raw.data) };
 }

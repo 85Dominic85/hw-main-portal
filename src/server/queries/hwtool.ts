@@ -2,7 +2,8 @@ import "server-only";
 
 import { unstable_cache, revalidateTag } from "next/cache";
 
-import { fetchHwToolMetrics } from "@/lib/connectors/hwtool";
+import { fetchHwToolRawMetrics } from "@/lib/connectors/hwtool/client";
+import { mapHwToolResponse } from "@/lib/connectors/hwtool/mapper";
 import type { HwToolMetrics, HwToolPeriodFilter } from "@/lib/connectors/hwtool";
 import type { Result } from "@/lib/connectors/types";
 
@@ -11,9 +12,14 @@ const CACHE_TAG = "hwtool-metrics";
 /**
  * Devuelve métricas HW Tool con cache de 60s.
  *
- * El cache key incluye los filtros serializados — distintos rangos
- * tienen entradas separadas. Se invalida con `invalidateHwToolCache()`
- * cuando el usuario pulsa "Actualizar" en el topbar.
+ * Cacheamos el RAW (snake_case + ISO strings) que es 100% JSON-serializable,
+ * y aplicamos el mapper FUERA del cache. Si meteramos `HwToolMetrics`
+ * (con campos `Date`) en `unstable_cache`, los Date se convertirían a string
+ * al deserializar y `m.generatedAt.toISOString()` petaría en runtime.
+ *
+ * El cache key incluye los filtros — distintos rangos tienen entradas
+ * separadas. Se invalida con `invalidateHwToolCache()` cuando el usuario
+ * pulsa "Actualizar" en el topbar.
  */
 export async function getHwToolSummary(
   filter: HwToolPeriodFilter = {},
@@ -23,11 +29,14 @@ export async function getHwToolSummary(
   const techKey = filter.technician ?? "all";
   const cacheKey = ["hwtool", "metrics", fromKey, toKey, techKey];
 
-  return unstable_cache(
-    async () => fetchHwToolMetrics(filter),
+  const cachedRaw = await unstable_cache(
+    async () => fetchHwToolRawMetrics(filter),
     cacheKey,
     { revalidate: 60, tags: [CACHE_TAG] },
   )();
+
+  if (!cachedRaw.ok) return cachedRaw;
+  return { ok: true, data: mapHwToolResponse(cachedRaw.data) };
 }
 
 /**
