@@ -31,6 +31,8 @@ interface TopbarProps {
     fullName: string | null;
     role: "admin" | "viewer";
   };
+  /** Si true, deshabilita el botón "Cerrar sesión" del UserMenu. */
+  bypass?: boolean;
 }
 
 /**
@@ -38,7 +40,7 @@ interface TopbarProps {
  * Recibe el `user` como prop desde el layout (Server Component) para no
  * tener que volver a leer la sesión en cliente.
  */
-export function Topbar({ user }: TopbarProps) {
+export function Topbar({ user, bypass = false }: TopbarProps) {
   const pathname = usePathname();
   const title = getTitle(pathname);
 
@@ -64,6 +66,7 @@ export function Topbar({ user }: TopbarProps) {
           email={user.email}
           fullName={user.fullName}
           role={user.role}
+          bypass={bypass}
         />
       </div>
     </header>

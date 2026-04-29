@@ -18,6 +18,8 @@ interface UserMenuProps {
   email: string;
   fullName: string | null;
   role: "admin" | "viewer";
+  /** Si true, el botón "Cerrar sesión" se deshabilita (no hay sesión que cerrar). */
+  bypass?: boolean;
 }
 
 function getInitials(email: string, fullName: string | null): string {
@@ -37,7 +39,7 @@ function getInitials(email: string, fullName: string | null): string {
   return local.slice(0, 2).toUpperCase() || "U";
 }
 
-export function UserMenu({ email, fullName, role }: UserMenuProps) {
+export function UserMenu({ email, fullName, role, bypass = false }: UserMenuProps) {
   const [isPending, startTransition] = React.useTransition();
   const initials = getInitials(email, fullName);
 
@@ -65,19 +67,30 @@ export function UserMenu({ email, fullName, role }: UserMenuProps) {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={isPending}
-          className="cursor-pointer"
-          onSelect={(e) => {
-            e.preventDefault();
-            startTransition(async () => {
-              await signOut();
-            });
-          }}
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          {isPending ? "Cerrando sesión…" : "Cerrar sesión"}
-        </DropdownMenuItem>
+        {bypass ? (
+          <DropdownMenuItem
+            disabled
+            className="cursor-not-allowed text-muted-foreground"
+            title="Auth bypass activado — no hay sesión que cerrar"
+          >
+            <LogOut className="h-4 w-4 opacity-50" aria-hidden="true" />
+            Auth bypass activo
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            disabled={isPending}
+            className="cursor-pointer"
+            onSelect={(e) => {
+              e.preventDefault();
+              startTransition(async () => {
+                await signOut();
+              });
+            }}
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {isPending ? "Cerrando sesión…" : "Cerrar sesión"}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

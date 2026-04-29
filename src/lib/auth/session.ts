@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { createSupabaseServerClient } from "./supabase-server";
 import { inferRoleFromEmail, type PortalRole } from "./roles";
+import { AUTH_BYPASS_ENABLED, getBypassUser } from "./bypass";
 
 export interface PortalSessionUser {
   id: string;
@@ -24,6 +25,14 @@ export interface PortalSessionUser {
  * `getCurrentUser()` 5 veces, se ejecuta una sola.
  */
 export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> => {
+  // Modo bypass — entorno cerrado. Devuelve admin sintético sin tocar Supabase.
+  if (AUTH_BYPASS_ENABLED) {
+    const fake = getBypassUser();
+    return fake
+      ? { id: fake.id, email: fake.email, role: fake.role, fullName: fake.fullName }
+      : null;
+  }
+
   const supabase = await createSupabaseServerClient();
 
   const {

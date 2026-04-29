@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseMiddlewareClient } from "@/lib/auth/supabase-middleware";
+import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 
 /**
  * Middleware del portal.
  *
  * Reglas:
+ *   - Si `PORTAL_AUTH_BYPASS=true`: deja pasar todo. Modo entorno cerrado.
  *   - Rutas públicas: `/login`, `/api/auth/callback`. Cualquiera entra.
  *   - Resto: requieren sesión Supabase válida. Si no, redirect a `/login`.
  *   - Si ya estás logueado y entras a `/login`, te manda a `/`.
@@ -21,6 +23,11 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // Bypass total (entorno cerrado). El layout (portal) inyecta admin sintético.
+  if (AUTH_BYPASS_ENABLED) {
+    return NextResponse.next();
+  }
+
   const { supabase, response } = createSupabaseMiddlewareClient(request);
   const { pathname } = request.nextUrl;
 
