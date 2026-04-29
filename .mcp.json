@@ -2,8 +2,8 @@
   "mcpServers": {
     "supabase-portal": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=PORTAL_PROJECT_REF",
-      "description": "Gestión del proyecto Supabase propio del portal (schema portal). Reemplazar PORTAL_PROJECT_REF tras crear el proyecto en Supabase.",
+      "url": "https://mcp.supabase.com/mcp?project_ref=thkrkubkiasfqmiiwfbj",
+      "description": "Gestión del proyecto Supabase propio del portal (project ref thkrkubkiasfqmiiwfbj, schema portal).",
       "headers": {
         "Authorization": "Bearer ${SUPABASE_PORTAL_ACCESS_TOKEN}"
       }

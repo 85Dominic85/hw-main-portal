@@ -12,6 +12,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   enabled: boolean;
+  /** Solo visible para el rol especificado (si se omite, lo ven todos). */
+  requiresRole?: "admin";
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
@@ -19,11 +21,18 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/mainops", label: "MainOPS", icon: Package, enabled: true },
   { href: "/hwtool", label: "HW Tool", icon: Settings2, enabled: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: false },
-  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true },
+  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
 ] as const;
 
-export function SidebarNav() {
+interface SidebarNavProps {
+  role: "admin" | "viewer";
+}
+
+export function SidebarNav({ role }: SidebarNavProps) {
   const pathname = usePathname();
+  const items = NAV_ITEMS.filter(
+    (item) => !item.requiresRole || item.requiresRole === role,
+  );
 
   return (
     <aside
@@ -39,7 +48,7 @@ export function SidebarNav() {
       </Link>
 
       <nav className="flex w-full flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (

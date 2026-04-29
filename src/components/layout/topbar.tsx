@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
+import { UserMenu } from "./user-menu";
 
 const TITLE_BY_PATH: Record<string, string> = {
   "/": "Resumen",
@@ -18,21 +19,26 @@ const TITLE_BY_PATH: Record<string, string> = {
 
 function getTitle(pathname: string): string {
   if (TITLE_BY_PATH[pathname]) return TITLE_BY_PATH[pathname];
-  // Match prefijos para sub-rutas (ej. /admin/notes)
   const prefix = Object.keys(TITLE_BY_PATH).find(
     (key) => key !== "/" && pathname.startsWith(`${key}/`),
   );
   return prefix ? TITLE_BY_PATH[prefix]! : "Portal";
 }
 
+interface TopbarProps {
+  user: {
+    email: string;
+    fullName: string | null;
+    role: "admin" | "viewer";
+  };
+}
+
 /**
- * Topbar del portal.
- *
- * Contiene: título de la página actual + botón Actualizar + theme toggle + avatar.
- * Los atajos a herramientas externas (MOP/HWT/HSM) NO viven aquí — se renderizan
- * directamente sobre cada Shield para asociación visual inmediata.
+ * Topbar del portal — título de la sección + utilidades del usuario.
+ * Recibe el `user` como prop desde el layout (Server Component) para no
+ * tener que volver a leer la sesión en cliente.
  */
-export function Topbar() {
+export function Topbar({ user }: TopbarProps) {
   const pathname = usePathname();
   const title = getTitle(pathname);
 
@@ -54,13 +60,11 @@ export function Topbar() {
           <span className="hidden sm:inline">Actualizar</span>
         </Button>
         <ThemeToggle />
-        <div
-          aria-label="Usuario"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground"
-          title="Usuario"
-        >
-          QH
-        </div>
+        <UserMenu
+          email={user.email}
+          fullName={user.fullName}
+          role={user.role}
+        />
       </div>
     </header>
   );

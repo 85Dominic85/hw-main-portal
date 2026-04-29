@@ -1,9 +1,13 @@
 import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.PORTAL_DATABASE_URL) {
+// Drizzle Kit (db:push, db:migrate, db:generate) hace DDL → necesita el role
+// `postgres` vía session pooler. Si no está, cae al runtime URL aunque vaya a fallar.
+const ddlUrl = process.env.PORTAL_DATABASE_DDL_URL ?? process.env.PORTAL_DATABASE_URL;
+
+if (!ddlUrl) {
   // eslint-disable-next-line no-console
-  console.warn("[drizzle] PORTAL_DATABASE_URL no está definida — comandos drizzle-kit fallarán hasta que la configures.");
+  console.warn("[drizzle] PORTAL_DATABASE_DDL_URL no está definida — los comandos db:* fallarán.");
 }
 
 export default defineConfig({
@@ -12,7 +16,7 @@ export default defineConfig({
   dialect: "postgresql",
   schemaFilter: ["portal"],
   dbCredentials: {
-    url: process.env.PORTAL_DATABASE_URL ?? "",
+    url: ddlUrl ?? "",
   },
   verbose: true,
   strict: true,

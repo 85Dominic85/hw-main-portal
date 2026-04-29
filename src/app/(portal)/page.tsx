@@ -1,16 +1,20 @@
+import { Suspense } from "react";
+
 import { ToolSummary } from "@/components/kpi/tool-summary";
 import type { ShieldStatus } from "@/components/kpi/shield";
 import type { UpdateItem } from "@/components/kpi/updates-list";
-import { TOOLS } from "@/lib/tools";
+import { HwToolBanner } from "@/components/connectors/hwtool-banner";
+import { ToolBannerSkeleton } from "@/components/connectors/tool-banner-skeleton";
+import { getTool } from "@/lib/tools";
 
 /**
  * Home del HW Main Portal — sección Resumen.
  *
- * V0: datos mock. Cuando los conectores estén operativos (Sprint 3, 4),
- * cada herramienta leerá su KPI hero y sus updates desde su connector.
+ * - HW Tool: datos reales vía connector (Suspense individual).
+ * - MainOPS y HSM: mock hasta que sus connectors estén implementados.
  *
- * El título "Resumen" se renderiza ahora en el Topbar — esta página solo
- * muestra el grid de los 3 ToolSummary.
+ * Cada banner está aislado en su propio Suspense boundary: si la API de
+ * uno cae, los demás siguen renderizando.
  */
 
 interface MockSummary {
@@ -19,7 +23,7 @@ interface MockSummary {
   updates: UpdateItem[];
 }
 
-const MOCK: Record<string, MockSummary> = {
+const MOCK: Record<"mainops" | "hsm", MockSummary> = {
   mainops: {
     hero: 94,
     status: "ok",
@@ -39,29 +43,7 @@ const MOCK: Record<string, MockSummary> = {
         id: "m3",
         occurredAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
         title: "3 pedidos nuevos en cola",
-      },
-    ],
-  },
-  hwtool: {
-    hero: 81,
-    status: "warn",
-    updates: [
-      {
-        id: "h1",
-        occurredAt: new Date(Date.now() - 1000 * 60 * 18),
-        title: "Configuración registrada — TPV Hostería",
-        description: "plug-n-play OK · 12 min",
-      },
-      {
-        id: "h2",
-        occurredAt: new Date(Date.now() - 1000 * 60 * 90),
-        title: "Configuración con incidencia — KDS Cocina",
-        description: "Driver impresora térmica",
-      },
-      {
-        id: "h3",
-        occurredAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
-        title: "5 configs nuevas hoy",
+        description: "Connector pendiente — datos mock",
       },
     ],
   },
@@ -80,21 +62,29 @@ const MOCK: Record<string, MockSummary> = {
 };
 
 export default function HomePage() {
+  const mainops = getTool("mainops");
+  const hsm = getTool("hsm");
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
-        {TOOLS.map((tool) => {
-          const data = MOCK[tool.id]!;
-          return (
-            <ToolSummary
-              key={tool.id}
-              tool={tool}
-              heroValue={data.hero}
-              heroStatus={data.status}
-              updates={data.updates}
-            />
-          );
-        })}
+        <ToolSummary
+          tool={mainops}
+          heroValue={MOCK.mainops.hero}
+          heroStatus={MOCK.mainops.status}
+          updates={MOCK.mainops.updates}
+        />
+
+        <Suspense fallback={<ToolBannerSkeleton tool={getTool("hwtool")} />}>
+          <HwToolBanner />
+        </Suspense>
+
+        <ToolSummary
+          tool={hsm}
+          heroValue={MOCK.hsm.hero}
+          heroStatus={MOCK.hsm.status}
+          updates={MOCK.hsm.updates}
+        />
       </div>
     </div>
   );
