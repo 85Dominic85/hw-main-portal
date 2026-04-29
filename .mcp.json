@@ -1,0 +1,64 @@
+{
+  "mcpServers": {
+    "supabase-portal": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=PORTAL_PROJECT_REF",
+      "description": "Gestión del proyecto Supabase propio del portal (schema portal). Reemplazar PORTAL_PROJECT_REF tras crear el proyecto en Supabase.",
+      "headers": {
+        "Authorization": "Bearer ${SUPABASE_PORTAL_ACCESS_TOKEN}"
+      }
+    },
+    "supabase-mainops": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=gbuifpsgcvxmuwzoyush",
+      "description": "Lectura del proyecto Supabase de MainOPS (hw-SellGear-platform).",
+      "headers": {
+        "Authorization": "Bearer ${SUPABASE_MAINOPS_ACCESS_TOKEN}"
+      }
+    },
+    "supabase-hwtool": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=olcxbtvjkjmofrbvzpat",
+      "description": "Lectura del proyecto Supabase de HW Tool / Configuraciones (staging-schema-manager, schema hw_staging).",
+      "headers": {
+        "Authorization": "Bearer ${SUPABASE_HWTOOL_ACCESS_TOKEN}"
+      }
+    },
+    "postgresql": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${PORTAL_DATABASE_URL}"],
+      "description": "Conexión directa al PostgreSQL del portal cuando MCP de Supabase no llegue."
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "Issues, PRs y releases del repo en GitHub."
+    },
+    "web-fetch": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kazuph/mcp-fetch"],
+      "description": "Obtención de contenido web (docs Tremor, Vercel, Supabase)."
+    },
+    "markitdown": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["markitdown-mcp"],
+      "description": "Conversión de documentos (PDF, DOCX, etc.) a markdown."
+    },
+    "figma": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+      },
+      "description": "Modo desarrollo Figma para mockups del portal."
+    }
+  }
+}

@@ -1,0 +1,75 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (no commits — secrets)
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.cursor/
+
+# Claude Code (settings.local.json sí, conversational/state no)
+.claude/settings.local.json
+.claude/.local/
+.claude/state/
+
+# logs
+*.log
+
+# OS
+.DS_Store
+ehthumbs.db
+Desktop.ini
+
+# Python (uipro skill scripts)
+__pycache__/
+*.pyc
+*.pyo
+
+# Backups locales (no committear)
+*.qamarero-backup
+*.bak
