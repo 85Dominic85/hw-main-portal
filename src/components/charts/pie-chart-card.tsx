@@ -1,10 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils/cn";
+
+/**
+ * Recharts toca `window` en algunas inicializaciones internas; al meterlo
+ * en SSR puede tirar excepciones que rompen la página.
+ * Lo cargamos solo en cliente con `dynamic({ ssr: false })`.
+ */
+const PieChartRecharts = dynamic(() => import("./pie-chart-recharts"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-full w-full rounded-md" />,
+});
 
 export interface PieChartSlice {
   /** Identificador interno (no se muestra). */
@@ -74,37 +85,11 @@ export function PieChartCard({
         ) : (
           <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr,auto]">
             <div className="relative h-[220px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={slicesWithColor}
-                    dataKey="value"
-                    nameKey="label"
-                    innerRadius={showCenterTotal ? 56 : 0}
-                    outerRadius={88}
-                    strokeWidth={1}
-                    stroke="hsl(var(--background))"
-                  >
-                    {slicesWithColor.map((slice) => (
-                      <Cell key={slice.key} fill={slice.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.875rem",
-                      fontVariantNumeric: "tabular-nums",
-                    }}
-                    formatter={(value: number, name: string) => [
-                      `${value.toLocaleString("es-ES")}${valueSuffix}`,
-                      name,
-                    ]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <PieChartRecharts
+                data={slicesWithColor}
+                showCenterTotal={showCenterTotal}
+                valueSuffix={valueSuffix}
+              />
               {showCenterTotal && (
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span className="font-mono text-2xl font-semibold tabular-nums">

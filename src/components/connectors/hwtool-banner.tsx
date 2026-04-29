@@ -51,10 +51,10 @@ export async function HwToolBanner() {
       description: `${m.principal.configuracion} config · ${m.principal.auditoria} auditorías · ${m.principal.noshow} no-show`,
     },
     {
-      id: "first-try-rate",
+      id: "pnp-delivered",
       occurredAt: m.generatedAt,
-      title: `${m.successRateFirstTry}% éxito a 1ª`,
-      description: `${m.secondConfigRate}% requieren 2ª config`,
+      title: `${m.detailed.configPnp.count} PnP entregados`,
+      description: `${m.detailed.configPnp.percentOfTotal}% del total · plug-and-play sin 2ª visita`,
     },
     {
       id: "equipment-origin",

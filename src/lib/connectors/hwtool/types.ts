@@ -33,17 +33,38 @@ export interface HwToolEquipment {
   totalItems: number;
 }
 
+export interface HwToolCrmTestMotivo {
+  motivo: string;
+  count: number;
+}
+
+export interface HwToolCrmTest {
+  count: number;
+  percentOfTotal: number;
+  withMotivo: number;
+  breakdownByType: {
+    configuracion: number;
+    auditoria: number;
+    noshow: number;
+  };
+  motivos: HwToolCrmTestMotivo[];
+}
+
 export interface HwToolMetrics {
   generatedAt: Date;
+  schemaVersion: string;
   filters: {
     from: Date | null;
     to: Date | null;
     technician: string | null;
+    crmTest: boolean | null;
   };
   principal: HwToolPrincipal;
   detailed: HwToolBreakdown;
   problems: HwToolProblem[];
   equipment: HwToolEquipment;
+  /** Solo presente si la API devuelve `additional.crm_test` (v1.1.0+). */
+  crmTest: HwToolCrmTest | null;
   /** Derivado: % configs OK a 1ª (config_ok + config_pnp) / configuracion. */
   successRateFirstTry: number; // 0..100
   /** % de configs que requieren 2ª visita / configuracion. */
@@ -54,4 +75,7 @@ export interface HwToolPeriodFilter {
   from?: Date;
   to?: Date;
   technician?: string;
+  /** Si se pasa, filtra el endpoint por sesiones marcadas (true) o no (false)
+   *  como CRM test. Si se omite, devuelve todas. */
+  crmTest?: boolean;
 }

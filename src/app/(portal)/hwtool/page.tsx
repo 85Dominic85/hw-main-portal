@@ -163,6 +163,72 @@ async function HwToolDashboard({ period }: { period: HwToolPeriod }) {
           centerLabel="items"
         />
       </section>
+
+      {m.crmTest && m.crmTest.count > 0 && (
+        <section aria-label="CRM Test">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                CRM Test ({m.crmTest.count})
+              </CardTitle>
+              <CardDescription>
+                Sesiones marcadas como CRM test — tienen menos prerrequisitos y
+                suelen requerir más tiempo o derivar en 2ª configuración.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    % del total
+                  </p>
+                  <p className="font-mono text-lg font-semibold tabular-nums">
+                    {m.crmTest.percentOfTotal}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Con motivo escrito
+                  </p>
+                  <p className="font-mono text-lg font-semibold tabular-nums">
+                    {m.crmTest.withMotivo} / {m.crmTest.count}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Por tipo
+                  </p>
+                  <p className="text-sm">
+                    {m.crmTest.breakdownByType.configuracion} config ·{" "}
+                    {m.crmTest.breakdownByType.auditoria} audit ·{" "}
+                    {m.crmTest.breakdownByType.noshow} no-show
+                  </p>
+                </div>
+              </div>
+              {m.crmTest.motivos.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Motivos reportados
+                  </p>
+                  <ul className="space-y-1.5">
+                    {m.crmTest.motivos.map((mot, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm"
+                      >
+                        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                          ×{mot.count}
+                        </span>
+                        <span className="flex-1">{mot.motivo}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      )}
     </div>
   );
 }

@@ -108,6 +108,9 @@ export async function fetchHwToolRawMetrics(
   if (filter.from) params.set("from", formatDate(filter.from));
   if (filter.to) params.set("to", formatDate(filter.to));
   if (filter.technician) params.set("technician", filter.technician);
+  if (typeof filter.crmTest === "boolean") {
+    params.set("crm_test", filter.crmTest ? "true" : "false");
+  }
 
   const url = `${config.baseUrl}${params.toString() ? `?${params}` : ""}`;
 

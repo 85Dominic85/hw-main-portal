@@ -1,12 +1,16 @@
 import type { HwToolApiResponse } from "./schema";
 import { labelForProblem } from "./labels";
-import type { HwToolMetrics } from "./types";
+import type { HwToolMetrics, HwToolCrmTest } from "./types";
 
 /**
  * Convierte el response crudo de la API (snake_case) al shape interno
  * del portal (camelCase) y deriva campos calculados:
  * - successRateFirstTry: % de configs OK a 1ª (config_ok + config_pnp) / configuracion
  * - secondConfigRate: % de configs que requieren 2ª visita / configuracion
+ *
+ * Las CRM test se incluyen en el cálculo (decisión 2026-04-29: "son citas
+ * con menos prerrequisitos que provocan más errores y suelen derivar en
+ * 2ª config, así que también deben estar incluidas").
  *
  * Si `principal.breakdown.configuracion` es 0, los porcentajes derivados
  * son 0 (no division by zero).
@@ -28,12 +32,27 @@ export function mapHwToolResponse(raw: HwToolApiResponse): HwToolMetrics {
       ? Math.round((raw.detailed.config_requires_2nd.count / configTotal) * 1000) / 10
       : 0;
 
+  const crmTest: HwToolCrmTest | null = raw.additional.crm_test
+    ? {
+        count: raw.additional.crm_test.count,
+        percentOfTotal: raw.additional.crm_test.percent_of_total,
+        withMotivo: raw.additional.crm_test.with_motivo,
+        breakdownByType: { ...raw.additional.crm_test.breakdown_by_type },
+        motivos: raw.additional.crm_test.motivos.map((m) => ({
+          motivo: m.motivo,
+          count: m.count,
+        })),
+      }
+    : null;
+
   return {
     generatedAt,
+    schemaVersion: raw.schema_version,
     filters: {
       from,
       to,
       technician: raw.filters.technician,
+      crmTest: raw.filters.crm_test ?? null,
     },
     principal: {
       totalSessions: raw.principal.total_sessions,
@@ -73,6 +92,7 @@ export function mapHwToolResponse(raw: HwToolApiResponse): HwToolMetrics {
       external: raw.additional.equipment.external,
       totalItems: raw.additional.equipment.total_items,
     },
+    crmTest,
     successRateFirstTry,
     secondConfigRate,
   };
