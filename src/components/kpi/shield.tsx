@@ -33,32 +33,41 @@ export type ShieldVariant =
 
 const STATUS_CLASSES: Record<
   ShieldStatus,
-  { stroke: string; glow: string; text: string; rivet: string }
+  { stroke: string; text: string; rivet: string }
 > = {
   ok: {
     stroke: "stroke-status-ok",
-    glow: "drop-shadow-[0_0_24px_hsl(var(--status-ok)/0.35)]",
     text: "text-status-ok",
     rivet: "fill-status-ok",
   },
   warn: {
     stroke: "stroke-status-warn",
-    glow: "drop-shadow-[0_0_24px_hsl(var(--status-warn)/0.4)]",
     text: "text-status-warn",
     rivet: "fill-status-warn",
   },
   danger: {
     stroke: "stroke-status-danger",
-    glow: "drop-shadow-[0_0_24px_hsl(var(--status-danger)/0.4)]",
     text: "text-status-danger",
     rivet: "fill-status-danger",
   },
   neutral: {
     stroke: "stroke-muted-foreground/40",
-    glow: "",
     text: "text-foreground",
     rivet: "fill-muted-foreground",
   },
+};
+
+/**
+ * Mapping status → CSS var del color del glow. El status `neutral` no glowea
+ * (queda vacío). La opacidad se inyecta vía `var(--shield-glow-opacity)` que
+ * se redefine en `:root` (claro 0.6) y `.dark` (oscuro 0.35) — el blanco
+ * absorbe color, así que en claro hay que intensificar.
+ */
+const STATUS_GLOW_VAR: Record<ShieldStatus, string | null> = {
+  ok: "--status-ok",
+  warn: "--status-warn",
+  danger: "--status-danger",
+  neutral: null,
 };
 
 // Path heráldico clásico (heater) — top recto + costados curvos + punta V suave.
@@ -131,12 +140,18 @@ export function Shield({
     }
   })();
 
+  // Glow del escudo: filter inline con CSS var de opacidad → adaptativo al modo.
+  const glowVar = STATUS_GLOW_VAR[status];
+  const glowFilter = glowVar
+    ? `drop-shadow(0 0 24px hsl(var(${glowVar}) / var(--shield-glow-opacity)))`
+    : undefined;
+
   return (
     <div
       className={cn("flex flex-col items-center gap-3", className)}
       style={{ width }}
     >
-      <div className={cn("relative", styles.glow)} style={{ width, height }}>
+      <div className="relative" style={{ width, height, filter: glowFilter }}>
         <svg
           viewBox="0 0 200 240"
           width={width}

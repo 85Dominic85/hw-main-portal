@@ -36,12 +36,13 @@ export function ToolShortcut({ tool, fullWidth, className, style }: ToolShortcut
         "group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-md",
         "border border-border bg-secondary px-4 py-2.5",
         "font-mono text-sm font-bold tracking-wide text-foreground",
-        // Sombra base sutil, mayor en hover, mínima en active
-        "shadow-[0_1px_0_0_hsl(var(--foreground)/0.04)_inset,0_1px_2px_0_hsl(var(--background)/0.5)]",
+        // Sombra neutra (no basada en --background → funciona en claro y oscuro).
+        // En claro --background es casi blanco y la sombra histórica desaparecía.
+        "shadow-[0_1px_0_0_hsl(var(--foreground)/0.06)_inset,0_1px_3px_0_hsl(220_20%_0%/0.12)]",
         // Microinteracciones (emil-design-eng)
         "transition-all duration-150 ease-out",
         "hover:-translate-y-0.5 hover:bg-secondary/80 hover:border-foreground/30",
-        "hover:shadow-[0_1px_0_0_hsl(var(--foreground)/0.06)_inset,0_4px_12px_-2px_hsl(var(--background)/0.7)]",
+        "hover:shadow-[0_1px_0_0_hsl(var(--foreground)/0.08)_inset,0_4px_12px_-2px_hsl(220_20%_0%/0.20)]",
         "active:translate-y-0 active:scale-[0.99]",
         "active:shadow-[0_1px_0_0_hsl(var(--foreground)/0.04)_inset]",
         // Foco accesible

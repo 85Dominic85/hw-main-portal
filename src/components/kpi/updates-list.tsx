@@ -50,8 +50,10 @@ export function UpdatesList({
                   }
                 : {})}
               className={cn(
-                "group block rounded-md border border-transparent px-3 py-2 transition-colors",
-                item.href && "hover:border-border/60 hover:bg-accent/50",
+                // Surface en reposo: en claro hace contraste con el background gris-azulado;
+                // en oscuro queda como una capa fina sobre la card del banner.
+                "group block rounded-md border border-border/40 bg-card px-3 py-2 transition-colors",
+                item.href && "hover:border-border hover:bg-muted/60",
               )}
             >
               <div className="flex items-start justify-between gap-2">

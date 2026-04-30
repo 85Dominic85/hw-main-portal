@@ -9,7 +9,10 @@
    ===================================================== */
 
 :root {
-  --background: 0 0% 100%;
+  /* Modo claro — background gris-azulado para crear capa con cards blancos.
+     Card y popover quedan en blanco puro: el contraste card/background da
+     jerarquía visual entre cromo (sidebar/topbar) y contenido. */
+  --background: 220 20% 97%;
   --foreground: 222 47% 11%;
 
   --card: 0 0% 100%;
@@ -21,20 +24,21 @@
   --primary: 222 47% 11%;
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 210 40% 96%;
+  --secondary: 214 32% 93%;
   --secondary-foreground: 222 47% 11%;
 
-  --muted: 210 40% 96%;
+  --muted: 214 32% 93%;
   --muted-foreground: 215 16% 47%;
 
-  --accent: 210 40% 96%;
+  --accent: 214 32% 93%;
   --accent-foreground: 222 47% 11%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
+  /* Border más oscuro (de 91% a 85%) para que sea visible sobre card blanco */
+  --border: 214 32% 85%;
+  --input: 214 32% 85%;
   --ring: 222 47% 11%;
 
   --radius: 0.5rem;
@@ -43,6 +47,10 @@
   --status-ok: 152 76% 36%;
   --status-warn: 38 92% 50%;
   --status-danger: 0 84% 60%;
+
+  /* Opacidad del glow del Shield — adaptable al modo.
+     En claro hay que intensificar porque el blanco absorbe color. */
+  --shield-glow-opacity: 0.6;
 }
 
 .dark {
@@ -73,6 +81,9 @@
   --border: 217 33% 16%;
   --input: 217 33% 16%;
   --ring: 213 27% 84%;
+
+  /* Glow del Shield: en oscuro el valor histórico (más sutil) */
+  --shield-glow-opacity: 0.35;
 }
 
 @theme inline {
