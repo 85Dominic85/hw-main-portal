@@ -46,9 +46,22 @@ export async function MainOpsBanner() {
   const heroRatio = m.ops?.onTimeShippingPct ?? m.sla.onTimePct;
   const heroValue = Math.round(heroRatio * 1000) / 10; // 1 decimal en 0-100
 
-  // Semáforo: ≥95 verde, ≥85 ámbar, <85 rojo.
-  const heroStatus: ShieldStatus =
-    heroValue >= 95 ? "ok" : heroValue >= 85 ? "warn" : "danger";
+  // Semáforo: umbrales distintos según métrica.
+  //   - Si usamos `ops.onTimeShippingPct` (handling depto, ≤5d): ≥85 ok / ≥70 warn / <70 danger.
+  //     Calibrado para lo que el depto realmente controla (sin TIPSA).
+  //   - Si caemos al fallback `sla.onTimePct` (end-to-end con transporte): ≥95 / ≥85 / <85.
+  //     Más exigente porque SLA "completo" debería ser casi perfecto.
+  const heroStatus: ShieldStatus = m.ops
+    ? heroValue >= 85
+      ? "ok"
+      : heroValue >= 70
+        ? "warn"
+        : "danger"
+    : heroValue >= 95
+      ? "ok"
+      : heroValue >= 85
+        ? "warn"
+        : "danger";
 
   // Línea 1: volumen + revenue (sin ticket medio).
   const totalOrders = m.kpis.totalOrders;

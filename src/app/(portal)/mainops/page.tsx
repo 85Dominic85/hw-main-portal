@@ -113,12 +113,14 @@ async function MainOpsDashboard({ period }: { period: MainOpsPeriod }) {
   const onTimeShippingPct = ops
     ? Math.round(ops.onTimeShippingPct * 1000) / 10
     : null;
+  // Mismos umbrales que el escudo del banner (≥85 ok / ≥70 warn / <70 danger).
+  // Calibrados para handling del depto (sin TIPSA), no para SLA end-to-end.
   const onTimeShippingStatus =
     onTimeShippingPct === null
       ? "neutral"
-      : onTimeShippingPct >= 95
+      : onTimeShippingPct >= 85
         ? "ok"
-        : onTimeShippingPct >= 85
+        : onTimeShippingPct >= 70
           ? "warn"
           : "danger";
 
