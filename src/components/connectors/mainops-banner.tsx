@@ -31,7 +31,7 @@ export async function MainOpsBanner() {
       {
         id: "mainops-error",
         occurredAt: new Date(),
-        title: "API MainOps no disponible",
+        title: "API Logística no disponible",
         description: result.error,
       },
     ];

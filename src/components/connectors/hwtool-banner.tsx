@@ -21,7 +21,7 @@ export async function HwToolBanner() {
       {
         id: "hwtool-error",
         occurredAt: new Date(),
-        title: "API HW Tool no disponible",
+        title: "API Configuraciones no disponible",
         description: result.error,
       },
     ];

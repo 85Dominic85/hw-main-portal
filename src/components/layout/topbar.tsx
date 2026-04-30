@@ -10,8 +10,8 @@ import { UserMenu } from "./user-menu";
 
 const TITLE_BY_PATH: Record<string, string> = {
   "/": "Resumen",
-  "/mainops": "MainOPS",
-  "/hwtool": "HW Tool",
+  "/mainops": "Logística",
+  "/hwtool": "Configuraciones",
   "/hsm": "HSM",
   "/admin": "Administración",
   "/lab/shields": "Lab · Shields",

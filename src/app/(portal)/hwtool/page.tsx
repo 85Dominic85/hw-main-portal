@@ -28,7 +28,7 @@ export default async function HwToolPage({ searchParams }: PageProps) {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">HW Tool</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Configuraciones</h1>
           <p className="text-sm text-muted-foreground">
             Configuraciones, auditorías y no-shows del periodo seleccionado.
           </p>
@@ -54,7 +54,7 @@ async function HwToolDashboard({ period }: { period: HwToolPeriod }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>API HW Tool no disponible</CardTitle>
+          <CardTitle>API Configuraciones no disponible</CardTitle>
           <CardDescription className="text-status-danger">{result.error}</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">

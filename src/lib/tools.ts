@@ -22,7 +22,7 @@ export const TOOLS: readonly Tool[] = [
   {
     id: "mainops",
     shortLabel: "MOP",
-    displayName: "MainOPS",
+    displayName: "Logística",
     externalUrl: "https://hw-sell-gear-platform-tsm1.vercel.app/orders",
     internalPath: "/mainops",
     heroLabel: "% envíos OK",
@@ -31,7 +31,7 @@ export const TOOLS: readonly Tool[] = [
   {
     id: "hwtool",
     shortLabel: "HWT",
-    displayName: "HW Tool",
+    displayName: "Configuraciones",
     externalUrl: "https://hwtoolbox.lovable.app/",
     internalPath: "/hwtool",
     heroLabel: "% configs OK a 1ª",

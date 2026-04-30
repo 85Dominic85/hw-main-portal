@@ -18,8 +18,8 @@ interface NavItem {
 
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Inicio", icon: Home, enabled: true },
-  { href: "/mainops", label: "MainOPS", icon: Package, enabled: true },
-  { href: "/hwtool", label: "HW Tool", icon: Settings2, enabled: true },
+  { href: "/mainops", label: "Logística", icon: Package, enabled: true },
+  { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: false },
   { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
 ] as const;

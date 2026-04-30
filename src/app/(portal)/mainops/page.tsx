@@ -42,7 +42,7 @@ export default async function MainOpsPage({ searchParams }: PageProps) {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">MainOps</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Logística</h1>
           <p className="text-sm text-muted-foreground">
             Pedidos, ingresos y SLA del periodo seleccionado.
           </p>
@@ -65,7 +65,7 @@ async function MainOpsDashboard({ period }: { period: MainOpsPeriod }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>API MainOps no disponible</CardTitle>
+          <CardTitle>API Logística no disponible</CardTitle>
           <CardDescription className="text-status-danger">
             {result.error}
           </CardDescription>
