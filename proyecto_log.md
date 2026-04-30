@@ -2,17 +2,20 @@
 
 > **Fuente de verdad para handoffs**. Si retomas el proyecto desde otra sesión, empieza leyendo este archivo. Cubre estado actual, decisiones tomadas, bugs conocidos, credenciales (referencias, sin valores), backlog priorizado, comandos útiles e histórico de iteraciones.
 >
-> Última actualización: **2026-04-30 13:00 UTC** · v0.2 con bloque `ops` integrado de MainOps · 30/30 tests verdes.
+> Última actualización: **2026-04-30 14:40 UTC** · v0.3 polish (renames + modo claro + logo) · 30/30 tests verdes.
 
 ---
 
-## Estado actual — v0.2 (bloque `ops` MainOps integrado)
+## Estado actual — v0.3 (polish: renames + modo claro + logo hub-shield-pulse)
 
 El portal está **desplegado en producción** (`https://hw-main-portal.vercel.app/`) sin auth (modo abierto temporal) con:
 
+- **Naming UI** (cambio v0.3): `MainOPS` → **Logística**, `HW Tool` → **Configuraciones** en sidebar, topbar, banners y mensajes. Slugs de rutas y código interno mantienen los originales (`/mainops`, `/hwtool`, `lib/connectors/mainops/...`). Iniciales del botón sobre escudo se mantienen (MOP / HWT / HSM).
+- **Logo del sidebar** (cambio v0.3): `<PortalLogo variant="hub-shield-pulse">` + texto "Hardware Dashboard" (antes "Qamarero / HW"). Variantes alternativas en `/lab/logos` y `/lab/logos/hub-shield`.
+- **Modo claro pulido** (v0.3): `--background` pasa de blanco puro a gris-azulado `220 20% 97%`, `--card` queda blanco para crear capa con sidebar/topbar. `--border` de 91% a 85%. Glow del Shield migrado a CSS var `--shield-glow-opacity` (0.6 light / 0.35 dark) para que el halo sea visible sobre blanco. `<UpdatesList>` items con `border-border/40 bg-card`. `<ToolShortcut>` con sombra neutra `hsl(220 20% 0%/0.12)`.
 - **Home**: 3 escudos heráldicos (variante `rivets-double`) con KPI hero y 3 líneas de updates por herramienta.
-  - **MainOPS** ✅ datos reales — **hero: `ops.on_time_shipping_pct`** (`73.7%` en abril 2026 — métrica del depto, no SLA end-to-end). Fallback a `sla.on_time_pct` si la API no devuelve `ops`.
-  - **HW Tool** ✅ datos reales — `% configs OK a 1ª intento` como hero (82.3% verde).
+  - **Logística** ✅ datos reales — **hero: `ops.on_time_shipping_pct`** (`73.7%` en abril 2026 — métrica del depto, no SLA end-to-end). Umbrales semáforo recalibrados v0.3: `≥85 ok / ≥70 warn / <70 danger` (handling depto, no SLA end-to-end). Fallback a `sla.on_time_pct` con umbrales antiguos si la API no devuelve `ops`.
+  - **Configuraciones** ✅ datos reales — `% configs OK a 1ª intento` como hero (82.3% verde).
   - **HSM** 🟡 placeholder neutral hasta v2.
 - **Pestaña `/mainops`**:
   - Sección **"Actividad operativa"** arriba (si la API devuelve `ops`): 6 KPI cards (enviados, completados, bloqueados / handling-d, transit-d, cumplimiento 5d) + bar chart de throughput semanal (created / shipped / delivered).
@@ -23,7 +26,9 @@ El portal está **desplegado en producción** (`https://hw-main-portal.vercel.ap
 - **Pestaña `/hwtool`**: 5 KPI cards + 2 pies (problemas, equipamiento) + bloque CRM test (cuando count > 0) · selector de periodo · `error.tsx`.
 - **Pestaña `/hsm`**: placeholder "v2".
 - **Pestaña `/admin`**: 4 cards "próximamente" para Sprint 5 (umbrales, notas, metas, manual entries).
-- **`/lab/shields`**: comparador interno de las 7 variantes del componente Shield × 4 estados de semáforo. No aparece en el sidebar.
+- **`/lab/shields`**: comparador interno de las 7 variantes del componente Shield × 4 estados de semáforo.
+- **`/lab/logos`** (nuevo v0.3): 8 propuestas de logo SVG inline para el portal (triple-shield, shield-hexes, shield-portal, q-shield, shield-pillars, convergence, hub-shield, monolith).
+- **`/lab/logos/hub-shield`** (nuevo v0.3): 7 sub-variantes del hub-shield con señales de "bajo asedio" (dent, cracks, pulse, impacts, shaded, battle). Elegida `hub-shield-pulse` (anillos concéntricos saliendo del hub central — absorción activa).
 
 **Tests**: 30/30 verdes (13 hwtool + 17 mainops, +4 nuevos del bloque `ops`). **Build**: 11 rutas, /hwtool 3.46kB, /mainops 1.14kB (Recharts pie + bar en chunks dinámicos cliente).
 
@@ -324,11 +329,18 @@ Decisiones tomadas pero sin ADR formal todavía:
 | **v0.1 cerrada** (29-abr) | Home con 3 escudos + pestañas funcionando · 26/26 tests · build verde. |
 | **MainOps CHANGELOG 2026-04-30 + bloque `ops`** | MainOps fixea `completed_rate` (era 0 siempre, ahora valor real) y añade bloque `ops` opcional (handling vs transit, on_time_shipping, throughput_by_week, blocked, excluded_admin). Portal: schema/mapper/tests +4 / banner usa `ops.on_time_shipping_pct` como hero (con fallback) / línea 2 separa Manipulación (depto) y Transporte (TIPSA) / pestaña `/mainops` con sección "Actividad operativa" arriba (6 KPI cards + bar chart throughput) + sección "Negocio" debajo. Componentes nuevos: `<BarChartCard>` + `<BarChartRecharts>` SSR-safe. |
 | **v0.2 cerrada** (30-abr) | Bloque `ops` integrado · 30/30 tests · build verde. |
+| **v0.3 polish UI** (30-abr) | Renames `MainOPS→Logística` / `HW Tool→Configuraciones`. Recalibrar umbrales semáforo MainOps (`≥85/≥70/<70` para handling depto). Diagnóstico modo claro vía agente UX → 5 cambios aplicados (background gris-azulado, border más oscuro, glow del Shield con CSS var adaptable, surface en updates-list, sombra neutra en tool-shortcut). 8 propuestas de logo en `/lab/logos` + 7 sub-variantes "bajo asedio" en `/lab/logos/hub-shield`. Elegida `hub-shield-pulse` con texto "Hardware Dashboard" en sidebar. |
+| **v0.3 cerrada** (30-abr) | Polish UI · 30/30 tests · build verde · /lab/logos y /lab/logos/hub-shield disponibles. |
 
 ### Commits importantes (en `main` del repo del portal)
 
 ```
-46a6186 fix(connectors/mainops): normalizar rate/pct cuando vienen en 0-100  ← LATEST
+59f24ed feat(ui): modo claro pulido + 6 sub-variantes hub-shield     ← v0.3
+fe7a6db feat(ui): renombrar MainOPS→Logística + HW Tool→Configuraciones + lab/logos
+3a34f8c fix(mainops): recalibrar umbrales semáforo on_time_shipping (≥85/≥70/<70)
+6d47c96 feat(connectors/mainops): integrar bloque ops del CHANGELOG 2026-04-30
+fc2db34 docs: añadir proyecto_log.md como source of truth para handoffs   ← v0.2
+46a6186 fix(connectors/mainops): normalizar rate/pct cuando vienen en 0-100
 1dde6c1 feat(connectors/mainops): integrar API analytics-api con banner + pestaña
 0e616c3 fix(hwtool): no cachear errores + timeout 15s
 9b875e9 fix(hwtool): mover periodToFilter() a módulo neutro server/client

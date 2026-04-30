@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Home, Package, Settings2, LifeBuoy, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { PortalLogo } from "@/components/brand/portal-logo";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -41,10 +42,10 @@ export function SidebarNav({ role }: SidebarNavProps) {
     >
       <Link
         href="/"
-        className="mb-4 flex h-10 items-center justify-center rounded-md font-mono text-lg font-bold tracking-tighter lg:justify-start lg:px-3"
+        className="mb-4 flex h-10 items-center justify-center gap-2 rounded-md font-mono text-sm font-bold tracking-tight text-foreground lg:justify-start lg:px-3"
       >
-        <span className="text-primary lg:hidden">Q</span>
-        <span className="hidden lg:inline">Qamarero / HW</span>
+        <PortalLogo variant="hub-shield-pulse" size={22} className="text-primary shrink-0" />
+        <span className="hidden lg:inline">Hardware Dashboard</span>
       </Link>
 
       <nav className="flex w-full flex-col gap-1">
