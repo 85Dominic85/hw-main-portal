@@ -10,8 +10,16 @@ import { formatEurCompact } from "@/lib/utils/format-currency";
  * Server Component que fetcha métricas reales de MainOps y renderiza
  * el bloque ToolSummary (escudo + atajo + nombre + updates).
  *
- * Hero del escudo: % on-time del SLA (sla.on_time_pct × 100).
- * Si la API falla, escudo neutro con mensaje y la home no se rompe.
+ * Hero del escudo (decidido 2026-04-30 tras CHANGELOG de MainOps):
+ *   - Si la API devuelve `ops` (post-2026-04-30): usar `ops.on_time_shipping_pct`
+ *     (% envíos despachados en ≤5 días — lo que controla el depto).
+ *   - Si no, fallback a `sla.on_time_pct` (SLA end-to-end, incluye transporte).
+ *
+ * Línea 2 del banner:
+ *   - Si hay `ops`: separación handling/transit (depto vs TIPSA).
+ *   - Si no, fallback al texto SLA tradicional.
+ *
+ * Si la API falla: escudo neutro con mensaje y la home no se rompe.
  */
 export async function MainOpsBanner() {
   const tool = getTool("mainops");
@@ -34,22 +42,34 @@ export async function MainOpsBanner() {
 
   const m = result.data;
 
-  // Hero = on_time_pct (ratio 0..1) → porcentaje 0..100.
-  const heroValue = Math.round(m.sla.onTimePct * 1000) / 10; // 1 decimal
+  // Hero — preferir on_time_shipping (depto) si está disponible; si no, SLA global.
+  const heroRatio = m.ops?.onTimeShippingPct ?? m.sla.onTimePct;
+  const heroValue = Math.round(heroRatio * 1000) / 10; // 1 decimal en 0-100
 
-  // Semáforo SLA: ≥95 verde, ≥85 ámbar, <85 rojo.
+  // Semáforo: ≥95 verde, ≥85 ámbar, <85 rojo.
   const heroStatus: ShieldStatus =
     heroValue >= 95 ? "ok" : heroValue >= 85 ? "warn" : "danger";
 
-  // Línea 1: Volumen + revenue (sin ticket medio, según decisión user).
+  // Línea 1: volumen + revenue (sin ticket medio).
   const totalOrders = m.kpis.totalOrders;
   const revenueShort = formatEurCompact(m.kpis.totalRevenueEur);
 
-  // Línea 2: SLA detalle.
-  const avgDays = m.sla.avgDeliveryDays.toFixed(1);
-  const slaParts: string[] = [`${avgDays}d promedio`];
-  if (m.sla.breachedCount > 0) slaParts.push(`${m.sla.breachedCount} rotos`);
-  if (m.sla.activeAtRisk > 0) slaParts.push(`${m.sla.activeAtRisk} en riesgo`);
+  // Línea 2: handling vs transit (si hay ops) o SLA detalle (fallback).
+  let line2Title: string;
+  let line2Description: string;
+  if (m.ops) {
+    const handling = m.ops.avgHandlingDays.toFixed(1);
+    const transit = m.ops.avgTransitDays.toFixed(1);
+    line2Title = `Manipulación: ${handling}d (depto)`;
+    line2Description = `Transporte: ${transit}d (TIPSA)`;
+  } else {
+    const avgDays = m.sla.avgDeliveryDays.toFixed(1);
+    const slaExtras: string[] = [];
+    if (m.sla.breachedCount > 0) slaExtras.push(`${m.sla.breachedCount} rotos`);
+    if (m.sla.activeAtRisk > 0) slaExtras.push(`${m.sla.activeAtRisk} en riesgo`);
+    line2Title = `SLA: ${avgDays}d entrega`;
+    line2Description = slaExtras.join(" · ") || "Sin incidencias SLA";
+  }
 
   // Línea 3: top compras (top 2 por count).
   const topPurchases = [...m.breakdowns.byPurchaseType]
@@ -71,10 +91,10 @@ export async function MainOpsBanner() {
       description: `${revenueShort} facturado en el periodo`,
     },
     {
-      id: "sla",
+      id: "handling-transit",
       occurredAt: m.generatedAt,
-      title: `SLA: ${avgDays}d entrega`,
-      description: slaParts.slice(1).join(" · ") || "Sin incidencias SLA",
+      title: line2Title,
+      description: line2Description,
     },
     {
       id: "top-purchases",

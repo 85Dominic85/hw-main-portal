@@ -88,6 +88,36 @@ export interface MainOpsRecentOrder {
   trackingNumber: string | null;
 }
 
+/** Punto semanal del throughput operativo (ops). */
+export interface MainOpsThroughputWeek {
+  weekStart: string; // YYYY-MM-DD
+  created: number;
+  shipped: number;
+  delivered: number;
+}
+
+/**
+ * Bloque "Actividad operativa" añadido por MainOps el 2026-04-30.
+ * Métricas que separan lo que controla el depto (handling, on_time_shipping)
+ * de lo que depende del transportista (transit). Opt-in: si la API revierte,
+ * el portal hace fallback al SLA tradicional.
+ */
+export interface MainOpsOps {
+  totalShipped: number;
+  totalCompleted: number;
+  /** Días promedio created → shipped (lo que controla el depto). */
+  avgHandlingDays: number;
+  /** Días promedio shipped → delivered (transportista, no controlado). */
+  avgTransitDays: number;
+  /** ratio 0..1 — multiplicar ×100 para mostrar. % envíos en ≤5 días. */
+  onTimeShippingPct: number;
+  throughputByWeek: MainOpsThroughputWeek[];
+  /** Pedidos status='bloqueado' creados en el periodo (no penaliza al depto). */
+  blockedCount: number;
+  /** Pedidos SaaS/otro completados, excluidos del SLA físico (transparencia). */
+  excludedAdmin: number;
+}
+
 export interface MainOpsMetrics {
   generatedAt: Date;
   range: { from: Date; to: Date };
@@ -103,6 +133,8 @@ export interface MainOpsMetrics {
   };
   sla: MainOpsSla;
   recentOrders: MainOpsRecentOrder[];
+  /** Solo presente si la API devuelve `ops` (added 2026-04-30). */
+  ops: MainOpsOps | null;
 }
 
 export interface MainOpsPeriodFilter {

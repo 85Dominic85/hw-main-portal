@@ -2,27 +2,32 @@
 
 > **Fuente de verdad para handoffs**. Si retomas el proyecto desde otra sesión, empieza leyendo este archivo. Cubre estado actual, decisiones tomadas, bugs conocidos, credenciales (referencias, sin valores), backlog priorizado, comandos útiles e histórico de iteraciones.
 >
-> Última actualización: **2026-04-29 19:20 UTC** · v0.1 cerrada · próximos cambios estéticos pendientes para mañana antes de integrar HSM.
+> Última actualización: **2026-04-30 13:00 UTC** · v0.2 con bloque `ops` integrado de MainOps · 30/30 tests verdes.
 
 ---
 
-## Estado actual — v0.1 cerrada
+## Estado actual — v0.2 (bloque `ops` MainOps integrado)
 
 El portal está **desplegado en producción** (`https://hw-main-portal.vercel.app/`) sin auth (modo abierto temporal) con:
 
 - **Home**: 3 escudos heráldicos (variante `rivets-double`) con KPI hero y 3 líneas de updates por herramienta.
-  - **MainOPS** ✅ datos reales — `% SLA on-time` como hero (55.2% rojo en abril 2026 con la implementación actual de la API).
+  - **MainOPS** ✅ datos reales — **hero: `ops.on_time_shipping_pct`** (`73.7%` en abril 2026 — métrica del depto, no SLA end-to-end). Fallback a `sla.on_time_pct` si la API no devuelve `ops`.
   - **HW Tool** ✅ datos reales — `% configs OK a 1ª intento` como hero (82.3% verde).
   - **HSM** 🟡 placeholder neutral hasta v2.
-- **Pestaña `/mainops`** MVP: 5 KPI cards + 2 pies (tipos de compra, estados) + tabla de últimos 10 pedidos · selector de periodo (Hoy / 7d / 30d / Mes) · `error.tsx`.
+- **Pestaña `/mainops`**:
+  - Sección **"Actividad operativa"** arriba (si la API devuelve `ops`): 6 KPI cards (enviados, completados, bloqueados / handling-d, transit-d, cumplimiento 5d) + bar chart de throughput semanal (created / shipped / delivered).
+  - Badge "En rodaje desde 21-abr" si `ops.total_shipped < 10` (TIPSA arrancó esa fecha).
+  - Sección **"Negocio"** debajo: 5 KPI cards (pedidos, ingresos, ticket medio, %SLA on-time, %completados — ahora muestra valor real 84.8% tras fix del 2026-04-30).
+  - 2 pies (tipos de compra, estados) + tabla últimos 10 pedidos.
+  - Selector de periodo (Hoy / 7d / 30d / Mes) · `error.tsx`.
 - **Pestaña `/hwtool`**: 5 KPI cards + 2 pies (problemas, equipamiento) + bloque CRM test (cuando count > 0) · selector de periodo · `error.tsx`.
 - **Pestaña `/hsm`**: placeholder "v2".
 - **Pestaña `/admin`**: 4 cards "próximamente" para Sprint 5 (umbrales, notas, metas, manual entries).
 - **`/lab/shields`**: comparador interno de las 7 variantes del componente Shield × 4 estados de semáforo. No aparece en el sidebar.
 
-**Tests**: 26/26 verdes (13 hwtool + 13 mainops). **Build**: 11 rutas, /hwtool 3.46kB, /mainops 776B (Recharts en chunks dinámicos cliente).
+**Tests**: 30/30 verdes (13 hwtool + 17 mainops, +4 nuevos del bloque `ops`). **Build**: 11 rutas, /hwtool 3.46kB, /mainops 1.14kB (Recharts pie + bar en chunks dinámicos cliente).
 
-**Repo**: [`github.com/85Dominic85/hw-main-portal`](https://github.com/85Dominic85/hw-main-portal). Último commit en `main`: **`46a6186 fix(connectors/mainops): normalizar rate/pct cuando vienen en 0-100`**.
+**Repo**: [`github.com/85Dominic85/hw-main-portal`](https://github.com/85Dominic85/hw-main-portal). Último commit en `main`: ver `git log --oneline -1`.
 
 ---
 
@@ -215,11 +220,9 @@ Proyecto: `thkrkubkiasfqmiiwfbj`. Schema: `portal`. Aplicado vía `scripts/apply
 
 **Fix pendiente**: en Vercel del proyecto MainOps → Settings → Domains → reasignar `hw-sell-gear-platform.vercel.app` al deployment Production actual. Cuando esté arreglado, cambiar `MAINOPS_BASE_URL` del portal de vuelta a la canónica.
 
-### 2. `kpis.completed_rate: 0` aunque hay 55 pedidos completados
+### 2. ~~`kpis.completed_rate: 0` aunque hay 55 pedidos completados~~ ✅ RESUELTO 2026-04-30
 
-La API de MainOps (`/api/external/metrics`) devuelve `kpis.completed_rate: 0` incluso cuando `breakdowns.by_status` lista `[{ status: "completado", count: 55 }]`. El RPC `get_dashboard_metrics` en el lado MainOps no cuenta correctamente el estado.
-
-**Acción**: comentar a Domingo / Guillermo. El portal lo muestra como `0%` en el KPI card "% completados" pero la verdad operativa está en el pie de estados (55/60 = 92%).
+MainOps reescribió `get_dashboard_metrics` (commit `9561d68`). Ahora `completed_rate` filtra por `status='completado'` y excluye `'bloqueado'` del denominador. Hoy devuelve valores reales (84.8% en abril). El portal lo muestra correctamente — mi `normalizeRate` ya manejaba 0-100. Ver `docs/CHANGELOG_2026-04-30_HW_PORTAL.md` en el repo de MainOps.
 
 ### 3. API de MainOps devuelve 0-100 cuando el doc dice 0-1
 
@@ -318,7 +321,9 @@ Decisiones tomadas pero sin ADR formal todavía:
 | **Connector MainOps** | Mismo patrón. Tests con payload sintético. Banner home con 3 líneas (volumen + revenue, SLA detalle, top compras). Pestaña `/mainops` MVP con 5 KPI cards + 2 pies + tabla recent_orders. |
 | **Deploy MainOps endpoint** | Endpoint `/api/external/metrics` ya existía en `feature/mvp-foundation` (default branch). Bloqueo: alias canónico `hw-sell-gear-platform.vercel.app` roto. Workaround: usar `tsm1`. |
 | **Bug shape MainOps** | API devuelve 0-100 a pesar de que doc dice 0-1. Fix: schema relajado a `.max(100)` + `normalizeRate` en mapper. |
-| **v0.1 cerrada** | Home con 3 escudos + pestañas funcionando · 26/26 tests · build verde. |
+| **v0.1 cerrada** (29-abr) | Home con 3 escudos + pestañas funcionando · 26/26 tests · build verde. |
+| **MainOps CHANGELOG 2026-04-30 + bloque `ops`** | MainOps fixea `completed_rate` (era 0 siempre, ahora valor real) y añade bloque `ops` opcional (handling vs transit, on_time_shipping, throughput_by_week, blocked, excluded_admin). Portal: schema/mapper/tests +4 / banner usa `ops.on_time_shipping_pct` como hero (con fallback) / línea 2 separa Manipulación (depto) y Transporte (TIPSA) / pestaña `/mainops` con sección "Actividad operativa" arriba (6 KPI cards + bar chart throughput) + sección "Negocio" debajo. Componentes nuevos: `<BarChartCard>` + `<BarChartRecharts>` SSR-safe. |
+| **v0.2 cerrada** (30-abr) | Bloque `ops` integrado · 30/30 tests · build verde. |
 
 ### Commits importantes (en `main` del repo del portal)
 

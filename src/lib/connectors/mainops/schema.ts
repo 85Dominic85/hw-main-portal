@@ -109,6 +109,34 @@ export const mainOpsApiResponseSchema = z.object({
       tracking_number: z.string().nullable(),
     }),
   ),
+  /**
+   * Bloque opcional añadido por MainOps el 2026-04-30. KPIs operativos del
+   * depto Hardware (handling vs transit, throughput, etc.). Si no viene,
+   * el portal hace fallback al SLA tradicional sin romperse.
+   *
+   * `on_time_shipping_pct` viene en escala 0-100 igual que el resto de
+   * `*_pct` y `*_rate` del endpoint (el doc canónico decía 0-1, pero la
+   * implementación real es 0-100 — el mapper normaliza).
+   */
+  ops: z
+    .object({
+      total_shipped: z.number().int().nonnegative(),
+      total_completed: z.number().int().nonnegative(),
+      avg_handling_days: z.number().nonnegative(),
+      avg_transit_days: z.number().nonnegative(),
+      on_time_shipping_pct: z.number().min(0).max(100),
+      throughput_by_week: z.array(
+        z.object({
+          week_start: z.string(),
+          created: z.number().int().nonnegative(),
+          shipped: z.number().int().nonnegative(),
+          delivered: z.number().int().nonnegative(),
+        }),
+      ),
+      blocked_count: z.number().int().nonnegative(),
+      excluded_admin: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 export type MainOpsApiResponse = z.infer<typeof mainOpsApiResponseSchema>;

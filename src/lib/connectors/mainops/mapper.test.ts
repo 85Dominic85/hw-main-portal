@@ -205,3 +205,66 @@ describe("mainops mapper — normalización rate/pct (0-100 vs 0-1)", () => {
     expect(m.sla.onTimePct).toBe(1);
   });
 });
+
+describe("mainops mapper — bloque ops (CHANGELOG 2026-04-30)", () => {
+  // Payload real obtenido vía curl 2026-04-30 con periodo abril.
+  const PAYLOAD_WITH_OPS = {
+    ...SAMPLE_PAYLOAD,
+    ops: {
+      total_shipped: 24,
+      total_completed: 71,
+      avg_handling_days: 11.2,
+      avg_transit_days: 2.6,
+      on_time_shipping_pct: 73.7,
+      throughput_by_week: [
+        { week_start: "2026-03-30", created: 1, shipped: 0, delivered: 0 },
+        { week_start: "2026-04-06", created: 19, shipped: 0, delivered: 3 },
+        { week_start: "2026-04-13", created: 18, shipped: 0, delivered: 32 },
+        { week_start: "2026-04-20", created: 14, shipped: 11, delivered: 22 },
+        { week_start: "2026-04-27", created: 14, shipped: 13, delivered: 14 },
+      ],
+      blocked_count: 0,
+      excluded_admin: 16,
+    },
+  };
+
+  it("mapea ops cuando está presente (camelCase + normalize del pct)", () => {
+    const m = mapMainOpsResponse(PAYLOAD_WITH_OPS);
+    expect(m.ops).not.toBeNull();
+    expect(m.ops?.totalShipped).toBe(24);
+    expect(m.ops?.totalCompleted).toBe(71);
+    expect(m.ops?.avgHandlingDays).toBe(11.2);
+    expect(m.ops?.avgTransitDays).toBe(2.6);
+    // 73.7 → 0.737 (normalize 0-100 → 0-1)
+    expect(m.ops?.onTimeShippingPct).toBeCloseTo(0.737, 4);
+    expect(m.ops?.blockedCount).toBe(0);
+    expect(m.ops?.excludedAdmin).toBe(16);
+  });
+
+  it("ops es null cuando la API no lo devuelve (compat retro pre-2026-04-30)", () => {
+    // SAMPLE_PAYLOAD original no tiene `ops`.
+    const m = mapMainOpsResponse(SAMPLE_PAYLOAD);
+    expect(m.ops).toBeNull();
+  });
+
+  it("preserva el orden y datos de throughputByWeek (5 semanas)", () => {
+    const m = mapMainOpsResponse(PAYLOAD_WITH_OPS);
+    expect(m.ops?.throughputByWeek).toHaveLength(5);
+    expect(m.ops?.throughputByWeek[0]?.weekStart).toBe("2026-03-30");
+    expect(m.ops?.throughputByWeek[3]?.shipped).toBe(11);
+    expect(m.ops?.throughputByWeek[4]?.delivered).toBe(14);
+  });
+
+  it("on_time_shipping_pct normaliza correctamente a 100% y a 0", () => {
+    const at100 = {
+      ...PAYLOAD_WITH_OPS,
+      ops: { ...PAYLOAD_WITH_OPS.ops, on_time_shipping_pct: 100 },
+    };
+    const at0 = {
+      ...PAYLOAD_WITH_OPS,
+      ops: { ...PAYLOAD_WITH_OPS.ops, on_time_shipping_pct: 0 },
+    };
+    expect(mapMainOpsResponse(at100).ops?.onTimeShippingPct).toBe(1);
+    expect(mapMainOpsResponse(at0).ops?.onTimeShippingPct).toBe(0);
+  });
+});

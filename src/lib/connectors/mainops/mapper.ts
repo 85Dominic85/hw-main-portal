@@ -1,6 +1,7 @@
 import type { MainOpsApiResponse } from "./schema";
 import type {
   MainOpsMetrics,
+  MainOpsOps,
   MainOpsOrderStatus,
   MainOpsPurchaseType,
 } from "./types";
@@ -95,5 +96,32 @@ export function mapMainOpsResponse(raw: MainOpsApiResponse): MainOpsMetrics {
       status: o.status as MainOpsOrderStatus,
       trackingNumber: o.tracking_number,
     })),
+    ops: mapOps(raw.ops),
+  };
+}
+
+/**
+ * Mapea el bloque opcional `ops` (snake_case → camelCase).
+ * Devuelve `null` si la API no lo incluye (compat retro pre-2026-04-30).
+ *
+ * `on_time_shipping_pct` se normaliza con `normalizeRate` igual que el resto
+ * de campos `*_pct` (la API devuelve 0-100 a pesar de que el doc dice 0-1).
+ */
+function mapOps(raw: MainOpsApiResponse["ops"]): MainOpsOps | null {
+  if (!raw) return null;
+  return {
+    totalShipped: raw.total_shipped,
+    totalCompleted: raw.total_completed,
+    avgHandlingDays: raw.avg_handling_days,
+    avgTransitDays: raw.avg_transit_days,
+    onTimeShippingPct: normalizeRate(raw.on_time_shipping_pct),
+    throughputByWeek: raw.throughput_by_week.map((w) => ({
+      weekStart: w.week_start,
+      created: w.created,
+      shipped: w.shipped,
+      delivered: w.delivered,
+    })),
+    blockedCount: raw.blocked_count,
+    excludedAdmin: raw.excluded_admin,
   };
 }

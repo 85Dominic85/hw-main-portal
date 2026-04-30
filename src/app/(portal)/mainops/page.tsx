@@ -10,6 +10,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/kpi/stat-card";
 import { PieChartCard, type PieChartSlice } from "@/components/charts/pie-chart-card";
+import { BarChartCard, type BarChartSeries } from "@/components/charts/bar-chart-card";
 import { MainOpsPeriodSelector } from "@/components/shared/mainops-period-selector";
 import { getMainOpsSummary } from "@/server/queries/mainops";
 import {
@@ -107,6 +108,36 @@ async function MainOpsDashboard({ period }: { period: MainOpsPeriod }) {
 
   const periodLabel = `${m.range.from.toISOString().slice(0, 10)} → ${m.range.to.toISOString().slice(0, 10)}`;
 
+  // Bloque "Actividad operativa" — solo si la API devuelve `ops` (post-2026-04-30).
+  const ops = m.ops;
+  const onTimeShippingPct = ops
+    ? Math.round(ops.onTimeShippingPct * 1000) / 10
+    : null;
+  const onTimeShippingStatus =
+    onTimeShippingPct === null
+      ? "neutral"
+      : onTimeShippingPct >= 95
+        ? "ok"
+        : onTimeShippingPct >= 85
+          ? "warn"
+          : "danger";
+
+  // Throughput chart data (3 series: created/shipped/delivered).
+  const throughputData = (ops?.throughputByWeek ?? []).map((w) => ({
+    weekStart: w.weekStart.slice(5), // "MM-DD" para más compacto en eje X
+    Creados: w.created,
+    Enviados: w.shipped,
+    Entregados: w.delivered,
+  }));
+  const throughputSeries: BarChartSeries[] = [
+    { dataKey: "Creados", label: "Creados", color: "hsl(220 70% 60%)" },
+    { dataKey: "Enviados", label: "Enviados", color: "hsl(var(--status-warn))" },
+    { dataKey: "Entregados", label: "Entregados", color: "hsl(var(--status-ok))" },
+  ];
+
+  // "En rodaje" badge si los datos de envíos físicos son escasos (TIPSA arrancó 21-abr).
+  const showRodajeBadge = ops !== null && ops.totalShipped < 10;
+
   return (
     <div className="space-y-6">
       <p className="text-xs text-muted-foreground">
@@ -116,37 +147,129 @@ async function MainOpsDashboard({ period }: { period: MainOpsPeriod }) {
         </time>
       </p>
 
+      {ops && (
+        <section aria-label="Actividad operativa" className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Actividad operativa</h2>
+              <p className="text-xs text-muted-foreground">
+                Lo que controla el departamento vs lo que depende del transportista.
+                {ops.excludedAdmin > 0 && (
+                  <>
+                    {" · "}
+                    Excluye {ops.excludedAdmin} pedidos SaaS/otro del SLA físico.
+                  </>
+                )}
+              </p>
+            </div>
+            {showRodajeBadge && (
+              <span
+                className="rounded-md border border-status-warn/40 bg-status-warn/10 px-2 py-1 text-xs font-medium text-status-warn"
+                title="La integración TIPSA arrancó el 21-abr-2026; los KPIs de envío mejorarán progresivamente"
+              >
+                En rodaje desde 21-abr
+              </span>
+            )}
+          </div>
+
+          {/* Volumen */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <StatCard
+              title="Pedidos enviados"
+              value={ops.totalShipped.toLocaleString("es-ES")}
+              description="con shipped_at en el periodo"
+            />
+            <StatCard
+              title="Pedidos completados"
+              value={ops.totalCompleted.toLocaleString("es-ES")}
+              description="con delivered_at en el periodo"
+            />
+            <StatCard
+              title="Pedidos bloqueados"
+              value={ops.blockedCount.toLocaleString("es-ES")}
+              description="creados en el periodo (no penalizan al depto)"
+              status={ops.blockedCount === 0 ? "ok" : ops.blockedCount <= 3 ? "warn" : "danger"}
+            />
+          </div>
+
+          {/* Tiempos de proceso */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <StatCard
+              title="Plazo manipulación"
+              value={`${ops.avgHandlingDays.toFixed(1)}d`}
+              description="created → shipped (lo que controla el depto)"
+              status={
+                ops.avgHandlingDays <= 5
+                  ? "ok"
+                  : ops.avgHandlingDays <= 10
+                    ? "warn"
+                    : "danger"
+              }
+            />
+            <StatCard
+              title="Plazo transporte"
+              value={`${ops.avgTransitDays.toFixed(1)}d`}
+              description="shipped → delivered (transportista)"
+            />
+            <StatCard
+              title="Cumplimiento envío 5d"
+              value={onTimeShippingPct !== null ? `${onTimeShippingPct}%` : "—"}
+              description="% envíos despachados en ≤5 días"
+              status={onTimeShippingStatus}
+            />
+          </div>
+
+          <BarChartCard
+            title="Throughput semanal"
+            description="Pedidos creados / enviados / entregados por semana"
+            data={throughputData}
+            xKey="weekStart"
+            series={throughputSeries}
+            valueSuffix=" pedidos"
+            height={260}
+          />
+        </section>
+      )}
+
       <section
-        aria-label="KPIs principales"
-        className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5"
+        aria-label="Negocio"
+        className="space-y-3"
       >
-        <StatCard
-          title="Pedidos"
-          value={m.kpis.totalOrders.toLocaleString("es-ES")}
-          description={`${m.sla.totalDelivered} entregados`}
-        />
-        <StatCard
-          title="Ingresos"
-          value={formatEurCompact(m.kpis.totalRevenueEur)}
-          description={formatEur(m.kpis.totalRevenueEur, { decimals: 2 })}
-        />
-        <StatCard
-          title="Ticket medio"
-          value={formatEur(m.kpis.avgOrderValueEur)}
-          description={`Promedio del periodo`}
-        />
-        <StatCard
-          title="% SLA on-time"
-          value={`${onTimePctPct}%`}
-          description={`${m.sla.avgDeliveryDays.toFixed(1)}d promedio · ${m.sla.breachedCount} rotos`}
-          status={slaStatus}
-        />
-        <StatCard
-          title="% completados"
-          value={`${completedRatePct}%`}
-          description={`${m.sla.activeAtRisk} en riesgo`}
-          status={completedStatus}
-        />
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Negocio</h2>
+          <p className="text-xs text-muted-foreground">
+            Volumen y facturación del periodo.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <StatCard
+            title="Pedidos"
+            value={m.kpis.totalOrders.toLocaleString("es-ES")}
+            description={`${m.sla.totalDelivered} entregados`}
+          />
+          <StatCard
+            title="Ingresos"
+            value={formatEurCompact(m.kpis.totalRevenueEur)}
+            description={formatEur(m.kpis.totalRevenueEur, { decimals: 2 })}
+          />
+          <StatCard
+            title="Ticket medio"
+            value={formatEur(m.kpis.avgOrderValueEur)}
+            description={`Promedio del periodo`}
+          />
+          <StatCard
+            title="% SLA on-time"
+            value={`${onTimePctPct}%`}
+            description={`${m.sla.avgDeliveryDays.toFixed(1)}d promedio · ${m.sla.breachedCount} rotos`}
+            status={slaStatus}
+          />
+          <StatCard
+            title="% completados"
+            value={`${completedRatePct}%`}
+            description={`${m.sla.activeAtRisk} en riesgo`}
+            status={completedStatus}
+          />
+        </div>
       </section>
 
       <section
