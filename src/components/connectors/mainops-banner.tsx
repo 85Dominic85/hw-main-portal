@@ -6,6 +6,12 @@ import { labelForPurchaseType } from "@/lib/connectors/mainops";
 import { getTool } from "@/lib/tools";
 import { formatEurCompact } from "@/lib/utils/format-currency";
 
+interface MainOpsBannerProps {
+  /** Rango temporal a consultar. Si no se pasa, usa el mes en curso (compat retro). */
+  from?: Date;
+  to?: Date;
+}
+
 /**
  * Server Component que fetcha métricas reales de MainOps y renderiza
  * el bloque ToolSummary (escudo + atajo + nombre + updates).
@@ -21,9 +27,10 @@ import { formatEurCompact } from "@/lib/utils/format-currency";
  *
  * Si la API falla: escudo neutro con mensaje y la home no se rompe.
  */
-export async function MainOpsBanner() {
+export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
   const tool = getTool("mainops");
-  const period = currentMonthPeriod();
+  // Si no se inyectan fechas (compat retro), seguir consultando el mes en curso.
+  const period = from || to ? { from, to } : currentMonthPeriod();
   const result = await getMainOpsSummary(period);
 
   if (!result.ok) {

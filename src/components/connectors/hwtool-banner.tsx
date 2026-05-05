@@ -4,6 +4,12 @@ import type { UpdateItem } from "@/components/kpi/updates-list";
 import { getHwToolSummary, currentMonthPeriod } from "@/server/queries/hwtool";
 import { getTool } from "@/lib/tools";
 
+interface HwToolBannerProps {
+  /** Rango temporal a consultar. Si no se pasa, usa el mes en curso (compat retro). */
+  from?: Date;
+  to?: Date;
+}
+
 /**
  * Server Component que fetcha métricas reales del HW Tool y renderiza
  * el bloque ToolSummary (escudo + atajo + nombre + updates).
@@ -11,9 +17,9 @@ import { getTool } from "@/lib/tools";
  * Si la API falla o devuelve shape inválido, el escudo aparece en
  * estado "neutral" con un update explicando el motivo. La home no se rompe.
  */
-export async function HwToolBanner() {
+export async function HwToolBanner({ from, to }: HwToolBannerProps = {}) {
   const tool = getTool("hwtool");
-  const period = currentMonthPeriod();
+  const period = from || to ? { from, to } : currentMonthPeriod();
   const result = await getHwToolSummary(period);
 
   if (!result.ok) {
