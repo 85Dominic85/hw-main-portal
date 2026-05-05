@@ -107,6 +107,13 @@ interface ShieldProps {
   size?: number;
   loading?: boolean;
   className?: string;
+  /**
+   * Display custom para el hero. Si se pasa, sobrescribe el render por defecto
+   * (`formatPercentFromBase100(value)`). Útil para deltas con signo y unidad
+   * distinta de "%" (ej. "+5.2pp" para tendencia MoM del SLA HSM).
+   * Si `value` es null, este prop se ignora y se muestra "—".
+   */
+  valueDisplay?: string;
 }
 
 export function Shield({
@@ -117,6 +124,7 @@ export function Shield({
   size = 200,
   loading = false,
   className,
+  valueDisplay,
 }: ShieldProps) {
   const aspect = 240 / 200;
   const height = size;
@@ -302,7 +310,7 @@ export function Shield({
                 styles.text,
               )}
             >
-              {formatPercentFromBase100(value)}
+              {valueDisplay ?? formatPercentFromBase100(value)}
             </span>
           )}
         </div>

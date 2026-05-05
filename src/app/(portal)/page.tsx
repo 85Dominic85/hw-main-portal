@@ -1,10 +1,8 @@
 import { Suspense } from "react";
 
-import { ToolSummary } from "@/components/kpi/tool-summary";
-import type { ShieldStatus } from "@/components/kpi/shield";
-import type { UpdateItem } from "@/components/kpi/updates-list";
 import { HwToolBanner } from "@/components/connectors/hwtool-banner";
 import { MainOpsBanner } from "@/components/connectors/mainops-banner";
+import { HsmBanner } from "@/components/connectors/hsm-banner";
 import { ToolBannerSkeleton } from "@/components/connectors/tool-banner-skeleton";
 import { HomePeriodSelector } from "@/components/home/period-selector";
 import { homePeriodToRange, rangeKey } from "@/lib/home/period";
@@ -14,29 +12,16 @@ import { getTool } from "@/lib/tools";
  * Home del HW Main Portal — sección Resumen.
  *
  * - Selector global de periodo arriba (5 presets + custom). Estado en URL.
- * - MainOPS / HW Tool: datos reales vía connector con el rango activo
- *   (Suspense aislado, key cambia con el periodo → fuerza re-fetch).
- * - HSM: placeholder hasta que se conecte en v2 (no afectado por el selector).
- *
- * Cada banner está aislado en su propio Suspense boundary: si la API de
- * uno cae, los demás siguen renderizando.
+ * - 3 banners reales con Suspense aislado (si una API cae, las otras
+ *   siguen renderizando):
+ *     · Logística (MainOps)
+ *     · Configuraciones (HW Tool)
+ *     · HSM — connector listo, espera endpoint en HSM. Mientras no exista,
+ *       muestra escudo neutral con "Conectando con HSM…" sin romper nada.
  *
  * NOTA: el selector de la home NO comparte estado con los selectores
- * propios de `/mainops` y `/hwtool` por decisión 2026-04-30.
+ * propios de `/mainops`, `/hwtool` y `/hsm` por decisión 2026-04-30.
  */
-
-const HSM_MOCK: { hero: number | null; status: ShieldStatus; updates: UpdateItem[] } = {
-  hero: null,
-  status: "neutral",
-  updates: [
-    {
-      id: "s1",
-      occurredAt: new Date(),
-      title: "Conector HSM pendiente para v2",
-      description: "Reusará queries existentes de dashboard.ts",
-    },
-  ],
-};
 
 interface HomePageProps {
   searchParams: Promise<{
@@ -54,7 +39,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     sp.to,
   );
   const key = rangeKey(range);
-  const hsm = getTool("hsm");
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -83,12 +67,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <HwToolBanner from={range.from} to={range.to} />
         </Suspense>
 
-        <ToolSummary
-          tool={hsm}
-          heroValue={HSM_MOCK.hero}
-          heroStatus={HSM_MOCK.status}
-          updates={HSM_MOCK.updates}
-        />
+        <Suspense
+          key={`hsm-${key}`}
+          fallback={<ToolBannerSkeleton tool={getTool("hsm")} />}
+        >
+          <HsmBanner from={range.from} to={range.to} />
+        </Suspense>
       </div>
     </div>
   );

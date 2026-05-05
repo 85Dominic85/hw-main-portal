@@ -15,6 +15,12 @@ interface ToolSummaryProps {
   heroValue: number | null;
   /** Estado semáforo derivado del valor + umbrales. */
   heroStatus: ShieldStatus;
+  /**
+   * Display custom del hero. Útil cuando el value no es un porcentaje 0-100
+   * (ej. delta MoM en pp para HSM: "+5.2pp"). Si no se pasa, usa el formato
+   * porcentaje histórico.
+   */
+  heroDisplay?: string;
   /** Variante de forma del escudo. Default `rivets-double` (decidido tras /lab/shields). */
   shieldVariant?: ShieldVariant;
   /** Tamaño (alto) del escudo. Default 240. */
@@ -35,6 +41,7 @@ export function ToolSummary({
   tool,
   heroValue,
   heroStatus,
+  heroDisplay,
   shieldVariant = "rivets-double",
   shieldSize = 240,
   updates,
@@ -54,6 +61,7 @@ export function ToolSummary({
         status={heroStatus}
         variant={shieldVariant}
         size={shieldSize}
+        valueDisplay={heroDisplay}
       />
 
       <Link

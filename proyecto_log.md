@@ -2,21 +2,23 @@
 
 > **Fuente de verdad para handoffs**. Si retomas el proyecto desde otra sesión, empieza leyendo este archivo. Cubre estado actual, decisiones tomadas, bugs conocidos, credenciales (referencias, sin valores), backlog priorizado, comandos útiles e histórico de iteraciones.
 >
-> Última actualización: **2026-04-30 14:40 UTC** · v0.3 polish (renames + modo claro + logo) · 30/30 tests verdes.
+> Última actualización: **2026-05-05 17:30 UTC** · v0.4 con connector HSM listo (espera endpoint) + selector global de periodo en home · 43/43 tests verdes.
 
 ---
 
-## Estado actual — v0.3 (polish: renames + modo claro + logo hub-shield-pulse)
+## Estado actual — v0.4 (connector HSM + selector home)
 
 El portal está **desplegado en producción** (`https://hw-main-portal.vercel.app/`) sin auth (modo abierto temporal) con:
 
+- **Selector global de periodo en home** (v0.4): pills `Mes en curso / 7d / 15d / 30d / Custom…` arriba a la derecha. Estado en URL (`?period=...&from=...&to=...`). Custom expande dos inputs date inline + botón Aplicar (sin nuevas dependencias). Cada cambio dispara re-fetch fresh de los 3 escudos en paralelo (Suspense con key derivada del rango). Default: mes natural en curso. Helper neutral en `src/lib/home/period.ts`. Selector NO comparte estado con los selectores de las pestañas detalle (decisión 2026-04-30).
+- **Connector HSM** (v0.4): completo del lado portal (`src/lib/connectors/hsm/`), banner home `<HsmBanner>` con hero "delta MoM en pp", pestaña `/hsm` con dashboard completo, server query con cache 60s + throw-no-cache, helper periodo, period selector. Espera endpoint en HSM (`docs/connectors/hsm-endpoint-spec.md` lista para que el dev de HSM lo implemente). Failsafe: sin env vars el banner muestra "Conectando con HSM…" en escudo neutral; cuando se publique el endpoint y se setee `HSM_BASE_URL` + `HSM_API_KEY` en Vercel, los datos aparecen automáticamente sin redeploy del portal.
 - **Naming UI** (cambio v0.3): `MainOPS` → **Logística**, `HW Tool` → **Configuraciones** en sidebar, topbar, banners y mensajes. Slugs de rutas y código interno mantienen los originales (`/mainops`, `/hwtool`, `lib/connectors/mainops/...`). Iniciales del botón sobre escudo se mantienen (MOP / HWT / HSM).
 - **Logo del sidebar** (cambio v0.3): `<PortalLogo variant="hub-shield-pulse">` + texto "Hardware Dashboard" (antes "Qamarero / HW"). Variantes alternativas en `/lab/logos` y `/lab/logos/hub-shield`.
 - **Modo claro pulido** (v0.3): `--background` pasa de blanco puro a gris-azulado `220 20% 97%`, `--card` queda blanco para crear capa con sidebar/topbar. `--border` de 91% a 85%. Glow del Shield migrado a CSS var `--shield-glow-opacity` (0.6 light / 0.35 dark) para que el halo sea visible sobre blanco. `<UpdatesList>` items con `border-border/40 bg-card`. `<ToolShortcut>` con sombra neutra `hsl(220 20% 0%/0.12)`.
 - **Home**: 3 escudos heráldicos (variante `rivets-double`) con KPI hero y 3 líneas de updates por herramienta.
   - **Logística** ✅ datos reales — **hero: `ops.on_time_shipping_pct`** (`73.7%` en abril 2026 — métrica del depto, no SLA end-to-end). Umbrales semáforo recalibrados v0.3: `≥85 ok / ≥70 warn / <70 danger` (handling depto, no SLA end-to-end). Fallback a `sla.on_time_pct` con umbrales antiguos si la API no devuelve `ops`.
   - **Configuraciones** ✅ datos reales — `% configs OK a 1ª intento` como hero (82.3% verde).
-  - **HSM** 🟡 placeholder neutral hasta v2.
+  - **HSM** 🟡 connector completo del lado portal — espera endpoint `/api/external/metrics` en HSM. Mientras `HSM_BASE_URL`/`HSM_API_KEY` no estén en Vercel, el banner muestra "Conectando con HSM…" en escudo neutral, sin romper la home. Hero (cuando llegue): **delta MoM del SLA en pp** (decisión 2026-04-30 — mostrar tendencia, no absoluto, porque el SLA actual es bajo y la tendencia mejorando es lo accionable).
 - **Pestaña `/mainops`**:
   - Sección **"Actividad operativa"** arriba (si la API devuelve `ops`): 6 KPI cards (enviados, completados, bloqueados / handling-d, transit-d, cumplimiento 5d) + bar chart de throughput semanal (created / shipped / delivered).
   - Badge "En rodaje desde 21-abr" si `ops.total_shipped < 10` (TIPSA arrancó esa fecha).
@@ -24,7 +26,14 @@ El portal está **desplegado en producción** (`https://hw-main-portal.vercel.ap
   - 2 pies (tipos de compra, estados) + tabla últimos 10 pedidos.
   - Selector de periodo (Hoy / 7d / 30d / Mes) · `error.tsx`.
 - **Pestaña `/hwtool`**: 5 KPI cards + 2 pies (problemas, equipamiento) + bloque CRM test (cuando count > 0) · selector de periodo · `error.tsx`.
-- **Pestaña `/hsm`**: placeholder "v2".
+- **Pestaña `/hsm`**: dashboard completo (espera endpoint para datos reales). Secciones:
+  - **Salud del SLA**: Cumplimiento %, Mejora MoM en pp (con semáforo `≥0 ok / -3 a 0 warn / ≤-3 danger`), Críticas en plazo (subset estricto), Vencidas ahora.
+  - **Volumen**: Incidencias abiertas, RMAs activas, Throughput ratio (cerradas/creadas), Reapertura.
+  - **Tiempos**: Resolución media (con comparativa al periodo anterior), Turnaround RMA.
+  - **Distribuciones**: Pie chart incidencias por prioridad + Bar chart aging distribution.
+  - **Top proveedores**: tabla con rma_count, % éxito, turnaround.
+  - Selector periodo (Hoy / 7d / 30d / Mes) · `error.tsx`.
+  - Si la API no está disponible: card amistosa "Conectando con HSM…" con instrucciones de configuración.
 - **Pestaña `/admin`**: 4 cards "próximamente" para Sprint 5 (umbrales, notas, metas, manual entries).
 - **`/lab/shields`**: comparador interno de las 7 variantes del componente Shield × 4 estados de semáforo.
 - **`/lab/logos`** (nuevo v0.3): 8 propuestas de logo SVG inline para el portal (triple-shield, shield-hexes, shield-portal, q-shield, shield-pillars, convergence, hub-shield, monolith).
@@ -85,7 +94,7 @@ curl -H "x-api-key: qamarer0" \
 | Forms | **React Hook Form + Zod** | preparado, aún no usado en CRUD |
 | Auth | **Supabase Auth con magic link** | desactivado por defecto (`PORTAL_AUTH_REQUIRED=false`) |
 | Notificaciones | **sonner** | toasts |
-| Tests | **Vitest + Testing Library** | 26 tests verdes |
+| Tests | **Vitest + Testing Library** | 43 tests verdes (17 mainops + 13 hwtool + 13 hsm) |
 | Deploy | **Vercel (Pro)** | auto-deploy desde `main` |
 
 ---
@@ -331,10 +340,16 @@ Decisiones tomadas pero sin ADR formal todavía:
 | **v0.2 cerrada** (30-abr) | Bloque `ops` integrado · 30/30 tests · build verde. |
 | **v0.3 polish UI** (30-abr) | Renames `MainOPS→Logística` / `HW Tool→Configuraciones`. Recalibrar umbrales semáforo MainOps (`≥85/≥70/<70` para handling depto). Diagnóstico modo claro vía agente UX → 5 cambios aplicados (background gris-azulado, border más oscuro, glow del Shield con CSS var adaptable, surface en updates-list, sombra neutra en tool-shortcut). 8 propuestas de logo en `/lab/logos` + 7 sub-variantes "bajo asedio" en `/lab/logos/hub-shield`. Elegida `hub-shield-pulse` con texto "Hardware Dashboard" en sidebar. |
 | **v0.3 cerrada** (30-abr) | Polish UI · 30/30 tests · build verde · /lab/logos y /lab/logos/hub-shield disponibles. |
+| **Selector global de periodo en home** (5-may) | Pills 5 presets + Custom… inline (estado en URL). Helper neutral `src/lib/home/period.ts`. Banners aceptan props `from/to` y refetchean por Suspense key. NO afecta a las pestañas detalle. |
+| **Connector HSM** (5-may) | Spec del endpoint HSM en `docs/connectors/hsm-endpoint-spec.md`. Connector portal completo (types/schema/mapper/client/labels/index + 13 tests). Server query con cache 60s + throw-no-cache. Banner home con hero "delta MoM en pp" (mostrar tendencia, no absoluto, porque SLA HSM es bajo y la mejora es lo accionable). Pestaña `/hsm` completa: 12 KPI cards + 2 charts + tabla top proveedores + selector periodo + error.tsx. Activado en `tools.ts` + sidebar. Failsafe: sin env vars muestra "Conectando con HSM…" sin romper. |
+| **v0.4 cerrada** (5-may) | Connector HSM listo (espera endpoint) + selector global de periodo en home · 43/43 tests · build verde. |
 
 ### Commits importantes (en `main` del repo del portal)
 
 ```
+<pendiente> feat(connectors/hsm): integrar HSM (banner home + pestaña /hsm + spec endpoint)  ← v0.4
+d81f3f0 feat(home): selector de periodo global sobre los 3 escudos
+9d8f417 feat(ui): integrar hub-shield-pulse + 'Hardware Dashboard' en sidebar
 59f24ed feat(ui): modo claro pulido + 6 sub-variantes hub-shield     ← v0.3
 fe7a6db feat(ui): renombrar MainOPS→Logística + HW Tool→Configuraciones + lab/logos
 3a34f8c fix(mainops): recalibrar umbrales semáforo on_time_shipping (≥85/≥70/<70)
