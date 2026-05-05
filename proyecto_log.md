@@ -347,7 +347,7 @@ Decisiones tomadas pero sin ADR formal todavía:
 ### Commits importantes (en `main` del repo del portal)
 
 ```
-<pendiente> feat(connectors/hsm): integrar HSM (banner home + pestaña /hsm + spec endpoint)  ← v0.4
+0796d2a feat(connectors/hsm): integrar HSM (banner home + pestaña /hsm + spec endpoint)  ← v0.4
 d81f3f0 feat(home): selector de periodo global sobre los 3 escudos
 9d8f417 feat(ui): integrar hub-shield-pulse + 'Hardware Dashboard' en sidebar
 59f24ed feat(ui): modo claro pulido + 6 sub-variantes hub-shield     ← v0.3
