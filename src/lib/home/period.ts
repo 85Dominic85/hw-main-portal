@@ -11,17 +11,22 @@
  *     que mantienen su propio selector.
  */
 
+// `month` se mantiene en el type por compat retro de URLs viejas (`?period=month`).
+// Si llega, `homePeriodToRange` lo trata como el default actual ("30d").
 export type HomePeriod = "month" | "7d" | "15d" | "30d" | "custom";
 
 export const HOME_VALID_PERIODS: readonly HomePeriod[] = [
-  "month",
-  "7d",
-  "15d",
   "30d",
+  "15d",
+  "7d",
+  "month",
   "custom",
 ] as const;
 
-export const HOME_DEFAULT_PERIOD: HomePeriod = "month";
+// Default desde 2026-05-06: últimos 30 días rolling. Antes era "month"
+// (mes natural en curso) pero al inicio del mes el rango era de pocos días
+// y no había datos relevantes en los escudos.
+export const HOME_DEFAULT_PERIOD: HomePeriod = "30d";
 
 export function isValidHomePeriod(s: string | null | undefined): s is HomePeriod {
   return HOME_VALID_PERIODS.includes(s as HomePeriod);
@@ -131,8 +136,10 @@ export function homePeriodToRange(
     }
     case "month":
     default: {
-      const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      return { from, to: now, label: "Mes en curso", effective: "month" };
+      // Legacy "month" + cualquier valor desconocido caen al default actual
+      // (últimos 30d). Mantenemos el case por compat retro de URLs guardadas.
+      const r = rolling(30);
+      return { ...r, label: "Últimos 30 días", effective: "30d" };
     }
   }
 }

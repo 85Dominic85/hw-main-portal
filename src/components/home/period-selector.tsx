@@ -30,11 +30,13 @@ import {
  *   - cuando hay rango custom activo, el botón muestra el rango seleccionado.
  */
 
-const PRESETS: { id: Exclude<HomePeriod, "custom">; label: string; description: string }[] = [
-  { id: "month", label: "Mes en curso", description: "Del día 1 del mes a hoy" },
-  { id: "7d", label: "7d", description: "Últimos 7 días (rolling)" },
-  { id: "15d", label: "15d", description: "Últimos 15 días (rolling)" },
-  { id: "30d", label: "30d", description: "Últimos 30 días (rolling)" },
+// Orden y etiquetas decididos 2026-05-06: el default va primero, etiquetas
+// largas porque el selector tiene espacio horizontal de sobra y queda más
+// legible que abreviar a "30d / 15d / 7d".
+const PRESETS: { id: "30d" | "15d" | "7d"; label: string; description: string }[] = [
+  { id: "30d", label: "Últimos 30 días", description: "Rolling — default" },
+  { id: "15d", label: "Últimos 15 días", description: "Rolling" },
+  { id: "7d", label: "Última semana", description: "Últimos 7 días rolling" },
 ];
 
 /** Formato YYYY-MM-DD para usar como `min`/`max`/`value` de inputs date. */
@@ -81,7 +83,7 @@ export function HomePeriodSelector({ className }: HomePeriodSelectorProps) {
     router.push(`/${query ? `?${query}` : ""}`, { scroll: false });
   }
 
-  function setPreset(next: Exclude<HomePeriod, "custom">) {
+  function setPreset(next: "30d" | "15d" | "7d") {
     const params = new URLSearchParams(searchParams.toString());
     if (next === HOME_DEFAULT_PERIOD) params.delete("period");
     else params.set("period", next);
