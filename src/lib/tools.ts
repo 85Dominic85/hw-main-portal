@@ -43,7 +43,7 @@ export const TOOLS: readonly Tool[] = [
     displayName: "Hardware Support Manager",
     externalUrl: "https://hardware-support-manager.vercel.app/dashboard",
     internalPath: "/hsm",
-    heroLabel: "Mejora SLA vs mes pasado",
+    heroLabel: "% SLA cumplido",
     enabledInV1: true,
   },
 ] as const;

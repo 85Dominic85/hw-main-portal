@@ -14,25 +14,34 @@ interface HsmBannerProps {
  * Server Component que fetcha métricas reales de HSM y renderiza el bloque
  * `<ToolSummary>` con el escudo, updates y atajo a HSM.
  *
- * Hero del escudo (decidido 2026-04-30): **delta de SLA en pp** (mejora MoM).
- * En HSM tenemos pain reciente y el SLA absoluto puede ser ~60% — mostrarlo
- * tal cual sería demoledor. Mostrar la TENDENCIA permite validar el esfuerzo
- * cuando el equipo está mejorando, aunque el absoluto siga bajo.
+ * Hero del escudo (decidido 2026-05-06): **% SLA cumplido absoluto**.
+ *   - Cambio respecto a v0.4: el delta MoM (`+5.2pp`) era engañoso cuando
+ *     el periodo no tenía actividad — `slaCompliancePct` cae en 100% por
+ *     default cuando no hay resueltos, así que ambos periodos salían al
+ *     100% y el delta = 0.0pp verde, simulando "todo perfecto".
+ *   - Ahora mostramos el cumplimiento absoluto del periodo. Cuando no hay
+ *     actividad real, el escudo va a neutral con `—` para no mentir.
  *
- * Semáforo del delta (en puntos porcentuales):
- *   - `≥ 0pp` → `ok` verde (mejora o plano, ningún empeoramiento).
- *   - `−3pp < d < 0pp` → `warn` ámbar (empeora ligeramente, atención).
- *   - `≤ −3pp` → `danger` rojo (empeora bastante, requiere acción).
+ * Detección "sin actividad":
+ *   - Si `avgResolutionHours === null` y `incidentsByPriority` está vacío,
+ *     el `slaCompliancePct === 100` viene del default de HSM (no hay
+ *     resueltos en el periodo) — no es información útil. Mostrar neutral.
  *
- * Updates (decidido 2026-04-30): "Volumen + plazo + tendencia":
+ * Semáforo del % SLA (calibrado para HSM con pain reciente — más laxo
+ * que MainOps porque el equipo está en remontada):
+ *   - `≥ 90%` → `ok` verde (excelente).
+ *   - `≥ 75%` → `warn` ámbar (mejorable, dentro de aceptable).
+ *   - `< 75%` → `danger` rojo (acción requerida).
+ *
+ * Updates (recortados al estado real, sin cifras engañosas en periodos
+ * vacíos):
  *   L1: `${open} incidencias abiertas · ${rmas} RMAs activas`
- *   L2: `Resolución media: ${avgHours}h`
- *   L3: `↑ +Xpp SLA vs mes pasado` (o `↓ −Xpp`)
+ *        descripción: vencidas + throughput (si hay actividad).
+ *   L2: `Resolución media: ${avgHours}h` (o "Sin resueltos en el periodo").
+ *   L3: tendencia MoM como dato secundario (`↑ +5pp vs mes pasado`).
  *
- * Estado inicial (endpoint HSM aún no implementado): `getHsmSummary` falla
- * con "Conectando con HSM…" → escudo neutral con mensaje amistoso. La home
- * sigue funcionando. Una vez que HSM publique el endpoint y se setee
- * `HSM_BASE_URL` + `HSM_API_KEY` en Vercel, los datos aparecen automáticamente.
+ * Estado inicial (endpoint HSM aún no implementado o env vars vacías):
+ * escudo neutral con "Conectando con HSM…" — la home no se rompe.
  */
 export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
   const tool = getTool("hsm");
@@ -57,40 +66,95 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
   }
 
   const m = result.data;
-  const delta = m.slaDeltaPp;
+  const c = m.current;
+  const p = m.previous;
 
-  // Semáforo del delta — mejora siempre verde, empeoramiento gradúa.
+  // --- Detección de "sin actividad" en el periodo actual ----------------
+  // El default de HSM `slaCompliancePercent = 100` cuando no hay resueltos
+  // hace que el hero parezca perfecto sin serlo. Detectamos esto y caemos
+  // al estado neutral con `—` y un update explicando el motivo.
+  const hasResolved = c.avgResolutionHours !== null;
+  const hasIncidents =
+    c.openIncidents > 0 ||
+    c.incidentsByPriority.some((b) => b.count > 0) ||
+    hasResolved;
+  const hasActivity = hasIncidents || c.activeRmas > 0;
+
+  if (!hasActivity || !hasResolved) {
+    // Sin datos suficientes: hero neutral, updates honestos.
+    const trend = formatTrend(m.slaDeltaPp);
+    const updates: UpdateItem[] = [
+      {
+        id: "no-activity",
+        occurredAt: m.generatedAt,
+        title: "Sin actividad en el periodo",
+        description: hasActivity
+          ? "Hay incidencias en curso pero ninguna resuelta todavía."
+          : "Aún no hay incidencias ni RMAs en el rango seleccionado.",
+      },
+      {
+        id: "previous-context",
+        occurredAt: m.generatedAt,
+        title: `Mes pasado: ${p.slaCompliancePct.toFixed(1)}% SLA`,
+        description:
+          p.avgResolutionHours !== null
+            ? `${p.avgResolutionHours.toFixed(1)}h resolución · reapertura ${p.reopenRatePct.toFixed(1)}%`
+            : `Reapertura ${p.reopenRatePct.toFixed(1)}%`,
+      },
+      {
+        id: "open-snapshot",
+        occurredAt: m.generatedAt,
+        title: `${c.openIncidents} incidencias abiertas · ${c.activeRmas} RMAs activas`,
+        description: trend ? `Tendencia: ${trend}` : "Snapshot actual del depto",
+      },
+    ];
+    return (
+      <ToolSummary
+        tool={tool}
+        heroValue={null}
+        heroStatus="neutral"
+        updates={updates}
+      />
+    );
+  }
+
+  // --- Caso normal con datos --------------------------------------------
+  const slaPct = c.slaCompliancePct;
+
+  // Semáforo SLA absoluto. Calibrado para HSM (≥90 / ≥75 / <75) — más laxo
+  // que MainOps porque el equipo está en remontada y se busca premiar
+  // mejoras sin demoler con umbrales corporativos.
   const heroStatus: ShieldStatus =
-    delta >= 0 ? "ok" : delta > -3 ? "warn" : "danger";
+    slaPct >= 90 ? "ok" : slaPct >= 75 ? "warn" : "danger";
 
-  // Display: signo explícito + 1 decimal + sufijo "pp".
-  const sign = delta > 0 ? "+" : "";
-  const heroDisplay = `${sign}${delta.toFixed(1)}pp`;
+  const heroDisplay = `${slaPct.toFixed(1)}%`;
 
   // Línea 1: volumen abiertos + RMAs activas.
   const line1 = {
-    title: `${m.current.openIncidents} incidencias abiertas · ${m.current.activeRmas} RMAs activas`,
+    title: `${c.openIncidents} incidencias abiertas · ${c.activeRmas} RMAs activas`,
     description:
-      m.current.overdueCount > 0
-        ? `${m.current.overdueCount} vencidas ahora · throughput ${m.current.throughputRatio.toFixed(2)}`
-        : `Sin vencidas · throughput ${m.current.throughputRatio.toFixed(2)}`,
+      c.overdueCount > 0
+        ? `${c.overdueCount} vencidas ahora · throughput ${c.throughputRatio.toFixed(2)}`
+        : `Sin vencidas · throughput ${c.throughputRatio.toFixed(2)}`,
   };
 
-  // Línea 2: resolución media + reopen rate.
-  const avgHours = m.current.avgResolutionHours;
+  // Línea 2: resolución media + reopen rate (solo si hay datos).
   const line2 = {
-    title: avgHours !== null ? `Resolución media: ${avgHours.toFixed(1)}h` : "Sin resueltos en el periodo",
+    title: `Resolución media: ${c.avgResolutionHours!.toFixed(1)}h`,
     description:
-      avgHours !== null && m.previous.avgResolutionHours !== null
-        ? `Mes pasado: ${m.previous.avgResolutionHours.toFixed(1)}h · reapertura ${m.current.reopenRatePct.toFixed(1)}%`
-        : `Reapertura ${m.current.reopenRatePct.toFixed(1)}%`,
+      p.avgResolutionHours !== null
+        ? `Mes pasado: ${p.avgResolutionHours.toFixed(1)}h · reapertura ${c.reopenRatePct.toFixed(1)}%`
+        : `Reapertura ${c.reopenRatePct.toFixed(1)}%`,
   };
 
-  // Línea 3: refuerzo de la tendencia (mismo dato del hero pero contextualizado).
-  const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+  // Línea 3: tendencia MoM como dato secundario (ahora que el hero es
+  // absoluto, el delta queda como contexto útil pero no mete ruido).
+  const trend = formatTrend(m.slaDeltaPp);
   const line3 = {
-    title: `${arrow} ${heroDisplay} SLA vs mes pasado`,
-    description: `${m.current.slaCompliancePct.toFixed(1)}% actual · ${m.previous.slaCompliancePct.toFixed(1)}% anterior`,
+    title: trend
+      ? `${trend} SLA vs mes pasado`
+      : `${slaPct.toFixed(1)}% SLA vs ${p.slaCompliancePct.toFixed(1)}%`,
+    description: `${slaPct.toFixed(1)}% actual · ${p.slaCompliancePct.toFixed(1)}% anterior`,
   };
 
   const updates: UpdateItem[] = [
@@ -117,10 +181,18 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
   return (
     <ToolSummary
       tool={tool}
-      heroValue={delta}
+      heroValue={slaPct}
       heroDisplay={heroDisplay}
       heroStatus={heroStatus}
       updates={updates}
     />
   );
+}
+
+/** Formatea el delta MoM en pp con flecha. Devuelve null si delta = 0 exacto. */
+function formatTrend(deltaPp: number): string | null {
+  if (deltaPp === 0) return null;
+  const sign = deltaPp > 0 ? "+" : "";
+  const arrow = deltaPp > 0 ? "↑" : "↓";
+  return `${arrow} ${sign}${deltaPp.toFixed(1)}pp`;
 }
