@@ -25,7 +25,7 @@ export const TOOLS: readonly Tool[] = [
     displayName: "Logística",
     externalUrl: "https://hw-sell-gear-platform-tsm1.vercel.app/orders",
     internalPath: "/mainops",
-    heroLabel: "% envíos OK",
+    heroLabel: "% envíos OK · 30d",
     enabledInV1: true,
   },
   {
@@ -34,7 +34,7 @@ export const TOOLS: readonly Tool[] = [
     displayName: "Configuraciones",
     externalUrl: "https://hwtoolbox.lovable.app/",
     internalPath: "/hwtool",
-    heroLabel: "% configs OK a 1ª",
+    heroLabel: "% configs OK a 1ª · 30d",
     enabledInV1: true,
   },
   {
@@ -43,7 +43,7 @@ export const TOOLS: readonly Tool[] = [
     displayName: "Hardware Support Manager",
     externalUrl: "https://hardware-support-manager.vercel.app/dashboard",
     internalPath: "/hsm",
-    heroLabel: "% SLA cumplido",
+    heroLabel: "% SLA cumplido · 30d",
     enabledInV1: true,
   },
 ] as const;

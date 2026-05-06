@@ -3,11 +3,12 @@ import type { ShieldStatus } from "@/components/kpi/shield";
 import type { UpdateItem } from "@/components/kpi/updates-list";
 import { getMainOpsSummary, currentMonthPeriod } from "@/server/queries/mainops";
 import { labelForPurchaseType } from "@/lib/connectors/mainops";
+import { last30DaysFilter } from "@/lib/home/period";
 import { getTool } from "@/lib/tools";
 import { formatEurCompact } from "@/lib/utils/format-currency";
 
 interface MainOpsBannerProps {
-  /** Rango temporal a consultar. Si no se pasa, usa el mes en curso (compat retro). */
+  /** Rango temporal del SELECTOR para los updates. Si no se pasa, mes en curso. */
   from?: Date;
   to?: Date;
 }
@@ -29,17 +30,29 @@ interface MainOpsBannerProps {
  */
 export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
   const tool = getTool("mainops");
-  // Si no se inyectan fechas (compat retro), seguir consultando el mes en curso.
-  const period = from || to ? { from, to } : currentMonthPeriod();
-  const result = await getMainOpsSummary(period);
 
-  if (!result.ok) {
+  // 2 fetches en paralelo:
+  //   - HERO siempre últimos 30d (estable, ignorando el selector global).
+  //   - UPDATES siguen el rango del selector (default: mes en curso).
+  // Si ambos rangos coinciden, el cache de 60s sirve un solo hit lógico.
+  const heroPeriod = last30DaysFilter();
+  const updatesPeriod = from || to ? { from, to } : currentMonthPeriod();
+
+  const [heroResult, updatesResult] = await Promise.all([
+    getMainOpsSummary(heroPeriod),
+    getMainOpsSummary(updatesPeriod),
+  ]);
+
+  // Si la API falla en cualquiera de los dos, mostramos error con el mensaje
+  // del que falló primero (priorizando heroResult porque es el escudo).
+  const failed = !heroResult.ok ? heroResult : !updatesResult.ok ? updatesResult : null;
+  if (failed) {
     const updates: UpdateItem[] = [
       {
         id: "mainops-error",
         occurredAt: new Date(),
         title: "API Logística no disponible",
-        description: result.error,
+        description: failed.error,
       },
     ];
     return (
@@ -47,10 +60,13 @@ export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
     );
   }
 
-  const m = result.data;
+  // TS-narrow: ambos ok aquí.
+  const heroData = heroResult.ok ? heroResult.data : null;
+  const m = updatesResult.ok ? updatesResult.data : null;
+  if (!heroData || !m) return null; // unreachable por el `failed` check
 
-  // Hero — preferir on_time_shipping (depto) si está disponible; si no, SLA global.
-  const heroRatio = m.ops?.onTimeShippingPct ?? m.sla.onTimePct;
+  // Hero — del rango fijo 30d. Preferir on_time_shipping si está; fallback SLA global.
+  const heroRatio = heroData.ops?.onTimeShippingPct ?? heroData.sla.onTimePct;
   const heroValue = Math.round(heroRatio * 1000) / 10; // 1 decimal en 0-100
 
   // Semáforo: umbrales distintos según métrica.
@@ -58,7 +74,7 @@ export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
   //     Calibrado para lo que el depto realmente controla (sin TIPSA).
   //   - Si caemos al fallback `sla.onTimePct` (end-to-end con transporte): ≥95 / ≥85 / <85.
   //     Más exigente porque SLA "completo" debería ser casi perfecto.
-  const heroStatus: ShieldStatus = m.ops
+  const heroStatus: ShieldStatus = heroData.ops
     ? heroValue >= 85
       ? "ok"
       : heroValue >= 70

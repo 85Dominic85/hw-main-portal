@@ -144,3 +144,25 @@ export function homePeriodToRange(
 export function rangeKey(range: HomePeriodRange): string {
   return `${range.effective}-${dateToIso(range.from)}-${dateToIso(range.to)}`;
 }
+
+/**
+ * Rango fijo "últimos 30 días rolling" para el HERO de los escudos del home.
+ *
+ * Decisión 2026-05-06: el hero del escudo debe ser un termómetro estable de
+ * la salud del depto, NO un dato sensible al rango pequeño que el user elija
+ * en el selector global. Si el selector está en "Mes en curso" durante los
+ * primeros días del mes, el hero se llena de NaN/100% por default y deja de
+ * ser informativo. Fijar 30d garantiza que siempre haya datos relevantes.
+ *
+ * Las 3 líneas de updates bajo el escudo SÍ siguen el selector global, así
+ * el user puede explorar sub-periodos sin que el hero se vuelva inestable.
+ */
+export function last30DaysFilter(): { from: Date; to: Date } {
+  const now = new Date();
+  const today = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const from = new Date(today);
+  from.setUTCDate(from.getUTCDate() - 29);
+  return { from, to: now };
+}

@@ -2,10 +2,11 @@ import { ToolSummary } from "@/components/kpi/tool-summary";
 import type { ShieldStatus } from "@/components/kpi/shield";
 import type { UpdateItem } from "@/components/kpi/updates-list";
 import { getHsmSummary, currentMonthPeriod } from "@/server/queries/hsm";
+import { last30DaysFilter } from "@/lib/home/period";
 import { getTool } from "@/lib/tools";
 
 interface HsmBannerProps {
-  /** Rango temporal a consultar. Si no se pasa, usa el mes en curso. */
+  /** Rango temporal del SELECTOR para los updates. Si no se pasa, mes en curso. */
   from?: Date;
   to?: Date;
 }
@@ -14,42 +15,45 @@ interface HsmBannerProps {
  * Server Component que fetcha métricas reales de HSM y renderiza el bloque
  * `<ToolSummary>` con el escudo, updates y atajo a HSM.
  *
- * Hero del escudo (decidido 2026-05-06): **% SLA cumplido absoluto**.
- *   - Cambio respecto a v0.4: el delta MoM (`+5.2pp`) era engañoso cuando
- *     el periodo no tenía actividad — `slaCompliancePct` cae en 100% por
- *     default cuando no hay resueltos, así que ambos periodos salían al
- *     100% y el delta = 0.0pp verde, simulando "todo perfecto".
- *   - Ahora mostramos el cumplimiento absoluto del periodo. Cuando no hay
- *     actividad real, el escudo va a neutral con `—` para no mentir.
+ * Decisión 2026-05-06 (v0.6): el HERO del escudo usa SIEMPRE últimos 30
+ * días rolling — no es sensible al selector global porque la salud del SLA
+ * del depto se mide en ciclos largos. Los UPDATES bajo el escudo SÍ siguen
+ * el rango del selector, así el user puede explorar sub-periodos sin
+ * desestabilizar el hero. Si ambos rangos coinciden, el cache de 60s sirve
+ * un solo hit lógico.
  *
- * Detección "sin actividad":
- *   - Si `avgResolutionHours === null` y `incidentsByPriority` está vacío,
- *     el `slaCompliancePct === 100` viene del default de HSM (no hay
- *     resueltos en el periodo) — no es información útil. Mostrar neutral.
+ * Hero del escudo: **% SLA cumplido** absoluto en los últimos 30d.
+ *   - Si en 30d hay resueltas: heroData.current.slaCompliancePct.
+ *   - Si NO hay resueltas en 30d (caso raro): hero neutral con `—`.
  *
- * Semáforo del % SLA (calibrado para HSM con pain reciente — más laxo
- * que MainOps porque el equipo está en remontada):
- *   - `≥ 90%` → `ok` verde (excelente).
- *   - `≥ 75%` → `warn` ámbar (mejorable, dentro de aceptable).
- *   - `< 75%` → `danger` rojo (acción requerida).
+ * Semáforo del % SLA (calibrado para HSM con pain reciente — más laxo que
+ * MainOps porque el equipo está en remontada):
+ *   - `≥ 90%` → `ok` verde · `≥ 75%` → `warn` ámbar · `< 75%` → `danger` rojo.
  *
- * Updates (recortados al estado real, sin cifras engañosas en periodos
- * vacíos):
- *   L1: `${open} incidencias abiertas · ${rmas} RMAs activas`
- *        descripción: vencidas + throughput (si hay actividad).
- *   L2: `Resolución media: ${avgHours}h` (o "Sin resueltos en el periodo").
- *   L3: tendencia MoM como dato secundario (`↑ +5pp vs mes pasado`).
+ * Updates (basados en el periodo del selector):
+ *   L1: `${open} incidencias abiertas · ${rmas} RMAs activas` (snapshot real).
+ *   L2: `Resolución media: ${avgHours}h` o "Sin resueltos en el periodo".
+ *   L3: tendencia MoM (delta SLA del periodo del selector vs su anterior).
  *
  * Estado inicial (endpoint HSM aún no implementado o env vars vacías):
  * escudo neutral con "Conectando con HSM…" — la home no se rompe.
  */
 export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
   const tool = getTool("hsm");
-  const period = from || to ? { from, to } : currentMonthPeriod();
-  const result = await getHsmSummary(period);
 
-  if (!result.ok) {
-    const isUnconfigured = result.error.startsWith("Conectando con HSM");
+  const heroPeriod = last30DaysFilter();
+  const updatesPeriod = from || to ? { from, to } : currentMonthPeriod();
+
+  const [heroResult, updatesResult] = await Promise.all([
+    getHsmSummary(heroPeriod),
+    getHsmSummary(updatesPeriod),
+  ]);
+
+  // Si cualquier fetch falla → mostrar error "Conectando con HSM…" o el
+  // mensaje de la API (priorizamos el del hero porque es la métrica visible).
+  const failed = !heroResult.ok ? heroResult : !updatesResult.ok ? updatesResult : null;
+  if (failed) {
+    const isUnconfigured = failed.error.startsWith("Conectando con HSM");
     const updates: UpdateItem[] = [
       {
         id: "hsm-error",
@@ -57,7 +61,7 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
         title: isUnconfigured ? "Conectando con HSM…" : "API HSM no disponible",
         description: isUnconfigured
           ? "Esperando endpoint y env vars en Vercel."
-          : result.error,
+          : failed.error,
       },
     ];
     return (
@@ -65,37 +69,55 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
     );
   }
 
-  const m = result.data;
-  const c = m.current;
+  const heroData = heroResult.ok ? heroResult.data : null;
+  const m = updatesResult.ok ? updatesResult.data : null;
+  if (!heroData || !m) return null; // unreachable
+
+  const c = m.current; // periodo del selector
   const p = m.previous;
+  const heroCurrent = heroData.current; // últimos 30d
 
-  // --- Detección de "sin actividad" en el periodo actual ----------------
-  // El default de HSM `slaCompliancePercent = 100` cuando no hay resueltos
-  // hace que el hero parezca perfecto sin serlo. Detectamos esto y caemos
-  // al estado neutral con `—` y un update explicando el motivo.
-  const hasResolved = c.avgResolutionHours !== null;
-  const hasIncidents =
+  // --- Hero del escudo ------------------------------------------------------
+  // Validar que los 30d tienen resueltas — sin resueltas, slaCompliancePct
+  // viene a 100% por default y mentiría. Caso raro pero posible (depto
+  // recién arrancado, vacaciones, etc.).
+  const heroHasResolved = heroCurrent.avgResolutionHours !== null;
+
+  let heroValue: number | null = null;
+  let heroDisplay: string | undefined;
+  let heroStatus: ShieldStatus = "neutral";
+
+  if (heroHasResolved) {
+    heroValue = heroCurrent.slaCompliancePct;
+    heroDisplay = `${heroValue.toFixed(1)}%`;
+    heroStatus = heroValue >= 90 ? "ok" : heroValue >= 75 ? "warn" : "danger";
+  }
+
+  // --- Updates (rango selector) --------------------------------------------
+  const periodHasResolved = c.avgResolutionHours !== null;
+  const periodHasActivity =
     c.openIncidents > 0 ||
+    c.activeRmas > 0 ||
     c.incidentsByPriority.some((b) => b.count > 0) ||
-    hasResolved;
-  const hasActivity = hasIncidents || c.activeRmas > 0;
+    periodHasResolved;
 
-  if (!hasActivity || !hasResolved) {
-    // Sin datos suficientes: hero neutral, updates honestos.
+  if (!periodHasActivity || !periodHasResolved) {
+    // Periodo del selector vacío → updates honestos sobre el snapshot global
+    // y el contexto del periodo anterior. El hero ya tiene su valor (de 30d).
     const trend = formatTrend(m.slaDeltaPp);
     const updates: UpdateItem[] = [
       {
         id: "no-activity",
         occurredAt: m.generatedAt,
-        title: "Sin actividad en el periodo",
-        description: hasActivity
+        title: "Sin actividad en el periodo seleccionado",
+        description: periodHasActivity
           ? "Hay incidencias en curso pero ninguna resuelta todavía."
           : "Aún no hay incidencias ni RMAs en el rango seleccionado.",
       },
       {
         id: "previous-context",
         occurredAt: m.generatedAt,
-        title: `Mes pasado: ${p.slaCompliancePct.toFixed(1)}% SLA`,
+        title: `Periodo anterior: ${p.slaCompliancePct.toFixed(1)}% SLA`,
         description:
           p.avgResolutionHours !== null
             ? `${p.avgResolutionHours.toFixed(1)}h resolución · reapertura ${p.reopenRatePct.toFixed(1)}%`
@@ -111,25 +133,15 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
     return (
       <ToolSummary
         tool={tool}
-        heroValue={null}
-        heroStatus="neutral"
+        heroValue={heroValue}
+        heroDisplay={heroDisplay}
+        heroStatus={heroStatus}
         updates={updates}
       />
     );
   }
 
-  // --- Caso normal con datos --------------------------------------------
-  const slaPct = c.slaCompliancePct;
-
-  // Semáforo SLA absoluto. Calibrado para HSM (≥90 / ≥75 / <75) — más laxo
-  // que MainOps porque el equipo está en remontada y se busca premiar
-  // mejoras sin demoler con umbrales corporativos.
-  const heroStatus: ShieldStatus =
-    slaPct >= 90 ? "ok" : slaPct >= 75 ? "warn" : "danger";
-
-  const heroDisplay = `${slaPct.toFixed(1)}%`;
-
-  // Línea 1: volumen abiertos + RMAs activas.
+  // Periodo del selector con datos reales.
   const line1 = {
     title: `${c.openIncidents} incidencias abiertas · ${c.activeRmas} RMAs activas`,
     description:
@@ -138,23 +150,20 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
         : `Sin vencidas · throughput ${c.throughputRatio.toFixed(2)}`,
   };
 
-  // Línea 2: resolución media + reopen rate (solo si hay datos).
   const line2 = {
     title: `Resolución media: ${c.avgResolutionHours!.toFixed(1)}h`,
     description:
       p.avgResolutionHours !== null
-        ? `Mes pasado: ${p.avgResolutionHours.toFixed(1)}h · reapertura ${c.reopenRatePct.toFixed(1)}%`
+        ? `Anterior: ${p.avgResolutionHours.toFixed(1)}h · reapertura ${c.reopenRatePct.toFixed(1)}%`
         : `Reapertura ${c.reopenRatePct.toFixed(1)}%`,
   };
 
-  // Línea 3: tendencia MoM como dato secundario (ahora que el hero es
-  // absoluto, el delta queda como contexto útil pero no mete ruido).
   const trend = formatTrend(m.slaDeltaPp);
   const line3 = {
     title: trend
-      ? `${trend} SLA vs mes pasado`
-      : `${slaPct.toFixed(1)}% SLA vs ${p.slaCompliancePct.toFixed(1)}%`,
-    description: `${slaPct.toFixed(1)}% actual · ${p.slaCompliancePct.toFixed(1)}% anterior`,
+      ? `${trend} SLA vs periodo anterior`
+      : `${c.slaCompliancePct.toFixed(1)}% SLA vs ${p.slaCompliancePct.toFixed(1)}%`,
+    description: `${c.slaCompliancePct.toFixed(1)}% actual · ${p.slaCompliancePct.toFixed(1)}% anterior`,
   };
 
   const updates: UpdateItem[] = [
@@ -181,7 +190,7 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
   return (
     <ToolSummary
       tool={tool}
-      heroValue={slaPct}
+      heroValue={heroValue}
       heroDisplay={heroDisplay}
       heroStatus={heroStatus}
       updates={updates}
