@@ -98,11 +98,19 @@ async function HsmDashboard({ period }: { period: HsmPeriod }) {
   const c = m.current;
   const p = m.previous;
 
-  // Semáforo del delta MoM (mismo que el banner home).
-  const slaDelta = m.slaDeltaPp;
-  const deltaSign = slaDelta > 0 ? "+" : "";
-  const deltaStatus =
-    slaDelta >= 0 ? "ok" : slaDelta > -3 ? "warn" : "danger";
+  // % Vencidas / Abiertas — proporción de incidencias en pain entre las
+  // actualmente abiertas. Más informativo que el conteo absoluto:
+  // 4 vencidas de 50 abiertas (8%) es muy distinto a 4 de 5 (80%).
+  const overduePct =
+    c.openIncidents > 0 ? (c.overdueCount / c.openIncidents) * 100 : 0;
+  const overduePctStatus =
+    c.openIncidents === 0
+      ? "neutral"
+      : overduePct === 0
+        ? "ok"
+        : overduePct <= 20
+          ? "warn"
+          : "danger";
 
   const overdueStatus =
     c.overdueCount === 0 ? "ok" : c.overdueCount <= 5 ? "warn" : "danger";
@@ -158,7 +166,8 @@ async function HsmDashboard({ period }: { period: HsmPeriod }) {
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Salud del SLA</h2>
           <p className="text-xs text-muted-foreground">
-            Cumplimiento, tendencia MoM y respuesta a lo crítico.
+            Cumplimiento, proporción de pain entre las abiertas y respuesta a
+            lo crítico.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -168,14 +177,16 @@ async function HsmDashboard({ period }: { period: HsmPeriod }) {
             description={`Periodo anterior: ${p.slaCompliancePct.toFixed(1)}%`}
           />
           <StatCard
-            title="Mejora MoM"
-            value={`${deltaSign}${slaDelta.toFixed(1)}pp`}
-            description={
-              slaDelta >= 0
-                ? "Mejora vs mes pasado"
-                : "Empeora vs mes pasado"
+            title="% Vencidas"
+            value={
+              c.openIncidents > 0 ? `${overduePct.toFixed(1)}%` : "—"
             }
-            status={deltaStatus}
+            description={
+              c.openIncidents > 0
+                ? `${c.overdueCount} de ${c.openIncidents} abiertas`
+                : "Sin incidencias abiertas"
+            }
+            status={overduePctStatus}
           />
           <StatCard
             title="Críticas en plazo"
@@ -269,10 +280,10 @@ async function HsmDashboard({ period }: { period: HsmPeriod }) {
       >
         <PieChartCard
           title="Incidencias por prioridad"
-          description="Reparto en el periodo (creadas)"
+          description="Reparto del estado actual (snapshot — abiertas ahora)"
           data={prioritySlices}
           showCenterTotal
-          centerLabel="incidencias"
+          centerLabel="abiertas"
         />
         <BarChartCard
           title="Aging — incidencias abiertas"
