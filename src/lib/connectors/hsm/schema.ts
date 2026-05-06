@@ -28,6 +28,26 @@ const topProviderSchema = z.object({
   avg_turnaround_days: z.number().nonnegative().nullable(),
 });
 
+// Carga oculta — consultas rápidas in-situ (HSM v1.1.0+).
+const quickConsultationByTechnicianSchema = z.object({
+  name: z.string(),
+  count: z.number().int().nonnegative(),
+  total_minutes: z.number().int().nonnegative(),
+});
+
+const quickConsultationsCurrentSchema = z.object({
+  count: z.number().int().nonnegative(),
+  total_minutes: z.number().int().nonnegative(),
+  avg_minutes: z.number().nonnegative().nullable(),
+  by_technician: z.array(quickConsultationByTechnicianSchema),
+  conversion_rate_pct: z.number().min(0).max(100),
+});
+
+const quickConsultationsPreviousSchema = z.object({
+  count: z.number().int().nonnegative(),
+  total_minutes: z.number().int().nonnegative(),
+});
+
 const currentSchema = z.object({
   open_incidents: z.number().int().nonnegative(),
   active_rmas: z.number().int().nonnegative(),
@@ -41,6 +61,8 @@ const currentSchema = z.object({
   incidents_by_priority: z.array(incidentByPrioritySchema),
   aging_distribution: z.array(agingPointSchema),
   top_providers: z.array(topProviderSchema),
+  // Opcional para retro-compat con schema_version=1.0.0 (HSM antes de v0.7).
+  quick_consultations: quickConsultationsCurrentSchema.optional(),
 });
 
 const previousSchema = z.object({
@@ -48,6 +70,7 @@ const previousSchema = z.object({
   avg_resolution_hours: z.number().nonnegative().nullable(),
   reopen_rate_pct: z.number().min(0).max(100),
   open_incidents_at_close: z.number().int().nonnegative(),
+  quick_consultations: quickConsultationsPreviousSchema.optional(),
 });
 
 const filtersSchema = z.object({

@@ -9,6 +9,9 @@ export type {
   HsmTopProvider,
   HsmIncidentPriority,
   HsmPeriodFilter,
+  HsmQuickConsultationsCurrent,
+  HsmQuickConsultationsPrevious,
+  HsmQuickConsultationByTechnician,
 } from "./types";
 export {
   PRIORITY_LABELS,

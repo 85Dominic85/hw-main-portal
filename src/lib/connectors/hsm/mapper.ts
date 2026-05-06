@@ -6,6 +6,9 @@ import type {
   HsmIncidentsByPriority,
   HsmMetrics,
   HsmPreviousMetrics,
+  HsmQuickConsultationByTechnician,
+  HsmQuickConsultationsCurrent,
+  HsmQuickConsultationsPrevious,
   HsmTopProvider,
 } from "./types";
 
@@ -51,6 +54,9 @@ function mapCurrent(raw: HsmApiResponse["current"]): HsmCurrentMetrics {
     incidentsByPriority: raw.incidents_by_priority.map(mapIncidentByPriority),
     agingDistribution: raw.aging_distribution.map(mapAging),
     topProviders: raw.top_providers.map(mapProvider),
+    quickConsultations: raw.quick_consultations
+      ? mapQuickConsultationsCurrent(raw.quick_consultations)
+      : null,
   };
 }
 
@@ -60,6 +66,40 @@ function mapPrevious(raw: HsmApiResponse["previous"]): HsmPreviousMetrics {
     avgResolutionHours: raw.avg_resolution_hours,
     reopenRatePct: raw.reopen_rate_pct,
     openIncidentsAtClose: raw.open_incidents_at_close,
+    quickConsultations: raw.quick_consultations
+      ? mapQuickConsultationsPrevious(raw.quick_consultations)
+      : null,
+  };
+}
+
+function mapQuickConsultationsCurrent(
+  raw: NonNullable<HsmApiResponse["current"]["quick_consultations"]>,
+): HsmQuickConsultationsCurrent {
+  return {
+    count: raw.count,
+    totalMinutes: raw.total_minutes,
+    avgMinutes: raw.avg_minutes,
+    byTechnician: raw.by_technician.map(mapQuickByTechnician),
+    conversionRatePct: raw.conversion_rate_pct,
+  };
+}
+
+function mapQuickConsultationsPrevious(
+  raw: NonNullable<HsmApiResponse["previous"]["quick_consultations"]>,
+): HsmQuickConsultationsPrevious {
+  return {
+    count: raw.count,
+    totalMinutes: raw.total_minutes,
+  };
+}
+
+function mapQuickByTechnician(
+  raw: NonNullable<HsmApiResponse["current"]["quick_consultations"]>["by_technician"][number],
+): HsmQuickConsultationByTechnician {
+  return {
+    name: raw.name,
+    count: raw.count,
+    totalMinutes: raw.total_minutes,
   };
 }
 

@@ -220,4 +220,75 @@ describe("mapHsmResponse", () => {
     expect(m.current.avgRmaTurnaroundDays).toBeNull();
     expect(m.current.topProviders[0]?.avgTurnaroundDays).toBeNull();
   });
+
+  // ─── Carga oculta — quick_consultations (HSM v1.1.0+) ────────────────────
+
+  it("mapea quick_consultations cuando HSM devuelve el bloque", () => {
+    const payload: unknown = {
+      ...SAMPLE_PAYLOAD,
+      current: {
+        ...SAMPLE_PAYLOAD.current,
+        quick_consultations: {
+          count: 12,
+          total_minutes: 95,
+          avg_minutes: 7.9,
+          by_technician: [
+            { name: "Domi", count: 7, total_minutes: 60 },
+            { name: "Guille", count: 5, total_minutes: 35 },
+          ],
+          conversion_rate_pct: 16.7,
+        },
+      },
+      previous: {
+        ...SAMPLE_PAYLOAD.previous,
+        quick_consultations: { count: 8, total_minutes: 50 },
+      },
+    };
+    const parsed = hsmApiResponseSchema.parse(payload);
+    const m = mapHsmResponse(parsed);
+
+    expect(m.current.quickConsultations).not.toBeNull();
+    expect(m.current.quickConsultations?.count).toBe(12);
+    expect(m.current.quickConsultations?.totalMinutes).toBe(95);
+    expect(m.current.quickConsultations?.avgMinutes).toBe(7.9);
+    expect(m.current.quickConsultations?.conversionRatePct).toBe(16.7);
+    expect(m.current.quickConsultations?.byTechnician).toHaveLength(2);
+    expect(m.current.quickConsultations?.byTechnician[0]).toEqual({
+      name: "Domi",
+      count: 7,
+      totalMinutes: 60,
+    });
+
+    expect(m.previous.quickConsultations).not.toBeNull();
+    expect(m.previous.quickConsultations?.count).toBe(8);
+    expect(m.previous.quickConsultations?.totalMinutes).toBe(50);
+  });
+
+  it("quick_consultations = null cuando HSM aún no expone el bloque (retro-compat)", () => {
+    // SAMPLE_PAYLOAD no tiene quick_consultations → simulamos HSM v1.0.0.
+    const parsed = hsmApiResponseSchema.parse(SAMPLE_PAYLOAD);
+    const m = mapHsmResponse(parsed);
+    expect(m.current.quickConsultations).toBeNull();
+    expect(m.previous.quickConsultations).toBeNull();
+  });
+
+  it("acepta quick_consultations.avg_minutes = null (sin tiempo registrado)", () => {
+    const payload: unknown = {
+      ...SAMPLE_PAYLOAD,
+      current: {
+        ...SAMPLE_PAYLOAD.current,
+        quick_consultations: {
+          count: 3,
+          total_minutes: 0,
+          avg_minutes: null,
+          by_technician: [],
+          conversion_rate_pct: 0,
+        },
+      },
+    };
+    const parsed = hsmApiResponseSchema.parse(payload);
+    const m = mapHsmResponse(parsed);
+    expect(m.current.quickConsultations?.avgMinutes).toBeNull();
+    expect(m.current.quickConsultations?.byTechnician).toHaveLength(0);
+  });
 });

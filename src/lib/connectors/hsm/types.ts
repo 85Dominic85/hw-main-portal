@@ -31,6 +31,33 @@ export interface HsmTopProvider {
   avgTurnaroundDays: number | null;
 }
 
+/** Reparto de consultas rápidas por técnico (top 5 en HSM). */
+export interface HsmQuickConsultationByTechnician {
+  name: string;
+  count: number;
+  totalMinutes: number;
+}
+
+/**
+ * "Carga oculta" del depto — consultas rápidas in-situ atendidas en el periodo.
+ * Decisión 2026-05-06: NO entran en el cálculo SLA (sesgan el promedio
+ * porque se crean ya resueltas). Sí cuentan como capacidad resolutiva en
+ * su propio bloque para visibilizar el tiempo invertido en consultas.
+ */
+export interface HsmQuickConsultationsCurrent {
+  count: number;
+  totalMinutes: number;
+  avgMinutes: number | null;
+  byTechnician: HsmQuickConsultationByTechnician[];
+  /** % de consultas creadas en el periodo que después se convirtieron en formal. */
+  conversionRatePct: number;
+}
+
+export interface HsmQuickConsultationsPrevious {
+  count: number;
+  totalMinutes: number;
+}
+
 /** Métricas del periodo actual (las que se enseñan en el banner y la pestaña). */
 export interface HsmCurrentMetrics {
   openIncidents: number;
@@ -53,6 +80,8 @@ export interface HsmCurrentMetrics {
   agingDistribution: HsmAgingPoint[];
   /** Top 5 proveedores por rma_count. */
   topProviders: HsmTopProvider[];
+  /** Carga oculta: consultas rápidas en el periodo. null si HSM aún no las expone. */
+  quickConsultations: HsmQuickConsultationsCurrent | null;
 }
 
 /** Periodo anterior equivalente (mismo número de días, justo antes de `from`). */
@@ -62,6 +91,8 @@ export interface HsmPreviousMetrics {
   reopenRatePct: number;
   /** Snapshot de openIncidents al cierre del periodo anterior. */
   openIncidentsAtClose: number;
+  /** Comparativa MoM de la carga oculta. null si HSM aún no las expone. */
+  quickConsultations: HsmQuickConsultationsPrevious | null;
 }
 
 export interface HsmMetrics {

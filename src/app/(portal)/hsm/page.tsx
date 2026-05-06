@@ -274,6 +274,97 @@ async function HsmDashboard({ period }: { period: HsmPeriod }) {
         </div>
       </section>
 
+      {/* "Carga oculta" — consultas rápidas in-situ. Solo se renderiza si HSM
+          devuelve el bloque (v1.1.0+). En HSM v1.0.0 sin el bloque, no aparece. */}
+      {c.quickConsultations !== null && (
+        <section aria-label="Carga oculta" className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Carga oculta · Consultas rápidas
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Tiempo invertido en consultas atendidas in-situ. NO entra en el
+              cálculo SLA — son resoluciones momentáneas que justifican la
+              capacidad real del equipo.
+            </p>
+          </div>
+          {(() => {
+            const qc = c.quickConsultations;
+            if (!qc) return null;
+            const prevQc = p.quickConsultations;
+            const totalHours = qc.totalMinutes / 60;
+            const prevHours =
+              prevQc !== null ? prevQc.totalMinutes / 60 : null;
+            const countDelta =
+              prevQc !== null ? qc.count - prevQc.count : null;
+            const deltaSign = countDelta !== null && countDelta > 0 ? "+" : "";
+
+            return (
+              <>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <StatCard
+                    title="Consultas atendidas"
+                    value={qc.count.toLocaleString("es-ES")}
+                    description={
+                      prevQc !== null
+                        ? `Anterior: ${prevQc.count} (${deltaSign}${countDelta})`
+                        : "Sin datos del periodo anterior"
+                    }
+                  />
+                  <StatCard
+                    title="Horas dedicadas"
+                    value={`${totalHours.toFixed(1)}h`}
+                    description={
+                      prevHours !== null
+                        ? `Anterior: ${prevHours.toFixed(1)}h`
+                        : "Sin datos del periodo anterior"
+                    }
+                  />
+                  <StatCard
+                    title="Tiempo medio"
+                    value={
+                      qc.avgMinutes !== null
+                        ? `${qc.avgMinutes.toFixed(1)} min`
+                        : "—"
+                    }
+                    description="Por consulta"
+                  />
+                  <StatCard
+                    title="Conversión a formal"
+                    value={`${qc.conversionRatePct.toFixed(1)}%`}
+                    description="Consultas escaladas a incidencia"
+                  />
+                </div>
+
+                {qc.byTechnician.length > 0 && (
+                  <div className="rounded-md border border-border bg-card p-4">
+                    <h3 className="mb-2 text-sm font-semibold">
+                      Reparto por técnico
+                    </h3>
+                    <ul className="space-y-1 text-sm">
+                      {qc.byTechnician.map((t) => {
+                        const tHours = (t.totalMinutes / 60).toFixed(1);
+                        return (
+                          <li
+                            key={t.name}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="font-medium">{t.name}</span>
+                            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                              {t.count} consultas · {tHours}h
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </section>
+      )}
+
       <section
         aria-label="Distribuciones"
         className="grid grid-cols-1 gap-4 lg:grid-cols-2"
