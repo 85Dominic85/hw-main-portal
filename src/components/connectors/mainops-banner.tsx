@@ -69,22 +69,15 @@ export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
   const heroRatio = heroData.ops?.onTimeShippingPct ?? heroData.sla.onTimePct;
   const heroValue = Math.round(heroRatio * 1000) / 10; // 1 decimal en 0-100
 
-  // Semáforo: umbrales distintos según métrica.
-  //   - Si usamos `ops.onTimeShippingPct` (handling depto, ≤5d): ≥85 ok / ≥70 warn / <70 danger.
-  //     Calibrado para lo que el depto realmente controla (sin TIPSA).
-  //   - Si caemos al fallback `sla.onTimePct` (end-to-end con transporte): ≥95 / ≥85 / <85.
-  //     Más exigente porque SLA "completo" debería ser casi perfecto.
-  const heroStatus: ShieldStatus = heroData.ops
-    ? heroValue >= 85
-      ? "ok"
-      : heroValue >= 70
-        ? "warn"
-        : "danger"
-    : heroValue >= 95
-      ? "ok"
-      : heroValue >= 85
-        ? "warn"
-        : "danger";
+  // Semáforo unificado para los 3 escudos del home (decidido 2026-05-06):
+  // ≥75 ok / ≥60 warn / <60 danger. Aplica tanto si el hero viene de
+  // `ops.onTimeShippingPct` como del fallback `sla.onTimePct`.
+  const heroStatus: ShieldStatus =
+    heroValue >= 75 ? "ok" : heroValue >= 60 ? "warn" : "danger";
+
+  // Redondeo hacia arriba para que el número encaje mejor en el escudo
+  // sin decimales (Math.ceil: 76.9 → 77, 80.0 → 80, 84.1 → 85).
+  const heroDisplay = `${Math.ceil(heroValue)}%`;
 
   // Línea 1: volumen + revenue (sin ticket medio).
   const totalOrders = m.kpis.totalOrders;
@@ -144,6 +137,7 @@ export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
     <ToolSummary
       tool={tool}
       heroValue={heroValue}
+      heroDisplay={heroDisplay}
       heroStatus={heroStatus}
       updates={updates}
     />

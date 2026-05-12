@@ -53,13 +53,17 @@ export async function HwToolBanner({ from, to }: HwToolBannerProps = {}) {
   const m = updatesResult.ok ? updatesResult.data : null;
   if (!heroData || !m) return null; // unreachable
 
-  // Semáforo: ≥80 ok / ≥60 warn / <60 danger. Aplicado al hero (30d fijos).
+  // Semáforo unificado del home (decidido 2026-05-06):
+  // ≥75 ok / ≥60 warn / <60 danger. Aplicado al hero (30d fijos).
   const heroStatus: ShieldStatus =
-    heroData.successRateFirstTry >= 80
+    heroData.successRateFirstTry >= 75
       ? "ok"
       : heroData.successRateFirstTry >= 60
         ? "warn"
         : "danger";
+
+  // Redondeo hacia arriba para visualización limpia en el escudo.
+  const heroDisplay = `${Math.ceil(heroData.successRateFirstTry)}%`;
 
   const equipmentOwnPct = m.equipment.own.percent.toFixed(1);
   const equipmentExternalPct = m.equipment.external.percent.toFixed(1);
@@ -89,6 +93,7 @@ export async function HwToolBanner({ from, to }: HwToolBannerProps = {}) {
     <ToolSummary
       tool={tool}
       heroValue={heroData.successRateFirstTry}
+      heroDisplay={heroDisplay}
       heroStatus={heroStatus}
       updates={updates}
     />
