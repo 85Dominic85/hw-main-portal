@@ -89,8 +89,8 @@ export async function HsmBanner({ from, to }: HsmBannerProps = {}) {
 
   if (heroHasResolved) {
     heroValue = heroCurrent.slaCompliancePct;
-    // Redondeo hacia arriba para visualización limpia (83.0 → 83, 77.4 → 78).
-    heroDisplay = `${Math.ceil(heroValue)}%`;
+    // Redondeo estándar al entero más cercano (83.0 → 83, 77.4 → 77, 77.5 → 78).
+    heroDisplay = `${Math.round(heroValue)}%`;
     // Semáforo unificado del home (decidido 2026-05-06):
     // ≥75 ok / ≥60 warn / <60 danger.
     heroStatus = heroValue >= 75 ? "ok" : heroValue >= 60 ? "warn" : "danger";

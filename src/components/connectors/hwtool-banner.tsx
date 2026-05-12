@@ -62,8 +62,8 @@ export async function HwToolBanner({ from, to }: HwToolBannerProps = {}) {
         ? "warn"
         : "danger";
 
-  // Redondeo hacia arriba para visualización limpia en el escudo.
-  const heroDisplay = `${Math.ceil(heroData.successRateFirstTry)}%`;
+  // Redondeo estándar al entero más cercano para visualización limpia.
+  const heroDisplay = `${Math.round(heroData.successRateFirstTry)}%`;
 
   const equipmentOwnPct = m.equipment.own.percent.toFixed(1);
   const equipmentExternalPct = m.equipment.external.percent.toFixed(1);

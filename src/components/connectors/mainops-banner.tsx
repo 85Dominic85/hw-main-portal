@@ -75,9 +75,9 @@ export async function MainOpsBanner({ from, to }: MainOpsBannerProps = {}) {
   const heroStatus: ShieldStatus =
     heroValue >= 75 ? "ok" : heroValue >= 60 ? "warn" : "danger";
 
-  // Redondeo hacia arriba para que el número encaje mejor en el escudo
-  // sin decimales (Math.ceil: 76.9 → 77, 80.0 → 80, 84.1 → 85).
-  const heroDisplay = `${Math.ceil(heroValue)}%`;
+  // Redondeo estándar al entero más cercano para que el número encaje
+  // mejor en el escudo sin decimales (76.4 → 76, 76.5 → 77, 76.9 → 77).
+  const heroDisplay = `${Math.round(heroValue)}%`;
 
   // Línea 1: volumen + revenue (sin ticket medio).
   const totalOrders = m.kpis.totalOrders;
