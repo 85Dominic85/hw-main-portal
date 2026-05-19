@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "crypto";
 import type { NextRequest } from "next/server";
 
 /**
@@ -53,17 +52,40 @@ function serviceUnavailableResponse(message: string): Response {
 }
 
 /**
- * Compara dos strings en tiempo constante para mitigar timing attacks.
- * Devuelve false si los lengths difieren (sin revelar info).
+ * Compara dos strings en tiempo constante (Edge-compatible).
+ *
+ * No usamos `node:crypto.timingSafeEqual` porque Next.js corre el
+ * middleware en Edge Runtime por defecto y `node:crypto` no está
+ * disponible — silently falla y devuelve 401 con creds correctas.
+ *
+ * Implementación: XOR char-by-char acumulando en un int. Si todos
+ * coinciden, `result === 0`. Tiempo proporcional a la longitud, no
+ * a las diferencias.
  */
 function safeEqual(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
+  if (provided.length !== expected.length) return false;
+  let result = 0;
+  for (let i = 0; i < provided.length; i++) {
+    result |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Decodifica un string base64 a UTF-8. Edge-compatible (usa `atob` global).
+ * Devuelve null si el input es inválido.
+ */
+function decodeBase64Utf8(encoded: string): string | null {
   try {
-    return timingSafeEqual(a, b);
+    // atob produce un binary string; lo convertimos a bytes y luego a UTF-8.
+    const binary = atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder("utf-8").decode(bytes);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -105,10 +127,8 @@ export function requireAdminBasicAuth(req: NextRequest): Response | null {
   }
 
   const encoded = authHeader.slice("basic ".length).trim();
-  let decoded: string;
-  try {
-    decoded = Buffer.from(encoded, "base64").toString("utf-8");
-  } catch {
+  const decoded = decodeBase64Utf8(encoded);
+  if (decoded === null) {
     console.error("[admin-auth] base64 decode failed");
     return unauthorizedResponse();
   }
