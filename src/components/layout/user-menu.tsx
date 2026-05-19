@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, User } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -18,12 +18,14 @@ interface UserMenuProps {
   email: string;
   fullName: string | null;
   role: "admin" | "viewer";
-  /** Si true, el portal está en modo abierto (sin auth real). El badge
-   *  "demo" aparece junto al rol y el botón cerrar sesión se deshabilita. */
+  /** Si true, el portal está en modo abierto (sin auth real obligatoria). */
   openMode?: boolean;
+  /** Si true, no hay credenciales reales — visitante anónimo. */
+  isGuest?: boolean;
 }
 
-function getInitials(email: string, fullName: string | null): string {
+function getInitials(email: string, fullName: string | null, isGuest: boolean): string {
+  if (isGuest) return "?";
   if (fullName) {
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
@@ -40,52 +42,85 @@ function getInitials(email: string, fullName: string | null): string {
   return local.slice(0, 2).toUpperCase() || "U";
 }
 
-export function UserMenu({ email, fullName, role, openMode = false }: UserMenuProps) {
+export function UserMenu({
+  email,
+  fullName,
+  role,
+  openMode = false,
+  isGuest = false,
+}: UserMenuProps) {
   const [isPending, startTransition] = React.useTransition();
-  const initials = getInitials(email, fullName);
+  const initials = getInitials(email, fullName, isGuest);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground",
-          "transition-all hover:bg-secondary/80",
+          "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold",
+          isGuest
+            ? "bg-muted text-muted-foreground"
+            : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "transition-all",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
-        aria-label="Menú de usuario"
+        aria-label={isGuest ? "Visitante invitado" : "Menú de usuario"}
       >
-        {initials}
+        {isGuest ? <User className="h-4 w-4" aria-hidden="true" /> : initials}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="flex flex-col gap-0.5 font-normal">
-          {fullName && <span className="font-semibold">{fullName}</span>}
-          <span className="truncate text-xs text-muted-foreground" title={email}>
-            {email}
-          </span>
-          <div className="mt-1 flex flex-wrap items-center gap-1">
-            <span className="inline-flex w-fit items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-              {role}
-            </span>
-            {openMode && (
-              <span
-                className="inline-flex w-fit items-center rounded bg-muted/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-                title="Portal abierto — sin autenticación real"
-              >
-                demo
+          {isGuest ? (
+            <>
+              <span className="font-semibold">Invitado</span>
+              <span className="text-xs text-muted-foreground">
+                Portal abierto · consulta sin sesión
               </span>
-            )}
-          </div>
+              <div className="mt-1">
+                <span className="inline-flex w-fit items-center rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Sin credenciales
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              {fullName && <span className="font-semibold">{fullName}</span>}
+              <span className="truncate text-xs text-muted-foreground" title={email}>
+                {email}
+              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                <span className="inline-flex w-fit items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                  {role}
+                </span>
+                {openMode && (
+                  <span
+                    className="inline-flex w-fit items-center rounded bg-muted/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+                    title="Sesión Basic Auth del área admin"
+                  >
+                    admin auth
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {openMode ? (
+        {isGuest ? (
           <DropdownMenuItem
             disabled
-            className="cursor-not-allowed text-muted-foreground"
-            title="Portal abierto — no hay sesión que cerrar"
+            className="cursor-not-allowed text-muted-foreground text-xs"
+            title="Visitante anónimo — no hay sesión"
+          >
+            Para gestionar configuración, ve a Admin.
+          </DropdownMenuItem>
+        ) : openMode ? (
+          <DropdownMenuItem
+            disabled
+            className="cursor-not-allowed text-muted-foreground text-xs"
+            title="Cierra el navegador para terminar la sesión Basic Auth"
           >
             <LogOut className="h-4 w-4 opacity-50" aria-hidden="true" />
-            Portal abierto
+            Cierra el navegador para salir
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem

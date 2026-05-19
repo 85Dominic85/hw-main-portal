@@ -22,7 +22,10 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/mainops", label: "Logística", icon: Package, enabled: true },
   { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true },
-  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
+  // /admin sigue visible para todos (la auth real la hace Basic Auth en el
+  // middleware). El sidebar no oculta el link a guests para que sepan dónde
+  // está el área administrativa — el prompt aparece al hacer click.
+  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true },
 ] as const;
 
 interface SidebarNavProps {

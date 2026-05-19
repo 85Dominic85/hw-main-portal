@@ -90,58 +90,79 @@ function decodeBase64Utf8(encoded: string): string | null {
 }
 
 /**
- * Verifica las credenciales Basic Auth contra la allowlist + password
- * compartida. Devuelve `null` si todo OK (el handler puede continuar),
- * o `NextResponse` con el error correspondiente.
+ * Valida un header `Authorization: Basic …` contra la allowlist +
+ * password. Pura — no devuelve Response, solo el resultado.
  *
- * - 503 si `PORTAL_ADMIN_PASSWORD` no está set en server.
- * - 401 si el header está ausente, malformado, o las credenciales fallan.
- *   El navegador mostrará el prompt nativo "Sign in" gracias a
- *   `WWW-Authenticate: Basic realm=…`.
+ * Devuelve `{ email }` si las credenciales son válidas (email autorizado
+ * + password correcta). Devuelve `null` si falta, está malformado, o
+ * cualquier credencial no coincide. Si las env vars no están configuradas
+ * devuelve `{ misconfigured: true }` para que el caller pueda diferenciar.
+ *
+ * Lo usa tanto el middleware (para devolver 401) como el server component
+ * que pinta el avatar (para identificar al usuario en el menú).
  */
-export function requireAdminBasicAuth(req: NextRequest): Response | null {
-  const expectedPassword = process.env.PORTAL_ADMIN_PASSWORD;
-  if (!expectedPassword) {
-    return serviceUnavailableResponse(
-      "Admin auth not configured.\n" +
-        "Set PORTAL_ADMIN_PASSWORD env var in Vercel and redeploy.",
-    );
-  }
+export type BasicAuthResult =
+  | { ok: true; email: string }
+  | { ok: false; misconfigured: boolean };
 
+export function validateBasicAuth(
+  authHeader: string | null | undefined,
+): BasicAuthResult {
+  const expectedPassword = process.env.PORTAL_ADMIN_PASSWORD;
   const adminEmailsCsv = process.env.PORTAL_ADMIN_EMAILS ?? "";
   const adminEmails = adminEmailsCsv
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter((s) => s.length > 0);
 
-  if (adminEmails.length === 0) {
-    return serviceUnavailableResponse(
-      "Admin allowlist empty.\n" +
-        "Set PORTAL_ADMIN_EMAILS env var (CSV) in Vercel and redeploy.",
-    );
+  if (!expectedPassword || adminEmails.length === 0) {
+    return { ok: false, misconfigured: true };
   }
 
-  const authHeader = req.headers.get("authorization") ?? "";
-  if (!authHeader.toLowerCase().startsWith("basic ")) {
-    return unauthorizedResponse();
+  if (!authHeader || !authHeader.toLowerCase().startsWith("basic ")) {
+    return { ok: false, misconfigured: false };
   }
 
   const encoded = authHeader.slice("basic ".length).trim();
   const decoded = decodeBase64Utf8(encoded);
-  if (decoded === null) return unauthorizedResponse();
+  if (decoded === null) return { ok: false, misconfigured: false };
 
   // Formato esperado: "email:password". Email puede contener ":" en teoría,
   // así que partimos por el PRIMER ":".
   const colonIdx = decoded.indexOf(":");
-  if (colonIdx === -1) return unauthorizedResponse();
+  if (colonIdx === -1) return { ok: false, misconfigured: false };
   const email = decoded.slice(0, colonIdx).trim().toLowerCase();
   const password = decoded.slice(colonIdx + 1);
 
-  // El email debe estar en la allowlist (constante-time check sobre el match).
   const emailAuthorized = adminEmails.some((e) => safeEqual(email, e));
-  if (!emailAuthorized) return unauthorizedResponse();
+  if (!emailAuthorized) return { ok: false, misconfigured: false };
 
-  if (!safeEqual(password, expectedPassword)) return unauthorizedResponse();
+  if (!safeEqual(password, expectedPassword)) {
+    return { ok: false, misconfigured: false };
+  }
 
-  return null;
+  return { ok: true, email };
+}
+
+/**
+ * Verifica las credenciales Basic Auth contra la allowlist + password
+ * compartida. Devuelve `null` si todo OK (el handler puede continuar),
+ * o `Response` con el error correspondiente.
+ *
+ * - 503 si `PORTAL_ADMIN_PASSWORD` / `PORTAL_ADMIN_EMAILS` no están set.
+ * - 401 si el header está ausente, malformado, o las credenciales fallan.
+ *   El navegador mostrará el prompt nativo "Sign in" gracias a
+ *   `WWW-Authenticate: Basic realm=…`.
+ */
+export function requireAdminBasicAuth(req: NextRequest): Response | null {
+  const authHeader = req.headers.get("authorization");
+  const result = validateBasicAuth(authHeader);
+  if (result.ok) return null;
+  if (result.misconfigured) {
+    return serviceUnavailableResponse(
+      "Admin auth not configured.\n" +
+        "Set PORTAL_ADMIN_PASSWORD and PORTAL_ADMIN_EMAILS env vars in Vercel and redeploy.",
+    );
+  }
+  return unauthorizedResponse();
 }

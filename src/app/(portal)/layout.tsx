@@ -35,7 +35,12 @@ export default async function PortalLayout({
       <SidebarNav role={user.role} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar
-          user={{ email: user.email, fullName: user.fullName, role: user.role }}
+          user={{
+            email: user.email,
+            fullName: user.fullName,
+            role: user.role,
+            isGuest: user.isGuest,
+          }}
           openMode={AUTH_BYPASS_ENABLED}
         />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>

@@ -1,17 +1,24 @@
 import "server-only";
 
 import { cache } from "react";
+import { headers } from "next/headers";
 
 import { createSupabaseServerClient } from "./supabase-server";
 import { inferRoleFromEmail, type PortalRole } from "./roles";
-import { AUTH_BYPASS_ENABLED, getBypassUser } from "./bypass";
+import { AUTH_BYPASS_ENABLED } from "./bypass";
+import { validateBasicAuth } from "./admin-basic-auth";
 
 export interface PortalSessionUser {
   id: string;
   email: string;
   role: PortalRole;
   fullName: string | null;
+  /** True si es un visitante anónimo (portal abierto, sin auth real). */
+  isGuest: boolean;
 }
+
+const BYPASS_USER_ID = "00000000-0000-0000-0000-000000000000";
+const GUEST_USER_ID = "00000000-0000-0000-0000-00000000guest";
 
 /**
  * Devuelve el usuario actual con su rol del portal.
@@ -25,12 +32,33 @@ export interface PortalSessionUser {
  * `getCurrentUser()` 5 veces, se ejecuta una sola.
  */
 export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> => {
-  // Modo bypass — entorno cerrado. Devuelve admin sintético sin tocar Supabase.
+  // Modo bypass — portal abierto para consulta. Identificamos al visitante:
+  //   - Si la request actual lleva un Basic Auth header válido (estamos
+  //     viendo /admin/* o el browser sigue mandando el header tras autenticar),
+  //     devolvemos el user real con role admin.
+  //   - Si no, devolvemos un "invitado": viewer sin email, fullName "Invitado".
+  //     El UserMenu lo muestra como tal en lugar de inventar un "Demo admin".
   if (AUTH_BYPASS_ENABLED) {
-    const fake = getBypassUser();
-    return fake
-      ? { id: fake.id, email: fake.email, role: fake.role, fullName: fake.fullName }
-      : null;
+    const headersList = await headers();
+    const result = validateBasicAuth(headersList.get("authorization"));
+
+    if (result.ok) {
+      return {
+        id: BYPASS_USER_ID,
+        email: result.email,
+        role: "admin",
+        fullName: null,
+        isGuest: false,
+      };
+    }
+
+    return {
+      id: GUEST_USER_ID,
+      email: "",
+      role: "viewer",
+      fullName: "Invitado",
+      isGuest: true,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -50,6 +78,7 @@ export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> 
       email: user.email,
       role: claimRole,
       fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
+      isGuest: false,
     };
   }
 
@@ -68,6 +97,7 @@ export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> 
         email: user.email,
         role: portalUser.role as PortalRole,
         fullName: portalUser.full_name ?? null,
+        isGuest: false,
       };
     }
   } catch {
@@ -80,6 +110,7 @@ export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> 
     email: user.email,
     role: inferRoleFromEmail(user.email),
     fullName: null,
+    isGuest: false,
   };
 });
 

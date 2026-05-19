@@ -30,9 +30,10 @@ interface TopbarProps {
     email: string;
     fullName: string | null;
     role: "admin" | "viewer";
+    isGuest: boolean;
   };
-  /** Si true, el portal está en modo abierto (sin auth real). El UserMenu
-   *  muestra un badge "demo" y el botón cerrar sesión queda deshabilitado. */
+  /** Si true, el portal está en modo abierto (sin auth real obligatoria).
+   *  El UserMenu adapta el copy según `user.isGuest`. */
   openMode?: boolean;
 }
 
@@ -68,6 +69,7 @@ export function Topbar({ user, openMode = false }: TopbarProps) {
           fullName={user.fullName}
           role={user.role}
           openMode={openMode}
+          isGuest={user.isGuest}
         />
       </div>
     </header>
