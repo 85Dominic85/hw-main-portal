@@ -109,6 +109,7 @@ export function requireAdminBasicAuth(req: NextRequest): Response | null {
   try {
     decoded = Buffer.from(encoded, "base64").toString("utf-8");
   } catch {
+    console.error("[admin-auth] base64 decode failed");
     return unauthorizedResponse();
   }
 
@@ -116,20 +117,40 @@ export function requireAdminBasicAuth(req: NextRequest): Response | null {
   // así que partimos por el PRIMER ":".
   const colonIdx = decoded.indexOf(":");
   if (colonIdx === -1) {
+    console.error("[admin-auth] decoded header missing ':'");
     return unauthorizedResponse();
   }
   const email = decoded.slice(0, colonIdx).trim().toLowerCase();
   const password = decoded.slice(colonIdx + 1);
 
+  // ─── LOGS DIAGNÓSTICO (temporal — quitar tras confirmar que funciona) ──
+  // Loggean a Vercel Runtime Logs sin exponer la password real ni el header
+  // completo. Útil para distinguir si falla por email no autorizado vs
+  // password incorrecta vs trimming/encoding.
+  console.error("[admin-auth] received email:", JSON.stringify(email));
+  console.error(
+    "[admin-auth] expected emails:",
+    JSON.stringify(adminEmails),
+  );
+  console.error(
+    "[admin-auth] password lengths — received:",
+    password.length,
+    "expected:",
+    expectedPassword.length,
+  );
+
   // El email debe estar en la allowlist (constante-time check sobre el match).
   const emailAuthorized = adminEmails.some((e) => safeEqual(email, e));
   if (!emailAuthorized) {
+    console.error("[admin-auth] FAIL: email not in allowlist");
     return unauthorizedResponse();
   }
 
   if (!safeEqual(password, expectedPassword)) {
+    console.error("[admin-auth] FAIL: password mismatch");
     return unauthorizedResponse();
   }
 
+  console.error("[admin-auth] OK: email + password validated");
   return null;
 }
