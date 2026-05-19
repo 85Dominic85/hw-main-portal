@@ -52,10 +52,17 @@ export function SidebarNav({ role }: SidebarNavProps) {
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
+          // Desactivar prefetch en /admin/* — el navegador prefetcha cualquier
+          // <Link> visible en viewport, y el endpoint responde 401 con
+          // WWW-Authenticate, lo que dispara el prompt de Basic Auth incluso
+          // cuando el user solo está mirando la home. Sin prefetch el prompt
+          // solo aparece al hacer click real en el item.
+          const isAdmin = item.href === "/admin" || item.href.startsWith("/admin/");
           return (
             <Link
               key={item.href}
               href={item.href}
+              prefetch={isAdmin ? false : undefined}
               aria-current={active ? "page" : undefined}
               aria-disabled={!item.enabled}
               tabIndex={item.enabled ? 0 : -1}
