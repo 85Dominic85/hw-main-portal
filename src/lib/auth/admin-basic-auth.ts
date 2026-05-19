@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "crypto";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 /**
  * HTTP Basic Auth para rutas administrativas del portal.
@@ -26,23 +26,30 @@ import { NextResponse, type NextRequest } from "next/server";
  * puede coexistir o reemplazarse — sólo afecta a `/admin/*`.
  */
 
-const REALM = "HW Main Portal — Admin";
+const REALM = "HW Main Portal Admin";
 
-function unauthorizedResponse(message?: string): NextResponse {
-  return new NextResponse(message ?? "Authentication required", {
+/**
+ * Devolvemos `Response` nativo (no `NextResponse`) porque algunos hosts
+ * (Vercel edge runtime) filtran `WWW-Authenticate` cuando viene en un
+ * `NextResponse`. El `Response` nativo lo pasa intacto y dispara el prompt
+ * nativo del navegador.
+ */
+function unauthorizedResponse(message?: string): Response {
+  const headers = new Headers();
+  headers.set("WWW-Authenticate", `Basic realm="${REALM}"`);
+  headers.set("Content-Type", "text/plain; charset=utf-8");
+  headers.set("Cache-Control", "no-store");
+  return new Response(message ?? "Authentication required", {
     status: 401,
-    headers: {
-      "WWW-Authenticate": `Basic realm="${REALM}", charset="UTF-8"`,
-      "Content-Type": "text/plain; charset=utf-8",
-    },
+    headers,
   });
 }
 
-function serviceUnavailableResponse(message: string): NextResponse {
-  return new NextResponse(message, {
-    status: 503,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
+function serviceUnavailableResponse(message: string): Response {
+  const headers = new Headers();
+  headers.set("Content-Type", "text/plain; charset=utf-8");
+  headers.set("Cache-Control", "no-store");
+  return new Response(message, { status: 503, headers });
 }
 
 /**
@@ -70,7 +77,7 @@ function safeEqual(provided: string, expected: string): boolean {
  *   El navegador mostrará el prompt nativo "Sign in" gracias a
  *   `WWW-Authenticate: Basic realm=…`.
  */
-export function requireAdminBasicAuth(req: NextRequest): NextResponse | null {
+export function requireAdminBasicAuth(req: NextRequest): Response | null {
   const expectedPassword = process.env.PORTAL_ADMIN_PASSWORD;
   if (!expectedPassword) {
     return serviceUnavailableResponse(
