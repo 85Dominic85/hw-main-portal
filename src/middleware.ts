@@ -2,14 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseMiddlewareClient } from "@/lib/auth/supabase-middleware";
 import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
+import { requireAdminBasicAuth } from "@/lib/auth/admin-basic-auth";
 
 /**
  * Middleware del portal.
  *
  * Reglas:
- *   - Si `PORTAL_AUTH_BYPASS=true`: deja pasar todo. Modo entorno cerrado.
+ *   - **`/admin/*`**: SIEMPRE pide HTTP Basic Auth (independiente del bypass).
+ *     Solo jj.gallego@ y domingo.bueno@ pueden gestionar umbrales, notas,
+ *     metas y manual entries. Credenciales en env vars PORTAL_ADMIN_EMAILS
+ *     y PORTAL_ADMIN_PASSWORD.
+ *   - Si `PORTAL_AUTH_BYPASS=true`: deja pasar todo el resto. Modo abierto.
  *   - Rutas públicas: `/login`, `/api/auth/callback`. Cualquiera entra.
- *   - Resto: requieren sesión Supabase válida. Si no, redirect a `/login`.
+ *   - Resto: requieren sesión Supabase válida (cuando Supabase Auth esté
+ *     activo). Si no, redirect a `/login`.
  *   - Si ya estás logueado y entras a `/login`, te manda a `/`.
  *
  * El allowlist `@qamarero.com` se aplica en el trigger SQL `handle_new_auth_user`,
@@ -22,7 +28,20 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+function isAdminPath(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
 export async function middleware(request: NextRequest) {
+  // /admin/* siempre protegido con Basic Auth, antes que cualquier otra regla.
+  // Esto permite que el portal funcione en modo abierto para el resto pero
+  // mantenga las páginas admin tras credenciales.
+  if (isAdminPath(request.nextUrl.pathname)) {
+    const authError = requireAdminBasicAuth(request);
+    if (authError) return authError;
+    // Auth OK → cae al flujo normal (en bypass o con Supabase).
+  }
+
   // Modo abierto (default): deja pasar todo y, si alguien entra a /login,
   // lo redirige a la home (no hay form que rellenar).
   if (AUTH_BYPASS_ENABLED) {
