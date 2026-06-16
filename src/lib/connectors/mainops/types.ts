@@ -9,6 +9,7 @@ export type MainOpsPurchaseType =
   | "hardware_one_off"
   | "hardware_financiacion"
   | "transferencias_saas"
+  | "saas_hardware"
   | "otro";
 
 export type MainOpsOrderStatus =

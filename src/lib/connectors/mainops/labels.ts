@@ -8,6 +8,7 @@ export const PURCHASE_TYPE_LABELS: Record<string, string> = {
   hardware_one_off: "Hardware",
   hardware_financiacion: "Hardware financiación",
   transferencias_saas: "Transferencias SaaS",
+  saas_hardware: "SaaS + Hardware",
   otro: "Otro",
 };
 
@@ -39,6 +40,7 @@ export const PURCHASE_TYPE_COLORS: Record<string, string> = {
   hardware_one_off: "hsl(var(--status-ok))",
   hardware_financiacion: "hsl(280 70% 60%)", // morado
   transferencias_saas: "hsl(195 70% 55%)", // cian
+  saas_hardware: "hsl(330 70% 60%)", // magenta
   otro: "hsl(var(--muted-foreground))",
 };
 

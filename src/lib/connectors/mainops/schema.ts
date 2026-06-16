@@ -10,13 +10,16 @@ import { z } from "zod";
  * muestran estado neutro sin romper la app.
  */
 
-const purchaseTypeSchema = z.enum([
-  "kit_digital",
-  "hardware_one_off",
-  "hardware_financiacion",
-  "transferencias_saas",
-  "otro",
-]);
+const purchaseTypeSchema = z
+  .enum([
+    "kit_digital",
+    "hardware_one_off",
+    "hardware_financiacion",
+    "transferencias_saas",
+    "saas_hardware",
+    "otro",
+  ])
+  .catch("otro");
 
 const orderStatusSchema = z.enum([
   "nuevo",
