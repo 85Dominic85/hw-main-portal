@@ -24,7 +24,9 @@ const topProviderSchema = z.object({
   provider_id: z.string(),
   provider_name: z.string(),
   rma_count: z.coerce.number().int().nonnegative(),
-  success_rate_pct: z.coerce.number().min(0).max(100),
+  // Sin .max(100): defensivo ante bugs upstream en queries de ratio.
+  // Si HSM emite >100 por una division mal calculada, no rompemos el shield.
+  success_rate_pct: z.coerce.number().nonnegative(),
   avg_turnaround_days: z.coerce.number().nonnegative().nullable(),
 });
 
@@ -40,7 +42,7 @@ const quickConsultationsCurrentSchema = z.object({
   total_minutes: z.coerce.number().int().nonnegative(),
   avg_minutes: z.coerce.number().nonnegative().nullable(),
   by_technician: z.array(quickConsultationByTechnicianSchema),
-  conversion_rate_pct: z.coerce.number().min(0).max(100),
+  conversion_rate_pct: z.coerce.number().nonnegative(),
 });
 
 const quickConsultationsPreviousSchema = z.object({
@@ -51,12 +53,15 @@ const quickConsultationsPreviousSchema = z.object({
 const currentSchema = z.object({
   open_incidents: z.coerce.number().int().nonnegative(),
   active_rmas: z.coerce.number().int().nonnegative(),
-  sla_compliance_pct: z.coerce.number().min(0).max(100),
+  // Sin .max(100) en los pcts: defensivo ante bugs upstream en queries de
+  // ratio. Si HSM emite >100 por una division mal calculada, no rompemos el
+  // shield. La UI clampea visualmente lo que exceda en mappers / formatters.
+  sla_compliance_pct: z.coerce.number().nonnegative(),
   overdue_count: z.coerce.number().int().nonnegative(),
   avg_resolution_hours: z.coerce.number().nonnegative().nullable(),
-  reopen_rate_pct: z.coerce.number().min(0).max(100),
+  reopen_rate_pct: z.coerce.number().nonnegative(),
   avg_rma_turnaround_days: z.coerce.number().nonnegative().nullable(),
-  critical_in_sla_pct: z.coerce.number().min(0).max(100).nullable(),
+  critical_in_sla_pct: z.coerce.number().nonnegative().nullable(),
   throughput_ratio: z.coerce.number().nonnegative(),
   incidents_by_priority: z.array(incidentByPrioritySchema),
   aging_distribution: z.array(agingPointSchema),
@@ -66,9 +71,9 @@ const currentSchema = z.object({
 });
 
 const previousSchema = z.object({
-  sla_compliance_pct: z.coerce.number().min(0).max(100),
+  sla_compliance_pct: z.coerce.number().nonnegative(),
   avg_resolution_hours: z.coerce.number().nonnegative().nullable(),
-  reopen_rate_pct: z.coerce.number().min(0).max(100),
+  reopen_rate_pct: z.coerce.number().nonnegative(),
   open_incidents_at_close: z.coerce.number().int().nonnegative(),
   quick_consultations: quickConsultationsPreviousSchema.optional(),
 });
