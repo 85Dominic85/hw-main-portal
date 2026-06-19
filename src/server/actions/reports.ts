@@ -12,7 +12,7 @@ import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
 import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
 
-const { reports, reportAuthors } = schema;
+const { reports, reportAuthors, portalUsers } = schema;
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
 
@@ -54,12 +54,30 @@ function revalidateReport(id: string) {
   revalidatePath("/reports");
 }
 
+async function ensurePortalUser(user: {
+  id: string;
+  email: string;
+  role: string;
+  fullName: string | null;
+}) {
+  await db
+    .insert(portalUsers)
+    .values({
+      id: user.id,
+      email: user.email || `${user.id}@portal.internal`,
+      role: user.role,
+      fullName: user.fullName,
+    })
+    .onConflictDoNothing();
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 export async function createReport(
   input: unknown,
 ): Promise<Result<{ id: string }>> {
   const user = await requireAdmin();
+  await ensurePortalUser(user);
 
   const parsed = createReportSchema.safeParse(input);
   if (!parsed.success) {
@@ -139,6 +157,7 @@ export async function saveSection(
   input: unknown,
 ): Promise<Result<{ savedAt: string }>> {
   const user = await requireAdmin();
+  await ensurePortalUser(user);
 
   const parsed = saveSectionSchema.safeParse(input);
   if (!parsed.success) {
@@ -185,6 +204,7 @@ export async function publishReport(
   input: unknown,
 ): Promise<Result<{ publishedAt: string }>> {
   const user = await requireAdmin();
+  await ensurePortalUser(user);
 
   const parsed = reportIdSchema.safeParse(input);
   if (!parsed.success) {
@@ -235,6 +255,7 @@ export async function publishReport(
 
 export async function unpublishReport(input: unknown): Promise<Result<true>> {
   const user = await requireAdmin();
+  await ensurePortalUser(user);
 
   const parsed = reportIdSchema.safeParse(input);
   if (!parsed.success) {
@@ -346,6 +367,7 @@ export async function cloneReport(
   input: unknown,
 ): Promise<Result<{ id: string }>> {
   const user = await requireAdmin();
+  await ensurePortalUser(user);
 
   const parsed = cloneReportSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.message };
