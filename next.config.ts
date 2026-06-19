@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["@react-pdf/renderer"],
   typedRoutes: true,
   env: {
     // Exponemos al cliente el dominio permitido para el placeholder del form.

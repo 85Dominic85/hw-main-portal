@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Download, Copy, ArrowLeft } from "lucide-react";
+import { Edit2, Download, FileDown, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getReportById } from "@/server/queries/reports";
 import { ReportViewer } from "@/components/reports/report-viewer";
+import { CopyNotionButton } from "@/components/reports/copy-notion-button";
 import { reportContentSchemaV1, kpiSnapshotSchema } from "@/lib/reports/schema";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
@@ -71,7 +72,7 @@ export default async function ReportViewPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isAdmin && report.status === "draft" && (
             <Button asChild variant="outline">
               <Link href={`/reports/${id}/edit`}>
@@ -86,6 +87,12 @@ export default async function ReportViewPage({ params }: PageProps) {
                 <a href={`/api/portal/reports/${id}/export/markdown`} download>
                   <Download className="mr-2 h-4 w-4" />
                   Markdown
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={`/api/portal/reports/${id}/export/pdf`} download>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  PDF
                 </a>
               </Button>
               <CopyNotionButton reportId={id} />
@@ -110,14 +117,5 @@ export default async function ReportViewPage({ params }: PageProps) {
         snapshot={snapshot?.success ? snapshot.data : null}
       />
     </div>
-  );
-}
-
-function CopyNotionButton({ reportId }: { reportId: string }) {
-  return (
-    <Button variant="outline" size="sm" id={`copy-notion-${reportId}`}>
-      <Copy className="mr-2 h-4 w-4" />
-      Copiar Notion
-    </Button>
   );
 }
