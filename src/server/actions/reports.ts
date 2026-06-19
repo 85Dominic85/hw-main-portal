@@ -10,7 +10,7 @@ import type { Result } from "@/lib/connectors/types";
 import { buildEmptyContent } from "@/lib/reports/defaults";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
-import { reportContentSchemaV1 } from "@/lib/reports/schema";
+import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
 
 const { reports, reportAuthors } = schema;
 
@@ -277,6 +277,134 @@ export async function deleteReport(input: unknown): Promise<Result<true>> {
 
   revalidateReport(reportId);
   return { ok: true, data: true };
+}
+
+const cloneReportSchema = z.object({
+  sourceReportId: z.string().uuid(),
+  isoYear: z.number().int(),
+  isoWeek: z.number().int().min(1).max(53),
+});
+
+const EMPTY_DOC = { type: "doc" as const, content: [] as [] };
+
+function buildClonedContent(src: ReportContent): ReportContent {
+  return {
+    ...src,
+    tesis: { doc: EMPTY_DOC },
+    highlights: { doc: EMPTY_DOC },
+    pabloComments: { doc: EMPTY_DOC },
+    executiveSummary: {
+      rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: null, comment: "" })),
+    },
+    amberRed: src.amberRed,
+    blockers: src.blockers,
+    decisions: { rows: src.decisions.rows.filter((r) => r.status !== "cerrada") },
+    configuraciones: {
+      ...src.configuraciones,
+      totalConfigs: null,
+      successRate1st: null,
+      successRate2nd: null,
+      problems: "",
+    },
+    envios: {
+      ...src.envios,
+      totalOps: null,
+      completed: null,
+      shipped: null,
+      pending: null,
+      grossRevenue: null,
+      avgDeliveryDays: null,
+      sla7dPct: null,
+      orders: src.envios.orders.filter(
+        (r) => r.status === "pendiente" || r.status === "bloqueado",
+      ),
+    },
+    soporte: {
+      ...src.soporte,
+      openIncidents: null,
+      activeRmas: null,
+      sla7dPct: null,
+      sla30dPct: null,
+      reopenRatePct: null,
+      avgResolutionHours: null,
+      rmaResponseUnder2hPct: null,
+      narrative: EMPTY_DOC,
+    },
+    cajones: src.cajones,
+    performance: {
+      members: src.performance.members.map((m) => ({
+        ...m,
+        kpis: m.kpis.map((k) => ({ ...k, value: "", status: "neutral" as const })),
+        narrative: EMPTY_DOC,
+      })),
+    },
+    nextFocus: src.nextFocus,
+  };
+}
+
+export async function cloneReport(
+  input: unknown,
+): Promise<Result<{ id: string }>> {
+  const user = await requireAdmin();
+
+  const parsed = cloneReportSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+  const { sourceReportId, isoYear, isoWeek } = parsed.data;
+
+  const [source] = await db
+    .select()
+    .from(reports)
+    .where(eq(reports.id, sourceReportId))
+    .limit(1);
+
+  if (!source) return { ok: false, error: "Informe origen no encontrado." };
+
+  const sourceContent = reportContentSchemaV1.parse(source.content ?? {});
+  const clonedContent = buildClonedContent(sourceContent);
+
+  const range = isoWeekToRange(isoYear, isoWeek);
+  const periodKey = formatWeekKey(isoYear, isoWeek);
+  const periodFrom = range.from.toISOString().slice(0, 10);
+  const periodTo = range.to.toISOString().slice(0, 10);
+  const title = `Informe ${periodKey}`;
+
+  try {
+    const [row] = await db
+      .insert(reports)
+      .values({
+        type: "weekly",
+        periodKey,
+        periodFrom,
+        periodTo,
+        isoYear,
+        isoWeek,
+        title,
+        content: clonedContent as unknown as Record<string, unknown>,
+        parentReportId: sourceReportId,
+        createdBy: user.id,
+      })
+      .returning({ id: reports.id });
+
+    if (!row) return { ok: false, error: "No se pudo crear el informe." };
+
+    await db.insert(reportAuthors).values({
+      reportId: row.id,
+      sectionKey: "meta",
+      userId: user.id,
+      action: "clone",
+      diffSummary: { sourceReportId, periodKey },
+    });
+
+    revalidateReport(row.id);
+    return { ok: true, data: { id: row.id } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return { ok: false, error: `Ya existe un informe para ${periodKey}.` };
+    }
+    return { ok: false, error: msg };
+  }
 }
 
 export async function setGlobalStatus(input: unknown): Promise<Result<true>> {

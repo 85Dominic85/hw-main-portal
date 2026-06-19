@@ -2,14 +2,16 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Download, FileDown, ArrowLeft } from "lucide-react";
 
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getReportById } from "@/server/queries/reports";
 import { ReportViewer } from "@/components/reports/report-viewer";
 import { CopyNotionButton } from "@/components/reports/copy-notion-button";
+import { CloneReportButton } from "@/components/reports/clone-report-button";
 import { reportContentSchemaV1, kpiSnapshotSchema } from "@/lib/reports/schema";
-import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
+import { formatWeekLabel, parseWeekKey, nextIsoWeek } from "@/lib/reports/iso-week";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -35,6 +37,14 @@ export default async function ReportViewPage({ params }: PageProps) {
   const periodLabel = weekInfo
     ? formatWeekLabel(weekInfo.isoYear, weekInfo.isoWeek)
     : report.periodKey;
+
+  const nextWeek =
+    isAdmin && report.type === "weekly" && report.status === "published" && weekInfo
+      ? nextIsoWeek(weekInfo.isoYear, weekInfo.isoWeek)
+      : null;
+  const nextWeekLabel = nextWeek
+    ? `W${nextWeek.isoWeek}`
+    : null;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -83,6 +93,14 @@ export default async function ReportViewPage({ params }: PageProps) {
           )}
           {report.status === "published" && (
             <>
+              {nextWeek && nextWeekLabel && (
+                <CloneReportButton
+                  reportId={id}
+                  nextIsoYear={nextWeek.isoYear}
+                  nextIsoWeek={nextWeek.isoWeek}
+                  nextPeriodLabel={nextWeekLabel}
+                />
+              )}
               <Button variant="outline" size="sm" asChild>
                 <a href={`/api/portal/reports/${id}/export/markdown`} download>
                   <Download className="mr-2 h-4 w-4" />

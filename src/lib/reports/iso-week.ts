@@ -91,6 +91,20 @@ export function parseWeekKey(key: string): { isoYear: number; isoWeek: number } 
 }
 
 /**
+ * Devuelve la semana ISO siguiente. Maneja el cambio de año.
+ * El 28 de diciembre siempre pertenece a la última semana ISO del año.
+ */
+export function nextIsoWeek(
+  isoYear: number,
+  isoWeek: number,
+): { isoYear: number; isoWeek: number } {
+  const dec28 = new Date(Date.UTC(isoYear, 11, 28));
+  const lastWeek = getIsoWeek(dec28).isoWeek;
+  if (isoWeek < lastWeek) return { isoYear, isoWeek: isoWeek + 1 };
+  return { isoYear: isoYear + 1, isoWeek: 1 };
+}
+
+/**
  * Etiqueta legible: "Semana 22 · 26 mayo – 1 jun 2026".
  */
 export function formatWeekLabel(isoYear: number, isoWeek: number): string {
