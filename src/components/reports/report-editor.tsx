@@ -9,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AutosaveIndicator, type AutosaveState } from "./autosave-indicator";
 import { TiptapEditor } from "./tiptap-editor";
+import { ExecutiveSummaryEditor } from "./sections/executive-summary-editor";
+import { AmberRedEditor } from "./sections/amber-red-editor";
+import { BlockersEditor } from "./sections/blockers-editor";
+import { DecisionsEditor } from "./sections/decisions-editor";
+import { ConfiguracionesEditor } from "./sections/configuraciones-editor";
+import { EnviosEditor } from "./sections/envios-editor";
+import { SoporteEditor } from "./sections/soporte-editor";
+import { CajonesEditor } from "./sections/cajones-editor";
+import { PerformanceEditor } from "./sections/performance-editor";
+import { NextFocusEditor } from "./sections/next-focus-editor";
 import { saveSection, publishReport, setGlobalStatus } from "@/server/actions/reports";
 import type { ReportContent } from "@/lib/reports/schema";
 
@@ -29,6 +39,13 @@ interface ReportEditorProps {
 
 type SectionKey = keyof ReportContent;
 
+const DEFAULT_OPEN = new Set([
+  "tesis",
+  "executiveSummary",
+  "highlights",
+  "nextFocus",
+]);
+
 export function ReportEditor({ report, initialContent }: ReportEditorProps) {
   const router = useRouter();
   const [content, setContent] = useState<ReportContent>(initialContent);
@@ -38,27 +55,19 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
     report.globalStatus,
   );
   const [isPublishing, startPublishing] = useTransition();
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["tesis", "executiveSummary", "highlights"]),
-  );
+  const [openSections, setOpenSections] = useState<Set<string>>(DEFAULT_OPEN);
 
-  // Debounce timer per section
-  const debounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
+  const debounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const retryCountRef = useRef<Map<string, number>>(new Map());
 
   const scheduleAutosave = useCallback(
     (sectionKey: string, payload: unknown) => {
-      // Limpiar timer previo de la misma sección
       const existing = debounceRef.current.get(sectionKey);
       if (existing) clearTimeout(existing);
-
       setAutosaveState("saving");
 
       const timer = setTimeout(async () => {
         const retries = retryCountRef.current.get(sectionKey) ?? 0;
-
         const result = await saveSection({ reportId: report.id, sectionKey, payload });
 
         if (result.ok) {
@@ -69,12 +78,11 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         } else {
           if (retries < 2) {
             retryCountRef.current.set(sectionKey, retries + 1);
-            // Reintento exponencial
             setTimeout(() => scheduleAutosave(sectionKey, payload), 2000 * (retries + 1));
           } else {
             retryCountRef.current.set(sectionKey, 0);
             setAutosaveState("error");
-            toast.error(`Error al guardar la sección. ${result.error}`);
+            toast.error(`Error al guardar "${sectionKey}". ${result.error}`);
           }
         }
       }, 1500);
@@ -105,19 +113,18 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         toast.error(result.error);
         return;
       }
-      toast.success("Informe publicado correctamente.");
+      toast.success("Informe publicado.");
       router.push(`/reports/${report.id}`);
     });
   }
 
   async function handleGlobalStatus(status: "verde" | "amarillo" | "rojo") {
     const result = await setGlobalStatus({ reportId: report.id, globalStatus: status });
-    if (result.ok) {
-      setGlobalStatusState(status);
-    } else {
-      toast.error(result.error);
-    }
+    if (result.ok) setGlobalStatusState(status);
+    else toast.error(result.error);
   }
+
+  const isOpen = (key: string) => openSections.has(key);
 
   return (
     <div className="space-y-4">
@@ -125,16 +132,17 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
         <div className="flex items-center gap-3">
           <AutosaveIndicator state={autosaveState} lastSavedAt={lastSavedAt} />
-          {/* Semáforo global */}
           <div className="flex items-center gap-1">
             {(["verde", "amarillo", "rojo"] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => handleGlobalStatus(s)}
-                title={`Estado: ${s}`}
+                title={`Estado global: ${s}`}
                 className={`h-4 w-4 rounded-full transition-opacity ${
-                  globalStatus === s ? "opacity-100 ring-2 ring-offset-1 ring-foreground/30" : "opacity-40 hover:opacity-70"
+                  globalStatus === s
+                    ? "opacity-100 ring-2 ring-offset-1 ring-foreground/30"
+                    : "opacity-40 hover:opacity-70"
                 } ${
                   s === "verde"
                     ? "bg-status-ok"
@@ -161,12 +169,8 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         </Button>
       </div>
 
-      {/* Sección: Tesis */}
-      <EditorSection
-        title="🎯 Tesis de la semana"
-        open={openSections.has("tesis")}
-        onToggle={() => toggleSection("tesis")}
-      >
+      {/* 🎯 Tesis */}
+      <EditorSection title="🎯 Tesis de la semana" sectionKey="tesis" open={isOpen("tesis")} onToggle={() => toggleSection("tesis")}>
         <TiptapEditor
           value={content.tesis.doc}
           onChange={(doc) => updateSection("tesis", { doc })}
@@ -174,45 +178,103 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         />
       </EditorSection>
 
-      {/* Sección: Highlights */}
-      <EditorSection
-        title="✅ Highlights"
-        open={openSections.has("highlights")}
-        onToggle={() => toggleSection("highlights")}
-      >
-        <TiptapEditor
-          value={content.highlights.doc}
-          onChange={(doc) => updateSection("highlights", { doc })}
-          placeholder="Logros y hitos destacados de la semana…"
+      {/* 🚦 Resumen ejecutivo */}
+      <EditorSection title="🚦 Resumen ejecutivo" sectionKey="executiveSummary" open={isOpen("executiveSummary")} onToggle={() => toggleSection("executiveSummary")}>
+        <ExecutiveSummaryEditor
+          value={content.executiveSummary}
+          onChange={(v) => updateSection("executiveSummary", v)}
         />
       </EditorSection>
 
-      {/* Sección: Comentarios Pablo (placeholder) */}
-      <EditorSection
-        title="💬 Comentarios Pablo"
-        open={openSections.has("pabloComments")}
-        onToggle={() => toggleSection("pabloComments")}
-      >
+      {/* 🔴🟡 Detalle ámbar/rojo */}
+      <EditorSection title="🔴🟡 Detalle ámbar / rojo" sectionKey="amberRed" open={isOpen("amberRed")} onToggle={() => toggleSection("amberRed")}>
+        <AmberRedEditor
+          value={content.amberRed}
+          onChange={(v) => updateSection("amberRed", v)}
+        />
+      </EditorSection>
+
+      {/* ✅ Highlights */}
+      <EditorSection title="✅ Highlights" sectionKey="highlights" open={isOpen("highlights")} onToggle={() => toggleSection("highlights")}>
+        <TiptapEditor
+          value={content.highlights.doc}
+          onChange={(doc) => updateSection("highlights", { doc })}
+          placeholder="Logros y hitos de la semana…"
+        />
+      </EditorSection>
+
+      {/* 🚧 Bloqueos */}
+      <EditorSection title="🚧 Bloqueos" sectionKey="blockers" open={isOpen("blockers")} onToggle={() => toggleSection("blockers")}>
+        <BlockersEditor
+          value={content.blockers}
+          onChange={(v) => updateSection("blockers", v)}
+        />
+      </EditorSection>
+
+      {/* 🔴 Decisiones */}
+      <EditorSection title="🔴 Decisiones" sectionKey="decisions" open={isOpen("decisions")} onToggle={() => toggleSection("decisions")}>
+        <DecisionsEditor
+          value={content.decisions}
+          onChange={(v) => updateSection("decisions", v)}
+        />
+      </EditorSection>
+
+      {/* 🛠 Configuraciones */}
+      <EditorSection title="🛠 Configuraciones (Guille)" sectionKey="configuraciones" open={isOpen("configuraciones")} onToggle={() => toggleSection("configuraciones")}>
+        <ConfiguracionesEditor
+          value={content.configuraciones}
+          onChange={(v) => updateSection("configuraciones", v)}
+        />
+      </EditorSection>
+
+      {/* 🛠 Envíos */}
+      <EditorSection title="🛠 Envíos / Logística (Domi)" sectionKey="envios" open={isOpen("envios")} onToggle={() => toggleSection("envios")}>
+        <EnviosEditor
+          value={content.envios}
+          onChange={(v) => updateSection("envios", v)}
+        />
+      </EditorSection>
+
+      {/* 🛠 Soporte */}
+      <EditorSection title="🛠 Soporte HW (Domi + JJ)" sectionKey="soporte" open={isOpen("soporte")} onToggle={() => toggleSection("soporte")}>
+        <SoporteEditor
+          value={content.soporte}
+          onChange={(v) => updateSection("soporte", v)}
+        />
+      </EditorSection>
+
+      {/* 🛠 Cajones */}
+      <EditorSection title="🛠 Cajones inteligentes (JJ)" sectionKey="cajones" open={isOpen("cajones")} onToggle={() => toggleSection("cajones")}>
+        <CajonesEditor
+          value={content.cajones}
+          onChange={(v) => updateSection("cajones", v)}
+        />
+      </EditorSection>
+
+      {/* 👥 Performance */}
+      <EditorSection title="👥 Performance del equipo" sectionKey="performance" open={isOpen("performance")} onToggle={() => toggleSection("performance")}>
+        <PerformanceEditor
+          value={content.performance}
+          onChange={(v) => updateSection("performance", v)}
+        />
+      </EditorSection>
+
+      {/* 📌 Foco próxima semana */}
+      <EditorSection title="📌 Foco próxima semana" sectionKey="nextFocus" open={isOpen("nextFocus")} onToggle={() => toggleSection("nextFocus")}>
+        <NextFocusEditor
+          value={content.nextFocus}
+          onChange={(v) => updateSection("nextFocus", v)}
+        />
+      </EditorSection>
+
+      {/* 💬 Comentarios Pablo */}
+      <EditorSection title="💬 Comentarios Pablo" sectionKey="pabloComments" open={isOpen("pabloComments")} onToggle={() => toggleSection("pabloComments")}>
         <TiptapEditor
           value={content.pabloComments.doc}
           onChange={(doc) => updateSection("pabloComments", { doc })}
           placeholder="Placeholder para respuesta de Pablo…"
         />
       </EditorSection>
-
-      {/* Secciones próximas (Fase 2) — collapsed con nota */}
-      {["executiveSummary", "amberRed", "blockers", "decisions", "configuraciones", "envios", "soporte", "cajones", "performance", "nextFocus"].map((key) => (
-        <div
-          key={key}
-          className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-4 py-3"
-        >
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium capitalize">{sectionLabel(key)}</span>
-            {" — "}
-            <span className="italic">Disponible en Fase 2</span>
-          </p>
-        </div>
-      ))}
     </div>
   );
 }
@@ -224,16 +286,14 @@ function EditorSection({
   children,
 }: {
   title: string;
+  sectionKey: string;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
     <Card>
-      <CardHeader
-        className="cursor-pointer select-none py-3"
-        onClick={onToggle}
-      >
+      <CardHeader className="cursor-pointer select-none py-3" onClick={onToggle}>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium">{title}</CardTitle>
           {open ? (
@@ -243,28 +303,7 @@ function EditorSection({
           )}
         </div>
       </CardHeader>
-      {open && (
-        <CardContent className="pt-0">
-          {children}
-        </CardContent>
-      )}
+      {open && <CardContent className="pt-0">{children}</CardContent>}
     </Card>
   );
-}
-
-const SECTION_LABELS: Record<string, string> = {
-  executiveSummary: "🚦 Resumen ejecutivo",
-  amberRed: "🔴🟡 Detalle ámbar/rojo",
-  blockers: "🚧 Bloqueos",
-  decisions: "🔴 Decisiones",
-  configuraciones: "🛠 Configuraciones",
-  envios: "🛠 Envíos / Logística",
-  soporte: "🛠 Soporte HW",
-  cajones: "🛠 Cajones inteligentes",
-  performance: "👥 Performance equipo",
-  nextFocus: "📌 Foco próxima semana",
-};
-
-function sectionLabel(key: string): string {
-  return SECTION_LABELS[key] ?? key;
 }

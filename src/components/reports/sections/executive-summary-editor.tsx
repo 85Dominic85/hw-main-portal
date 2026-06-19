@@ -1,0 +1,182 @@
+"use client";
+
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { ExecutiveSummary, ExecutiveSummaryRow } from "@/lib/reports/schema";
+import { cn } from "@/lib/utils/cn";
+
+const STATUS_LABELS: Record<string, string> = {
+  verde: "🟢",
+  amarillo: "🟡",
+  rojo: "🔴",
+  neutral: "—",
+};
+
+const STATUS_OPTIONS = ["verde", "amarillo", "rojo", "neutral"] as const;
+
+interface Props {
+  value: ExecutiveSummary;
+  onChange: (v: ExecutiveSummary) => void;
+}
+
+function newRow(): ExecutiveSummaryRow {
+  return {
+    id: crypto.randomUUID(),
+    kpiKey: crypto.randomUUID().slice(0, 8),
+    label: "",
+    unit: "",
+    target: null,
+    actual: null,
+    source: "manual",
+    status: "neutral",
+    comment: "",
+  };
+}
+
+function updateRow(
+  rows: ExecutiveSummaryRow[],
+  id: string,
+  patch: Partial<ExecutiveSummaryRow>,
+): ExecutiveSummaryRow[] {
+  return rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
+}
+
+export function ExecutiveSummaryEditor({ value, onChange }: Props) {
+  const rows = value.rows;
+
+  function handleChange(id: string, patch: Partial<ExecutiveSummaryRow>) {
+    onChange({ rows: updateRow(rows, id, patch) });
+  }
+
+  function handleAdd() {
+    onChange({ rows: [...rows, newRow()] });
+  }
+
+  function handleDelete(id: string) {
+    onChange({ rows: rows.filter((r) => r.id !== id) });
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40">
+              <th className="min-w-[160px] px-3 py-2 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">KPI</th>
+              <th className="w-14 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Unidad</th>
+              <th className="w-20 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Target</th>
+              <th className="w-20 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Actual</th>
+              <th className="w-24 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Estado</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Comentario</th>
+              <th className="w-10 px-2 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  Sin KPIs — pulsa &ldquo;Añadir KPI&rdquo; para empezar.
+                </td>
+              </tr>
+            )}
+            {rows.map((row, i) => (
+              <tr
+                key={row.id}
+                className={cn(
+                  "border-b border-border/60 last:border-0 transition-colors hover:bg-accent/20",
+                  i % 2 === 1 && "bg-muted/20",
+                )}
+              >
+                <td className="min-w-[160px] px-2 py-1">
+                  <input
+                    type="text"
+                    value={row.label}
+                    placeholder="Nombre del KPI"
+                    onChange={(e) => handleChange(row.id, { label: e.target.value })}
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </td>
+                <td className="w-14 px-2 py-1">
+                  <input
+                    type="text"
+                    value={row.unit ?? ""}
+                    placeholder="u."
+                    onChange={(e) => handleChange(row.id, { unit: e.target.value })}
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </td>
+                <td className="w-20 px-2 py-1">
+                  <input
+                    type="number"
+                    value={row.target == null ? "" : String(row.target)}
+                    placeholder="—"
+                    onChange={(e) =>
+                      handleChange(row.id, {
+                        target: e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </td>
+                <td className="w-20 px-2 py-1">
+                  <input
+                    type="number"
+                    value={row.actual == null ? "" : String(row.actual)}
+                    placeholder="—"
+                    onChange={(e) =>
+                      handleChange(row.id, {
+                        actual: e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </td>
+                <td className="w-24 px-2 py-1">
+                  <select
+                    value={row.status}
+                    onChange={(e) =>
+                      handleChange(row.id, {
+                        status: e.target.value as ExecutiveSummaryRow["status"],
+                      })
+                    }
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]} {s}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="min-w-[180px] px-2 py-1">
+                  <input
+                    type="text"
+                    value={row.comment}
+                    placeholder="Comentario opcional..."
+                    onChange={(e) => handleChange(row.id, { comment: e.target.value })}
+                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </td>
+                <td className="w-10 px-2 py-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground/50 hover:text-destructive"
+                    onClick={() => handleDelete(row.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        Añadir KPI
+      </Button>
+    </div>
+  );
+}
