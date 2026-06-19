@@ -41,7 +41,20 @@ export default async function ReportsPage() {
 }
 
 async function ReportsList({ isAdmin }: { isAdmin: boolean }) {
-  const reports = await listReports(isAdmin ? "admin" : "viewer");
+  let reports: Awaited<ReturnType<typeof listReports>>;
+  try {
+    reports = await listReports(isAdmin ? "admin" : "viewer");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return (
+      <Card>
+        <CardContent className="py-8">
+          <p className="text-sm font-semibold text-destructive">Error al cargar informes</p>
+          <pre className="mt-2 overflow-auto text-xs text-muted-foreground">{msg}</pre>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!reports.length) {
     return (
