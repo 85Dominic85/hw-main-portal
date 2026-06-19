@@ -2,13 +2,17 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { eq, and } from "drizzle-orm";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { db, schema } from "@/lib/db";
 import type { Result } from "@/lib/connectors/types";
 import { buildEmptyContent } from "@/lib/reports/defaults";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
 import { reportContentSchemaV1 } from "@/lib/reports/schema";
+
+const { reports, reportAuthors } = schema;
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
 
@@ -25,7 +29,7 @@ const createReportSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("custom"),
-    from: z.string().date(), // "YYYY-MM-DD"
+    from: z.string().date(),
     to: z.string().date(),
   }),
 ]);
@@ -52,11 +56,6 @@ function revalidateReport(id: string) {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
-/**
- * Crea un nuevo borrador de informe.
- * El contenido inicial se construye con `buildEmptyContent()`.
- * El kpi_snapshot es null — se congela al publicar.
- */
 export async function createReport(
   input: unknown,
 ): Promise<Result<{ id: string }>> {
@@ -99,52 +98,43 @@ export async function createReport(
 
   const content = buildEmptyContent();
 
-  // Drizzle insert — usando cliente portal con RLS
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
+  try {
+    const [row] = await db
+      .insert(reports)
+      .values({
+        type: data.type,
+        periodKey,
+        periodFrom,
+        periodTo,
+        isoYear,
+        isoWeek,
+        title,
+        content: content as unknown as Record<string, unknown>,
+        createdBy: user.id,
+      })
+      .returning({ id: reports.id });
 
-  const { data: row, error } = await supabase
-    .schema("portal")
-    .from("reports")
-    .insert({
-      type: data.type,
-      period_key: periodKey,
-      period_from: periodFrom,
-      period_to: periodTo,
-      iso_year: isoYear,
-      iso_week: isoWeek,
-      title,
-      content: content as unknown as Record<string, unknown>,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+    if (!row) return { ok: false, error: "No se pudo crear el informe." };
 
-  if (error) {
-    if (error.code === "23505") {
+    await db.insert(reportAuthors).values({
+      reportId: row.id,
+      sectionKey: "meta",
+      userId: user.id,
+      action: "create",
+      diffSummary: { periodKey, type: data.type },
+    });
+
+    revalidateReport(row.id);
+    return { ok: true, data: { id: row.id } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    if (msg.includes("unique") || msg.includes("duplicate")) {
       return { ok: false, error: `Ya existe un informe para el periodo ${periodKey}.` };
     }
-    return { ok: false, error: error.message };
+    return { ok: false, error: msg };
   }
-
-  // Audit trail
-  await supabase.schema("portal").from("report_authors").insert({
-    report_id: row.id,
-    section_key: "meta",
-    user_id: user.id,
-    action: "create",
-    diff_summary: { periodKey, type: data.type },
-  });
-
-  revalidateReport(row.id);
-  return { ok: true, data: { id: row.id } };
 }
 
-/**
- * Guarda una sección del informe de forma atómica con jsonb_set.
- * Cada sección se valida con el sub-schema correspondiente antes de persistir.
- * Registra audit trail por sección.
- */
 export async function saveSection(
   input: unknown,
 ): Promise<Result<{ savedAt: string }>> {
@@ -157,60 +147,40 @@ export async function saveSection(
 
   const { reportId, sectionKey, payload } = parsed.data;
 
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
+  const existing = await db
+    .select({ status: reports.status, content: reports.content })
+    .from(reports)
+    .where(eq(reports.id, reportId))
+    .limit(1);
 
-  // Verificar que el informe existe y es draft
-  const { data: report, error: fetchErr } = await supabase
-    .schema("portal")
-    .from("reports")
-    .select("id, status, content")
-    .eq("id", reportId)
-    .single();
-
-  if (fetchErr || !report) {
-    return { ok: false, error: "Informe no encontrado." };
-  }
+  const report = existing[0];
+  if (!report) return { ok: false, error: "Informe no encontrado." };
   if (report.status !== "draft") {
     return { ok: false, error: "Solo se pueden editar informes en borrador." };
   }
 
-  // Merge parcial: actualizar solo la sección pedida dentro del JSONB
   const currentContent = reportContentSchemaV1.parse(report.content ?? {});
-  const updatedContent = {
-    ...currentContent,
-    [sectionKey]: payload,
-  };
+  const updatedContent = { ...currentContent, [sectionKey]: payload };
 
-  const { error: updateErr } = await supabase
-    .schema("portal")
-    .from("reports")
-    .update({ content: updatedContent as unknown as Record<string, unknown> })
-    .eq("id", reportId);
-
-  if (updateErr) {
-    return { ok: false, error: updateErr.message };
-  }
+  await db
+    .update(reports)
+    .set({ content: updatedContent as unknown as Record<string, unknown> })
+    .where(eq(reports.id, reportId));
 
   const savedAt = new Date().toISOString();
 
-  // Audit trail (autosave)
-  await supabase.schema("portal").from("report_authors").insert({
-    report_id: reportId,
-    section_key: sectionKey,
-    user_id: user.id,
+  await db.insert(reportAuthors).values({
+    reportId,
+    sectionKey,
+    userId: user.id,
     action: "autosave",
-    diff_summary: { savedAt },
+    diffSummary: { savedAt },
   });
 
   revalidateReport(reportId);
   return { ok: true, data: { savedAt } };
 }
 
-/**
- * Publica un informe: recomputa el snapshot KPI y lo congela.
- * Después de publicar, el trigger `guard_published_report` impide mutaciones.
- */
 export async function publishReport(
   input: unknown,
 ): Promise<Result<{ publishedAt: string }>> {
@@ -223,60 +193,46 @@ export async function publishReport(
 
   const { reportId } = parsed.data;
 
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
+  const existing = await db
+    .select({ status: reports.status, periodFrom: reports.periodFrom, periodTo: reports.periodTo })
+    .from(reports)
+    .where(eq(reports.id, reportId))
+    .limit(1);
 
-  const { data: report, error: fetchErr } = await supabase
-    .schema("portal")
-    .from("reports")
-    .select("id, status, period_from, period_to")
-    .eq("id", reportId)
-    .single();
-
-  if (fetchErr || !report) {
-    return { ok: false, error: "Informe no encontrado." };
-  }
+  const report = existing[0];
+  if (!report) return { ok: false, error: "Informe no encontrado." };
   if (report.status !== "draft") {
     return { ok: false, error: "El informe ya está publicado o archivado." };
   }
 
-  const from = new Date(report.period_from + "T00:00:00Z");
-  const to = new Date(report.period_to + "T23:59:59Z");
-
+  const from = new Date((report.periodFrom ?? "") + "T00:00:00Z");
+  const to = new Date((report.periodTo ?? "") + "T23:59:59Z");
   const snapshot = await buildKpiSnapshot({ from, to });
-  const publishedAt = new Date().toISOString();
+  const publishedAtDate = new Date();
+  const publishedAt = publishedAtDate.toISOString();
 
-  const { error: updateErr } = await supabase
-    .schema("portal")
-    .from("reports")
-    .update({
+  await db
+    .update(reports)
+    .set({
       status: "published",
-      kpi_snapshot: snapshot as unknown as Record<string, unknown>,
-      published_by: user.id,
-      published_at: publishedAt,
+      kpiSnapshot: snapshot as unknown as Record<string, unknown>,
+      publishedBy: user.id,
+      publishedAt: publishedAtDate,
     })
-    .eq("id", reportId);
+    .where(eq(reports.id, reportId));
 
-  if (updateErr) {
-    return { ok: false, error: updateErr.message };
-  }
-
-  await supabase.schema("portal").from("report_authors").insert({
-    report_id: reportId,
-    section_key: "meta",
-    user_id: user.id,
+  await db.insert(reportAuthors).values({
+    reportId,
+    sectionKey: "meta",
+    userId: user.id,
     action: "publish",
-    diff_summary: { publishedAt, snapshotSources: Object.keys(snapshot.sourceHealth) },
+    diffSummary: { publishedAt },
   });
 
   revalidateReport(reportId);
   return { ok: true, data: { publishedAt } };
 }
 
-/**
- * Despublica un informe (→ draft). Permite correcciones post-publicación.
- * El snapshot se conserva — se sobreescribirá al siguiente publish.
- */
 export async function unpublishReport(input: unknown): Promise<Result<true>> {
   const user = await requireAdmin();
 
@@ -287,36 +243,23 @@ export async function unpublishReport(input: unknown): Promise<Result<true>> {
 
   const { reportId } = parsed.data;
 
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
+  await db
+    .update(reports)
+    .set({ status: "draft", publishedAt: null, publishedBy: null })
+    .where(and(eq(reports.id, reportId), eq(reports.status, "published")));
 
-  const { error } = await supabase
-    .schema("portal")
-    .from("reports")
-    .update({ status: "draft", published_at: null, published_by: null })
-    .eq("id", reportId)
-    .eq("status", "published");
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  await supabase.schema("portal").from("report_authors").insert({
-    report_id: reportId,
-    section_key: "meta",
-    user_id: user.id,
+  await db.insert(reportAuthors).values({
+    reportId,
+    sectionKey: "meta",
+    userId: user.id,
     action: "restore",
-    diff_summary: { action: "unpublish" },
+    diffSummary: { action: "unpublish" },
   });
 
   revalidateReport(reportId);
   return { ok: true, data: true };
 }
 
-/**
- * Archiva (soft-delete) un informe.
- * Los archivados no aparecen en listados normales pero se conservan en BD.
- */
 export async function deleteReport(input: unknown): Promise<Result<true>> {
   await requireAdmin();
 
@@ -327,26 +270,15 @@ export async function deleteReport(input: unknown): Promise<Result<true>> {
 
   const { reportId } = parsed.data;
 
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
-
-  const { error } = await supabase
-    .schema("portal")
-    .from("reports")
-    .update({ status: "archived" })
-    .eq("id", reportId);
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
+  await db
+    .update(reports)
+    .set({ status: "archived" })
+    .where(eq(reports.id, reportId));
 
   revalidateReport(reportId);
   return { ok: true, data: true };
 }
 
-/**
- * Actualiza el semáforo global del informe (verde/amarillo/rojo).
- */
 export async function setGlobalStatus(input: unknown): Promise<Result<true>> {
   await requireAdmin();
 
@@ -357,19 +289,10 @@ export async function setGlobalStatus(input: unknown): Promise<Result<true>> {
 
   const { reportId, globalStatus } = parsed.data;
 
-  const { createSupabaseServerClient } = await import("@/lib/auth/supabase-server");
-  const supabase = await createSupabaseServerClient();
-
-  const { error } = await supabase
-    .schema("portal")
-    .from("reports")
-    .update({ global_status: globalStatus })
-    .eq("id", reportId)
-    .eq("status", "draft");
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
+  await db
+    .update(reports)
+    .set({ globalStatus })
+    .where(and(eq(reports.id, reportId), eq(reports.status, "draft")));
 
   revalidateReport(reportId);
   return { ok: true, data: true };

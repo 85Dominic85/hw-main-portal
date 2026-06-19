@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, Settings2, LifeBuoy, ShieldCheck } from "lucide-react";
+import { Home, Package, Settings2, LifeBuoy, ShieldCheck, FileText } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { PortalLogo } from "@/components/brand/portal-logo";
@@ -22,6 +22,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/mainops", label: "Logística", icon: Package, enabled: true },
   { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true },
+  { href: "/reports", label: "Informes", icon: FileText, enabled: true },
   // /admin sigue visible para todos (la auth real la hace Basic Auth en el
   // middleware). El sidebar no oculta el link a guests para que sepan dónde
   // está el área administrativa — el prompt aparece al hacer click.
