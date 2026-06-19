@@ -33,7 +33,6 @@ export const reports = portalSchema.table(
     contentVersion: integer("content_version").notNull().default(1),
     parentReportId: uuid("parent_report_id"), // self-ref: FK defined at DB level
     createdBy: uuid("created_by")
-      .notNull()
       .references(() => portalUsers.id, { onDelete: "restrict" }),
     publishedBy: uuid("published_by").references(() => portalUsers.id, {
       onDelete: "set null",

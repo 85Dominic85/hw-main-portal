@@ -10,6 +10,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { listReports } from "@/server/queries/reports";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReportsPage() {
   let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
   let userError: string | null = null;

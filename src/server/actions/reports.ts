@@ -5,6 +5,7 @@ import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
 import type { Result } from "@/lib/connectors/types";
 import { buildEmptyContent } from "@/lib/reports/defaults";
@@ -60,6 +61,9 @@ async function ensurePortalUser(user: {
   role: string;
   fullName: string | null;
 }) {
+  // El bypass user no tiene entrada en auth.users → FK violation.
+  // Solo insertamos usuarios reales de Supabase Auth.
+  if (AUTH_BYPASS_ENABLED) return;
   await db
     .insert(portalUsers)
     .values({
@@ -115,6 +119,7 @@ export async function createReport(
   }
 
   const content = buildEmptyContent();
+  const authorId = AUTH_BYPASS_ENABLED ? null : user.id;
 
   try {
     const [row] = await db
@@ -128,7 +133,7 @@ export async function createReport(
         isoWeek,
         title,
         content: content as unknown as Record<string, unknown>,
-        createdBy: user.id,
+        createdBy: authorId,
       })
       .returning({ id: reports.id });
 
@@ -137,7 +142,7 @@ export async function createReport(
     await db.insert(reportAuthors).values({
       reportId: row.id,
       sectionKey: "meta",
-      userId: user.id,
+      userId: authorId,
       action: "create",
       diffSummary: { periodKey, type: data.type },
     });
@@ -191,7 +196,7 @@ export async function saveSection(
   await db.insert(reportAuthors).values({
     reportId,
     sectionKey,
-    userId: user.id,
+    userId: AUTH_BYPASS_ENABLED ? null : user.id,
     action: "autosave",
     diffSummary: { savedAt },
   });
@@ -236,7 +241,7 @@ export async function publishReport(
     .set({
       status: "published",
       kpiSnapshot: snapshot as unknown as Record<string, unknown>,
-      publishedBy: user.id,
+      publishedBy: AUTH_BYPASS_ENABLED ? null : user.id,
       publishedAt: publishedAtDate,
     })
     .where(eq(reports.id, reportId));
@@ -244,7 +249,7 @@ export async function publishReport(
   await db.insert(reportAuthors).values({
     reportId,
     sectionKey: "meta",
-    userId: user.id,
+    userId: AUTH_BYPASS_ENABLED ? null : user.id,
     action: "publish",
     diffSummary: { publishedAt },
   });
@@ -272,7 +277,7 @@ export async function unpublishReport(input: unknown): Promise<Result<true>> {
   await db.insert(reportAuthors).values({
     reportId,
     sectionKey: "meta",
-    userId: user.id,
+    userId: AUTH_BYPASS_ENABLED ? null : user.id,
     action: "restore",
     diffSummary: { action: "unpublish" },
   });
@@ -404,7 +409,7 @@ export async function cloneReport(
         title,
         content: clonedContent as unknown as Record<string, unknown>,
         parentReportId: sourceReportId,
-        createdBy: user.id,
+        createdBy: AUTH_BYPASS_ENABLED ? null : user.id,
       })
       .returning({ id: reports.id });
 
@@ -413,7 +418,7 @@ export async function cloneReport(
     await db.insert(reportAuthors).values({
       reportId: row.id,
       sectionKey: "meta",
-      userId: user.id,
+      userId: AUTH_BYPASS_ENABLED ? null : user.id,
       action: "clone",
       diffSummary: { sourceReportId, periodKey },
     });
