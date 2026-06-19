@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
 import { eq } from "drizzle-orm";
 
 import { getCurrentUser } from "@/lib/auth/session";
@@ -57,8 +56,8 @@ export async function GET(
     snapshot,
   };
 
-  // renderToBuffer necesita ReactElement<DocumentProps>; hacemos cast ya que
-  // ReportPdfDocument devuelve <Document> como nodo raíz.
+  // Import dinámico para que @react-pdf/renderer no crashee el Lambda en cold-start.
+  const { renderToBuffer } = await import("@react-pdf/renderer");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(ReportPdfDocument(props) as any);
 
