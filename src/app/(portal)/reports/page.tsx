@@ -11,7 +11,13 @@ import { listReports } from "@/server/queries/reports";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
 export default async function ReportsPage() {
-  const user = await getCurrentUser();
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+  let userError: string | null = null;
+  try {
+    user = await getCurrentUser();
+  } catch (err) {
+    userError = err instanceof Error ? err.message : String(err);
+  }
   const isAdmin = user?.role === "admin";
 
   return (
@@ -32,6 +38,15 @@ export default async function ReportsPage() {
           </Button>
         )}
       </div>
+
+      {userError && (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-sm font-semibold text-destructive">Error en getCurrentUser</p>
+            <pre className="mt-2 overflow-auto text-xs text-muted-foreground">{userError}</pre>
+          </CardContent>
+        </Card>
+      )}
 
       <Suspense fallback={<ReportsListSkeleton />}>
         <ReportsList isAdmin={isAdmin} />
