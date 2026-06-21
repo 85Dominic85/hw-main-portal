@@ -19,6 +19,7 @@ import { SoporteEditor } from "./sections/soporte-editor";
 import { CajonesEditor } from "./sections/cajones-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
+import { DeleteDraftButton } from "./delete-draft-button";
 import { saveSection, publishReport, setGlobalStatus, setReportTitle } from "@/server/actions/reports";
 import type { ReportContent } from "@/lib/reports/schema";
 
@@ -172,19 +173,22 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
             ))}
           </div>
         </div>
-        <Button onClick={handlePublish} disabled={isPublishing}>
-          {isPublishing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Publicando…
-            </>
-          ) : (
-            <>
-              <Globe className="mr-2 h-4 w-4" />
-              Publicar
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <DeleteDraftButton reportId={report.id} redirectTo="/reports" label="Eliminar" />
+          <Button onClick={handlePublish} disabled={isPublishing}>
+            {isPublishing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Publicando…
+              </>
+            ) : (
+              <>
+                <Globe className="mr-2 h-4 w-4" />
+                Publicar
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Cabecera del informe — título + autor (estilo Notion) */}

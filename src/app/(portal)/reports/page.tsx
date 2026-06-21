@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listReports } from "@/server/queries/reports";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
+import { DeleteDraftButton } from "@/components/reports/delete-draft-button";
 
 export const dynamic = "force-dynamic";
 
@@ -111,51 +112,46 @@ async function ReportsList({ isAdmin }: { isAdmin: boolean }) {
             ? formatWeekLabel(weekInfo.isoYear, weekInfo.isoWeek)
             : r.periodKey;
 
+        const href =
+          r.status === "draft" && isAdmin ? `/reports/${r.id}/edit` : `/reports/${r.id}`;
+
         return (
-          <Link
-            key={r.id}
-            href={
-              r.status === "draft" && isAdmin
-                ? `/reports/${r.id}/edit`
-                : `/reports/${r.id}`
-            }
-            className="block"
-          >
-            <Card className="transition-colors hover:bg-accent/30">
-              <CardContent className="flex items-center gap-4 py-4">
+          <Card key={r.id} className="transition-colors hover:bg-accent/30">
+            <CardContent className="flex items-center gap-4 py-4">
+              <Link href={href} className="flex min-w-0 flex-1 items-center gap-4">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{r.title}</p>
                   <p className="text-sm text-muted-foreground">{periodLabel}</p>
                 </div>
+              </Link>
 
-                <div className="flex items-center gap-2">
-                  {r.globalStatus && (
-                    <span
-                      className={
-                        r.globalStatus === "verde"
-                          ? "text-status-ok"
-                          : r.globalStatus === "amarillo"
-                            ? "text-status-warn"
-                            : "text-status-danger"
-                      }
-                    >
-                      ●
-                    </span>
-                  )}
-                  <ReportStatusBadge status={r.status} />
-                  <span className="hidden text-xs text-muted-foreground sm:block">
-                    {r.publishedAt
-                      ? new Date(r.publishedAt).toLocaleDateString("es-ES")
-                      : new Date(r.createdAt).toLocaleDateString("es-ES")}
+              <div className="flex items-center gap-2">
+                {r.globalStatus && (
+                  <span
+                    className={
+                      r.globalStatus === "verde"
+                        ? "text-status-ok"
+                        : r.globalStatus === "amarillo"
+                          ? "text-status-warn"
+                          : "text-status-danger"
+                    }
+                  >
+                    ●
                   </span>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+                )}
+                <ReportStatusBadge status={r.status} />
+                <span className="hidden text-xs text-muted-foreground sm:block">
+                  {r.publishedAt
+                    ? new Date(r.publishedAt).toLocaleDateString("es-ES")
+                    : new Date(r.createdAt).toLocaleDateString("es-ES")}
+                </span>
+                {isAdmin && r.status === "draft" && <DeleteDraftButton reportId={r.id} />}
+              </div>
+            </CardContent>
+          </Card>
         );
       })}
     </div>

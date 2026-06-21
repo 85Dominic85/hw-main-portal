@@ -327,6 +327,38 @@ export async function deleteReport(input: unknown): Promise<Result<true>> {
   return { ok: true, data: true };
 }
 
+/**
+ * Borra PERMANENTEMENTE un informe — solo si está en borrador.
+ * Los informes publicados/archivados no se borran (se archivan con deleteReport
+ * para preservar histórico). El cascade de la FK elimina sus report_authors.
+ */
+export async function deleteDraftReport(input: unknown): Promise<Result<true>> {
+  await requireAdmin();
+
+  const parsed = reportIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.message };
+  }
+
+  const { reportId } = parsed.data;
+
+  const [existing] = await db
+    .select({ status: reports.status })
+    .from(reports)
+    .where(eq(reports.id, reportId))
+    .limit(1);
+
+  if (!existing) return { ok: false, error: "Informe no encontrado." };
+  if (existing.status !== "draft") {
+    return { ok: false, error: "Solo se pueden eliminar borradores. Los publicados se archivan." };
+  }
+
+  await db.delete(reports).where(and(eq(reports.id, reportId), eq(reports.status, "draft")));
+
+  revalidatePath("/reports");
+  return { ok: true, data: true };
+}
+
 const cloneReportSchema = z.object({
   sourceReportId: z.string().uuid(),
   isoYear: z.number().int(),
