@@ -4,15 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ExecutiveSummary, ExecutiveSummaryRow } from "@/lib/reports/schema";
 import { cn } from "@/lib/utils/cn";
-
-const STATUS_LABELS: Record<string, string> = {
-  verde: "🟢",
-  amarillo: "🟡",
-  rojo: "🔴",
-  neutral: "—",
-};
-
-const STATUS_OPTIONS = ["verde", "amarillo", "rojo", "neutral"] as const;
+import { StatusSelect } from "../status-select";
 
 interface Props {
   value: ExecutiveSummary;
@@ -128,21 +120,10 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
                   />
                 </td>
                 <td className="w-24 px-2 py-1">
-                  <select
+                  <StatusSelect
                     value={row.status}
-                    onChange={(e) =>
-                      handleChange(row.id, {
-                        status: e.target.value as ExecutiveSummaryRow["status"],
-                      })
-                    }
-                    className={inputCls}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_LABELS[s]} {s}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(status) => handleChange(row.id, { status })}
+                  />
                 </td>
                 <td className="min-w-[160px] px-2 py-1">
                   <input

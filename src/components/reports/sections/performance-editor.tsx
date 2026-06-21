@@ -4,15 +4,9 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TiptapEditor } from "../tiptap-editor";
+import { StatusSelect } from "../status-select";
 import type { Performance, MemberBlock, MemberKpiRow } from "@/lib/reports/schema";
 import { cn } from "@/lib/utils/cn";
-
-const STATUS_OPTIONS = [
-  { value: "verde", label: "🟢" },
-  { value: "amarillo", label: "🟡" },
-  { value: "rojo", label: "🔴" },
-  { value: "neutral", label: "—" },
-] as const;
 
 function newKpiRow(): MemberKpiRow {
   return {
@@ -127,21 +121,10 @@ function MemberCard({ block, onChange }: MemberCardProps) {
                       />
                     </td>
                     <td className="px-2 py-1">
-                      <select
+                      <StatusSelect
                         value={kpi.status}
-                        onChange={(e) =>
-                          patchKpi(kpi.id, {
-                            status: e.target.value as MemberKpiRow["status"],
-                          })
-                        }
-                        className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      >
-                        {STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(status) => patchKpi(kpi.id, { status })}
+                      />
                     </td>
                     <td className="px-2 py-1">
                       <Button
