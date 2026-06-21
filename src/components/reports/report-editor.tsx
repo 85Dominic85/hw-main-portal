@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
+import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { CajonesEditor } from "./sections/cajones-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
 import { DeleteDraftButton } from "./delete-draft-button";
+import { ReportViewer } from "./report-viewer";
 import {
   saveSection,
   publishReport,
@@ -65,6 +66,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
   );
   const [isPublishing, startPublishing] = useTransition();
   const [isRefreshing, startRefreshing] = useTransition();
+  const [showPreview, setShowPreview] = useState(true);
   const [openSections, setOpenSections] = useState<Set<string>>(DEFAULT_OPEN);
 
   const debounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -193,6 +195,17 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
               />
             ))}
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPreview((v) => !v)}
+            className="hidden lg:inline-flex"
+            title="Mostrar / ocultar vista previa"
+          >
+            {showPreview ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+            Vista previa
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -222,6 +235,9 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         </div>
       </div>
 
+      <div className={showPreview ? "grid items-start gap-6 lg:grid-cols-2" : undefined}>
+        {/* Columna izquierda — editor */}
+        <div className="min-w-0 space-y-4">
       {/* Cabecera del informe — título + autor (estilo Notion) */}
       <div className="space-y-3 rounded-lg border border-border bg-card px-4 py-3">
         <input
@@ -352,6 +368,33 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
           placeholder="Placeholder para respuesta de Pablo…"
         />
       </EditorSection>
+        </div>
+
+        {/* Columna derecha — vista previa en vivo (formato publicado) */}
+        {showPreview && (
+          <div className="hidden lg:block">
+            <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3">
+              <p className="px-1 text-xs font-medium text-muted-foreground">
+                Vista previa · formato publicado
+              </p>
+              <ReportViewer
+                report={{
+                  id: report.id,
+                  title: title || "Informe",
+                  type: report.type,
+                  periodKey: report.periodKey,
+                  periodLabel: report.periodLabel,
+                  globalStatus,
+                  status: "draft",
+                  publishedAt: null,
+                }}
+                content={content}
+                snapshot={null}
+              />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
