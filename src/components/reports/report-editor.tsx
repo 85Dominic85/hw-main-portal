@@ -235,7 +235,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         </div>
       </div>
 
-      <div className={showPreview ? "grid items-start gap-6 lg:grid-cols-2" : undefined}>
+      <div className={showPreview ? "grid items-start gap-6 lg:grid-cols-[3fr_2fr]" : undefined}>
         {/* Columna izquierda — editor */}
         <div className="min-w-0 space-y-4">
       {/* Cabecera del informe — título + autor (estilo Notion) */}
