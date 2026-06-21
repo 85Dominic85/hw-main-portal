@@ -69,10 +69,19 @@ describe("hsmApiResponseSchema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("rechaza sla_compliance_pct fuera de [0, 100]", () => {
-    const bad = {
+  it("acepta sla_compliance_pct > 100 (sin .max: defensivo ante bugs upstream en ratios)", () => {
+    const overflow = {
       ...SAMPLE_PAYLOAD,
       current: { ...SAMPLE_PAYLOAD.current, sla_compliance_pct: 150 },
+    };
+    const parsed = hsmApiResponseSchema.safeParse(overflow);
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rechaza sla_compliance_pct negativo", () => {
+    const bad = {
+      ...SAMPLE_PAYLOAD,
+      current: { ...SAMPLE_PAYLOAD.current, sla_compliance_pct: -5 },
     };
     const parsed = hsmApiResponseSchema.safeParse(bad);
     expect(parsed.success).toBe(false);
