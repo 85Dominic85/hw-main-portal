@@ -8,7 +8,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
 import type { Result } from "@/lib/connectors/types";
-import { buildEmptyContent } from "@/lib/reports/defaults";
+import { buildEmptyContent, parseReportContent } from "@/lib/reports/defaults";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
 import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
@@ -171,6 +171,20 @@ export async function saveSection(
 
   const { reportId, sectionKey, payload } = parsed.data;
 
+  // Validar la sección y su payload antes de persistir, para no guardar
+  // content malformado que luego rompería viewer/editor/export.
+  const sectionShapes = reportContentSchemaV1.shape;
+  if (sectionKey === "_version" || !(sectionKey in sectionShapes)) {
+    return { ok: false, error: `Sección desconocida: ${sectionKey}` };
+  }
+  const sectionSchema = sectionShapes[
+    sectionKey as keyof typeof sectionShapes
+  ] as z.ZodTypeAny;
+  const sectionParsed = sectionSchema.safeParse(payload);
+  if (!sectionParsed.success) {
+    return { ok: false, error: `Datos de sección inválidos: ${sectionParsed.error.message}` };
+  }
+
   const existing = await db
     .select({ status: reports.status, content: reports.content })
     .from(reports)
@@ -183,8 +197,8 @@ export async function saveSection(
     return { ok: false, error: "Solo se pueden editar informes en borrador." };
   }
 
-  const currentContent = reportContentSchemaV1.parse(report.content ?? {});
-  const updatedContent = { ...currentContent, [sectionKey]: payload };
+  const currentContent = parseReportContent(report.content);
+  const updatedContent = { ...currentContent, [sectionKey]: sectionParsed.data };
 
   await db
     .update(reports)
@@ -387,7 +401,7 @@ export async function cloneReport(
 
   if (!source) return { ok: false, error: "Informe origen no encontrado." };
 
-  const sourceContent = reportContentSchemaV1.parse(source.content ?? {});
+  const sourceContent = parseReportContent(source.content);
   const clonedContent = buildClonedContent(sourceContent);
 
   const range = isoWeekToRange(isoYear, isoWeek);

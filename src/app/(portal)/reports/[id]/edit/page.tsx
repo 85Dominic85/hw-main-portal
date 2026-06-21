@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getReportById } from "@/server/queries/reports";
 import { ReportEditor } from "@/components/reports/report-editor";
-import { reportContentSchemaV1 } from "@/lib/reports/schema";
+import { parseReportContent } from "@/lib/reports/defaults";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
 interface PageProps {
@@ -23,7 +23,7 @@ export default async function ReportEditPage({ params }: PageProps) {
   if (!report) notFound();
   if (report.status !== "draft") redirect(`/reports/${id}`);
 
-  const content = reportContentSchemaV1.parse(report.content ?? {});
+  const content = parseReportContent(report.content);
 
   const weekInfo =
     report.type === "weekly" && report.isoYear && report.isoWeek

@@ -490,14 +490,14 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
                 timeStyle: "short",
               })}
             </span>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.mainops ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-              MainOPS {snapshot.sourceHealth.mainops ? "OK" : "Error"}
+            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.mainops.ok ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+              MainOPS {snapshot.sourceHealth.mainops.ok ? "OK" : "Error"}
             </span>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.hwtool ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-              HW Tool {snapshot.sourceHealth.hwtool ? "OK" : "Error"}
+            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.hwtool.ok ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+              HW Tool {snapshot.sourceHealth.hwtool.ok ? "OK" : "Error"}
             </span>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.hsm ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-              HSM {snapshot.sourceHealth.hsm ? "OK" : "Error"}
+            <span className={cn("rounded-full px-2 py-0.5 text-xs", snapshot.sourceHealth.hsm.ok ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+              HSM {snapshot.sourceHealth.hsm.ok ? "OK" : "Error"}
             </span>
           </div>
         </ViewSection>

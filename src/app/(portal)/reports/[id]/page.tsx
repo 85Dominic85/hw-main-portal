@@ -10,7 +10,8 @@ import { getReportById } from "@/server/queries/reports";
 import { ReportViewer } from "@/components/reports/report-viewer";
 import { CopyNotionButton } from "@/components/reports/copy-notion-button";
 import { CloneReportButton } from "@/components/reports/clone-report-button";
-import { reportContentSchemaV1, kpiSnapshotSchema } from "@/lib/reports/schema";
+import { kpiSnapshotSchema } from "@/lib/reports/schema";
+import { parseReportContent } from "@/lib/reports/defaults";
 import { formatWeekLabel, parseWeekKey, nextIsoWeek } from "@/lib/reports/iso-week";
 
 interface PageProps {
@@ -25,7 +26,7 @@ export default async function ReportViewPage({ params }: PageProps) {
   const report = await getReportById(id, isAdmin ? "admin" : "viewer");
   if (!report) notFound();
 
-  const content = reportContentSchemaV1.parse(report.content ?? {});
+  const content = parseReportContent(report.content);
   const snapshot = report.kpiSnapshot
     ? kpiSnapshotSchema.safeParse(report.kpiSnapshot)
     : null;

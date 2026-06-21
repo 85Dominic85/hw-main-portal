@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 
 import { getCurrentUser } from "@/lib/auth/session";
+import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
-import { reportContentSchemaV1, kpiSnapshotSchema } from "@/lib/reports/schema";
+import { kpiSnapshotSchema } from "@/lib/reports/schema";
+import { parseReportContent } from "@/lib/reports/defaults";
 import { contentToNotionMarkdown } from "@/lib/reports/to-notion-markdown";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
@@ -31,7 +33,7 @@ export async function GET(
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  const content = reportContentSchemaV1.parse(report.content ?? {});
+  const content = parseReportContent(report.content);
   const snapshotResult = report.kpiSnapshot
     ? kpiSnapshotSchema.safeParse(report.kpiSnapshot)
     : null;
@@ -56,11 +58,20 @@ export async function GET(
     snapshot,
   );
 
-  await db.insert(exportLog).values({
-    userId: user.id,
-    exportKind: "report_notion",
-    filters: { report_id: id, period_key: report.periodKey },
-  });
+  // Audit log — best-effort, nunca debe romper la respuesta.
+  // En modo bypass el usuario sintético no existe en portal_users (FK
+  // export_log_user_id_fkey, columna NOT NULL), así que se omite el log.
+  if (!AUTH_BYPASS_ENABLED) {
+    try {
+      await db.insert(exportLog).values({
+        userId: user.id,
+        exportKind: "report_notion",
+        filters: { report_id: id, period_key: report.periodKey },
+      });
+    } catch (e) {
+      console.error("[export/notion] export_log insert failed", e);
+    }
+  }
 
   return new NextResponse(markdown, {
     headers: {
