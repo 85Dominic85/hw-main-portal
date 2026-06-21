@@ -2,7 +2,7 @@
 
 > **Fuente de verdad para handoffs**. Si retomas el proyecto desde otra sesión, empieza leyendo este archivo. Cubre estado actual, decisiones tomadas, bugs conocidos, credenciales (referencias, sin valores), backlog priorizado, comandos útiles e histórico de iteraciones.
 >
-> Última actualización: **2026-05-05 17:30 UTC** · v0.4 con connector HSM listo (espera endpoint) + selector global de periodo en home · 43/43 tests verdes.
+> Última actualización: **2026-06-21** · v0.5 con feature de **Informes** (editor semanal + publish + export PDF/MD/Notion + clone) y fix del crash de producción (FK de `export_log` en modo bypass) · 51/51 tests verdes.
 
 ---
 
@@ -42,6 +42,41 @@ El portal está **desplegado en producción** (`https://hw-main-portal.vercel.ap
 **Tests**: 30/30 verdes (13 hwtool + 17 mainops, +4 nuevos del bloque `ops`). **Build**: 11 rutas, /hwtool 3.46kB, /mainops 1.14kB (Recharts pie + bar en chunks dinámicos cliente).
 
 **Repo**: [`github.com/85Dominic85/hw-main-portal`](https://github.com/85Dominic85/hw-main-portal). Último commit en `main`: ver `git log --oneline -1`.
+
+---
+
+## Feature: Informes (v0.5 — jun 2026)
+
+Editor de **informes semanales / mensuales / custom** del departamento HW (el informe de Jota a Pablo). Construido en 5 fases (0→4) tras el cierre de v0.4. **No estaba documentado en este log hasta el 2026-06-21.**
+
+### Qué hace
+
+- **Lista** `/reports`: admins ven draft+published, viewers solo published. `export const dynamic = "force-dynamic"`.
+- **Crear** `/reports/new`: wizard (weekly/monthly/custom) → server action `createReport`.
+- **Editar** `/reports/[id]/edit`: editor por secciones con **autosave debounced** (1.5s, 2 reintentos) → `saveSection`. Secciones: tesis, resumen ejecutivo, ámbar/rojo, highlights, bloqueos, decisiones, configuraciones, envíos, soporte, cajones, performance, foco próxima semana, comentarios Pablo. Editores ricos con **Tiptap**.
+- **Ver** `/reports/[id]`: viewer read-only + botón clonar a la semana siguiente.
+- **Publicar** `publishReport`: congela un `kpiSnapshot` (vía `buildKpiSnapshot`) y bloquea ediciones (trigger DB `guard_published_report`). `unpublishReport` revierte a draft.
+- **Exportar**: PDF (`@react-pdf/renderer`, import dinámico para evitar crash de cold-start en Lambda), Markdown, y "Copiar para Notion". Rutas en `/api/portal/reports/[id]/export/{pdf,markdown,notion}`.
+- **Clonar** `cloneReport`: copia estructura limpiando valores volátiles para la semana siguiente.
+
+### Schema (migraciones `sql/0002`, `sql/0003`)
+
+Tablas en schema `portal`: `reports`, `report_authors` (audit trail), `report_kpi_definitions` (catálogo de KPIs con targets/owners), `report_templates` (layouts; seed `weekly_v1`). FK chain relevante: `reports.created_by` / `published_by` → `portal_users.id` → `auth.users.id`; `report_authors.user_id` y `export_log.user_id` → `portal_users.id`. `content` es JSONB versionado (`reportContentSchemaV1`, `_version: 1`).
+
+> ⚠️ **Migraciones a mano**: no hay carpeta `drizzle/` generada. Las migraciones se aplican manualmente como `postgres` en el SQL editor de Supabase (`sql/0001` → `0002` → `0003`). **0003** (`reports.created_by DROP NOT NULL`) es load-bearing para el modo bypass — verificado aplicado en prod el 2026-06-21 (`is_nullable = YES`).
+
+### El crash de producción y su fix (jun 2026)
+
+La feature crasheaba en Vercel. Tras una tanda de commits de depuración (`debug:` + error boundary + endpoint `/api/debug-reports`), el crash de **lectura** se resolvió con `force-dynamic` + el patrón de saltar las FK del usuario sintético en modo bypass.
+
+**Causa raíz del modo bypass**: el portal corre con `PORTAL_AUTH_REQUIRED` sin setear → `AUTH_BYPASS_ENABLED=true`. `getCurrentUser()` devuelve un usuario sintético (admin `00000000-…-000000000000` con Basic Auth, o invitado `00000000-…-00000000guest` que **ni es UUID válido**) que **no existe en `portal_users`**. Cualquier INSERT que escriba ese id en una FK a `portal_users` revienta.
+
+- El commit `d58c354` arregló esto en las **server actions** (`reports.ts`): salta `ensurePortalUser` y escribe `null` en `created_by`/`published_by`/`user_id` en modo bypass (de ahí la migración 0003).
+- **Pero dejó las 3 rutas de export sin arreglar** → insertaban en `export_log` (columna `user_id` **NOT NULL** con FK) con el id sintético → **500 al exportar cualquier informe publicado**. Este era **el fallo pendiente**, arreglado el 2026-06-21 (ver Bugs conocidos #7).
+
+### Estado actual (2026-06-21)
+
+Crear ✅ · listar/ver ✅ · editar/autosave ✅ · publicar ✅ · **exportar ✅ (arreglado)**. 51/51 tests · build verde.
 
 ---
 
@@ -259,6 +294,20 @@ Métrica preocupante en sí misma, pero conviene confirmar con el equipo:
 
 Por decisión temporal hasta que se pueda configurar el Site URL del proyecto Supabase del portal (no es accesible al usuario actual). Cualquiera con la URL entra como admin. **Mitigación pendiente**: reactivar `PORTAL_AUTH_REQUIRED=true` cuando esté el dashboard configurable.
 
+### 7. ~~Export de informes: 500 por FK de `export_log` en modo bypass~~ ✅ RESUELTO 2026-06-21
+
+Las 3 rutas `/api/portal/reports/[id]/export/{pdf,markdown,notion}` insertaban en `export_log` con `userId: user.id`, pero en modo bypass ese id es el sintético (no existe en `portal_users`) y `export_log.user_id` es `NOT NULL` con FK → violación de FK (admin) o UUID inválido (invitado) → 500 al exportar cualquier informe publicado. Era la mitad sin arreglar del fix de FK del commit `d58c354` (que solo tocó `reports.ts`).
+
+**Fix**: el log de auditoría se omite en modo bypass (`if (!AUTH_BYPASS_ENABLED)`) y se envuelve en try/catch (best-effort, nunca rompe la descarga). Sin migración. De paso se endureció el parseo de `content` (`parseReportContent` con safeParse + fallback en viewer/editor/export) y se validó el payload por sección en `saveSection` para no persistir content malformado.
+
+### 8. Indicador de salud del KPI snapshot siempre verde
+
+`report-viewer.tsx` leía `snapshot.sourceHealth.mainops` (un objeto, siempre truthy) en vez de `.ok`. ✅ Corregido el 2026-06-21 (lee `.ok`).
+
+### 9. Migraciones aplicadas a mano (sin `drizzle/`)
+
+No hay migraciones generadas; se ejecutan los `sql/000x` manualmente como `postgres`. Riesgo: que una migración no se aplique en prod y el código asuma el estado post-migración (p.ej. `created_by` nullable). El endpoint `/api/debug-reports` solo hace SELECT, así que no detecta una migración de escritura faltante. **Verificación**: `select is_nullable from information_schema.columns where table_schema='portal' and table_name='reports' and column_name='created_by'` (debe dar `YES`).
+
 ---
 
 ## Backlog priorizado
@@ -343,6 +392,9 @@ Decisiones tomadas pero sin ADR formal todavía:
 | **Selector global de periodo en home** (5-may) | Pills 5 presets + Custom… inline (estado en URL). Helper neutral `src/lib/home/period.ts`. Banners aceptan props `from/to` y refetchean por Suspense key. NO afecta a las pestañas detalle. |
 | **Connector HSM** (5-may) | Spec del endpoint HSM en `docs/connectors/hsm-endpoint-spec.md`. Connector portal completo (types/schema/mapper/client/labels/index + 13 tests). Server query con cache 60s + throw-no-cache. Banner home con hero "delta MoM en pp" (mostrar tendencia, no absoluto, porque SLA HSM es bajo y la mejora es lo accionable). Pestaña `/hsm` completa: 12 KPI cards + 2 charts + tabla top proveedores + selector periodo + error.tsx. Activado en `tools.ts` + sidebar. Failsafe: sin env vars muestra "Conectando con HSM…" sin romper. |
 | **v0.4 cerrada** (5-may) | Connector HSM listo (espera endpoint) + selector global de periodo en home · 43/43 tests · build verde. |
+| **Feature Informes Fases 0-4** (jun) | Infra schema (`reports`, `report_authors`, `report_kpi_definitions`, `report_templates`) + Zod types + ISO week + build-snapshot + server actions (Fase 0). MVP editor (Fase 1). Editores de secciones estructuradas + viewer (Fase 2). PDF + Notion export + Copiar Notion (Fase 3). Clone + admin KPI targets (Fase 4). |
+| **Crash producción + debug** (jun) | Tanda de commits `debug:` + error boundary + endpoint `/api/debug-reports` + `force-dynamic` + import dinámico de `@react-pdf/renderer`. `d58c354` arregla FK de bypass en `reports.ts` (skip ensurePortalUser + null en created_by/published_by/user_id) + migración 0003. |
+| **Fix export FK + hardening** (21-jun) | Arreglado el fallo pendiente: las 3 rutas de export insertaban en `export_log` (NOT NULL FK) con el id sintético de bypass → 500. Fix: omitir el log de auditoría en bypass + try/catch. Además: `parseReportContent` (safeParse + fallback) en viewer/editor/export, validación por sección en `saveSection`, badge de salud del snapshot lee `.ok`, test HSM obsoleto actualizado. 51/51 tests · build verde. |
 
 ### Commits importantes (en `main` del repo del portal)
 
