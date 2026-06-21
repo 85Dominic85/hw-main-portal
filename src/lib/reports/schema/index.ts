@@ -19,6 +19,9 @@ export const REPORT_CURRENT_VERSION = 1 as const;
 
 export const reportContentSchemaV1 = z.object({
   _version: z.literal(1).default(1),
+  // Autor del informe (mostrado en la cabecera de propiedades, estilo Notion).
+  // Autollenado con el admin que crea el informe; editable a mano.
+  author: z.string().default(""),
   tesis: tesisSchema.default({}),
   executiveSummary: executiveSummarySchema.default({}),
   amberRed: amberRedSchema.default({}),

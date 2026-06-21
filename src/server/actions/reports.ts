@@ -48,6 +48,11 @@ const globalStatusSchema = z.object({
   globalStatus: z.enum(["verde", "amarillo", "rojo"]),
 });
 
+const setTitleSchema = z.object({
+  reportId: z.string().uuid(),
+  title: z.string().trim().min(1).max(200),
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function revalidateReport(id: string) {
@@ -119,6 +124,9 @@ export async function createReport(
   }
 
   const content = buildEmptyContent();
+  // Autollenado del autor (editable a mano después). En bypass, user.email es
+  // el email del Basic Auth admin; user.fullName suele ser null.
+  content.author = user.fullName ?? user.email ?? "";
   const authorId = AUTH_BYPASS_ENABLED ? null : user.id;
 
   try {
@@ -334,7 +342,7 @@ function buildClonedContent(src: ReportContent): ReportContent {
     highlights: { doc: EMPTY_DOC },
     pabloComments: { doc: EMPTY_DOC },
     executiveSummary: {
-      rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: null, comment: "" })),
+      rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: "", delta: "", comment: "" })),
     },
     amberRed: src.amberRed,
     blockers: src.blockers,
@@ -462,6 +470,22 @@ export async function setGlobalStatus(input: unknown): Promise<Result<true>> {
     .update(reports)
     .set({ globalStatus })
     .where(and(eq(reports.id, reportId), eq(reports.status, "draft")));
+
+  revalidateReport(reportId);
+  return { ok: true, data: true };
+}
+
+export async function setReportTitle(input: unknown): Promise<Result<true>> {
+  await requireAdmin();
+
+  const parsed = setTitleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.message };
+  }
+
+  const { reportId, title } = parsed.data;
+
+  await db.update(reports).set({ title }).where(eq(reports.id, reportId));
 
   revalidateReport(reportId);
   return { ok: true, data: true };

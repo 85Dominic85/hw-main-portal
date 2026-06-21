@@ -25,8 +25,9 @@ function newRow(): ExecutiveSummaryRow {
     kpiKey: crypto.randomUUID().slice(0, 8),
     label: "",
     unit: "",
-    target: null,
-    actual: null,
+    target: "",
+    actual: "",
+    delta: "",
     source: "manual",
     status: "neutral",
     comment: "",
@@ -40,6 +41,9 @@ function updateRow(
 ): ExecutiveSummaryRow[] {
   return rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
 }
+
+const inputCls =
+  "w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 
 export function ExecutiveSummaryEditor({ value, onChange }: Props) {
   const rows = value.rows;
@@ -62,12 +66,12 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="min-w-[160px] px-3 py-2 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">KPI</th>
-              <th className="w-14 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Unidad</th>
-              <th className="w-20 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Target</th>
-              <th className="w-20 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Actual</th>
+              <th className="min-w-[150px] px-3 py-2 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">KPI</th>
+              <th className="min-w-[110px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Target</th>
+              <th className="min-w-[120px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Actual</th>
+              <th className="min-w-[120px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Δ vs anterior</th>
               <th className="w-24 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Estado</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Comentario</th>
+              <th className="min-w-[160px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Comentario</th>
               <th className="w-10 px-2 py-2" />
             </tr>
           </thead>
@@ -87,48 +91,40 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
                   i % 2 === 1 && "bg-muted/20",
                 )}
               >
-                <td className="min-w-[160px] px-2 py-1">
+                <td className="min-w-[150px] px-2 py-1">
                   <input
                     type="text"
                     value={row.label}
                     placeholder="Nombre del KPI"
                     onChange={(e) => handleChange(row.id, { label: e.target.value })}
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    className={inputCls}
                   />
                 </td>
-                <td className="w-14 px-2 py-1">
+                <td className="min-w-[110px] px-2 py-1">
                   <input
                     type="text"
-                    value={row.unit ?? ""}
-                    placeholder="u."
-                    onChange={(e) => handleChange(row.id, { unit: e.target.value })}
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    value={row.target}
+                    placeholder="4.000 €"
+                    onChange={(e) => handleChange(row.id, { target: e.target.value })}
+                    className={inputCls}
                   />
                 </td>
-                <td className="w-20 px-2 py-1">
+                <td className="min-w-[120px] px-2 py-1">
                   <input
-                    type="number"
-                    value={row.target == null ? "" : String(row.target)}
-                    placeholder="—"
-                    onChange={(e) =>
-                      handleChange(row.id, {
-                        target: e.target.value === "" ? null : Number(e.target.value),
-                      })
-                    }
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    type="text"
+                    value={row.actual}
+                    placeholder="33 registros"
+                    onChange={(e) => handleChange(row.id, { actual: e.target.value })}
+                    className={inputCls}
                   />
                 </td>
-                <td className="w-20 px-2 py-1">
+                <td className="min-w-[120px] px-2 py-1">
                   <input
-                    type="number"
-                    value={row.actual == null ? "" : String(row.actual)}
-                    placeholder="—"
-                    onChange={(e) =>
-                      handleChange(row.id, {
-                        actual: e.target.value === "" ? null : Number(e.target.value),
-                      })
-                    }
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    type="text"
+                    value={row.delta}
+                    placeholder="+3pp vs W18"
+                    onChange={(e) => handleChange(row.id, { delta: e.target.value })}
+                    className={inputCls}
                   />
                 </td>
                 <td className="w-24 px-2 py-1">
@@ -139,7 +135,7 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
                         status: e.target.value as ExecutiveSummaryRow["status"],
                       })
                     }
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    className={inputCls}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>
@@ -148,13 +144,13 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
                     ))}
                   </select>
                 </td>
-                <td className="min-w-[180px] px-2 py-1">
+                <td className="min-w-[160px] px-2 py-1">
                   <input
                     type="text"
                     value={row.comment}
                     placeholder="Comentario opcional..."
                     onChange={(e) => handleChange(row.id, { comment: e.target.value })}
-                    className="w-full rounded-sm border-0 bg-transparent py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    className={inputCls}
                   />
                 </td>
                 <td className="w-10 px-2 py-1">

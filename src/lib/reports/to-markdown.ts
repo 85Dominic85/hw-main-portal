@@ -34,6 +34,7 @@ export function contentToMarkdown(
           : "";
 
   L.push(`# ${statusEmoji} ${meta.title}`);
+  if (content.author) L.push(`> Autor: ${content.author}`);
   L.push(`> ${meta.periodLabel}`);
   if (meta.publishedAt) {
     L.push(
@@ -49,13 +50,13 @@ export function contentToMarkdown(
   // 2. Resumen ejecutivo
   if (content.executiveSummary.rows.length > 0) {
     L.push("## 🚦 Resumen ejecutivo", "");
-    L.push("| KPI | Unidad | Target | Actual | Estado | Comentario |");
-    L.push("| --- | --- | ---: | ---: | :---: | --- |");
+    L.push("| KPI | Target | Actual | Δ vs anterior | Estado | Comentario |");
+    L.push("| --- | --- | --- | --- | :---: | --- |");
     for (const r of content.executiveSummary.rows) {
       const s =
         r.status === "verde" ? "🟢" : r.status === "amarillo" ? "🟡" : r.status === "rojo" ? "🔴" : "—";
       L.push(
-        `| ${r.label || "—"} | ${r.unit || "—"} | ${r.target ?? "—"} | ${r.actual ?? "—"} | ${s} | ${r.comment || ""} |`,
+        `| ${r.label || "—"} | ${r.target || "—"} | ${r.actual || "—"} | ${r.delta || "—"} | ${s} | ${r.comment || ""} |`,
       );
     }
     L.push("");

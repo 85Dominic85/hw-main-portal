@@ -19,7 +19,7 @@ import { SoporteEditor } from "./sections/soporte-editor";
 import { CajonesEditor } from "./sections/cajones-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
-import { saveSection, publishReport, setGlobalStatus } from "@/server/actions/reports";
+import { saveSection, publishReport, setGlobalStatus, setReportTitle } from "@/server/actions/reports";
 import type { ReportContent } from "@/lib/reports/schema";
 
 interface ReportEditorProps {
@@ -51,6 +51,8 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
   const [content, setContent] = useState<ReportContent>(initialContent);
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | undefined>();
+  const [title, setTitle] = useState(report.title);
+  const titleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [globalStatus, setGlobalStatusState] = useState<string | null>(
     report.globalStatus,
   );
@@ -95,6 +97,22 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
   function updateSection<K extends SectionKey>(key: K, value: ReportContent[K]) {
     setContent((prev) => ({ ...prev, [key]: value }));
     scheduleAutosave(key as string, value);
+  }
+
+  function handleTitleChange(v: string) {
+    setTitle(v);
+    if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
+    setAutosaveState("saving");
+    titleTimerRef.current = setTimeout(async () => {
+      const res = await setReportTitle({ reportId: report.id, title: v.trim() || "Sin título" });
+      if (res.ok) {
+        setAutosaveState("saved");
+        setLastSavedAt(new Date());
+      } else {
+        setAutosaveState("error");
+        toast.error(res.error);
+      }
+    }, 1200);
   }
 
   function toggleSection(key: string) {
@@ -167,6 +185,30 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
             </>
           )}
         </Button>
+      </div>
+
+      {/* Cabecera del informe — título + autor (estilo Notion) */}
+      <div className="space-y-3 rounded-lg border border-border bg-card px-4 py-3">
+        <input
+          type="text"
+          value={title}
+          placeholder="Título del informe (p. ej. W20 — JJ — Hardware)"
+          onChange={(e) => handleTitleChange(e.target.value)}
+          className="w-full rounded-sm border-0 bg-transparent text-2xl font-bold tracking-tight focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        <div className="flex items-center gap-3 border-t border-border pt-2">
+          <label htmlFor="report-author" className="text-sm font-medium text-muted-foreground">
+            Autor
+          </label>
+          <input
+            id="report-author"
+            type="text"
+            value={content.author}
+            placeholder="Nombre del autor"
+            onChange={(e) => updateSection("author", e.target.value)}
+            className="flex-1 rounded-sm border-0 bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
       </div>
 
       {/* 🎯 Tesis */}

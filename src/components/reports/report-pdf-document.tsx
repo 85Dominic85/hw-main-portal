@@ -196,6 +196,9 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
         {/* ── Header ── */}
         <View style={styles.header}>
           <Text style={styles.title}>{report.title}</Text>
+          {content.author ? (
+            <Text style={styles.period}>Autor: {content.author}</Text>
+          ) : null}
           <Text style={styles.period}>{report.periodLabel}</Text>
           {report.globalStatus && (
             <View
@@ -224,18 +227,18 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
             <View style={styles.table}>
               <View style={styles.tableHeaderRow}>
                 <Text style={[styles.cellHeader, styles.cellWide]}>KPI</Text>
-                <Text style={[styles.cellHeader, styles.cellNarrow]}>Unidad</Text>
-                <Text style={[styles.cellHeader, styles.cellNarrow]}>Target</Text>
-                <Text style={[styles.cellHeader, styles.cellNarrow]}>Actual</Text>
+                <Text style={styles.cellHeader}>Target</Text>
+                <Text style={styles.cellHeader}>Actual</Text>
+                <Text style={styles.cellHeader}>Delta vs ant.</Text>
                 <Text style={[styles.cellHeader, styles.cellNarrow]}>Estado</Text>
                 <Text style={[styles.cellHeader, styles.cellWide]}>Comentario</Text>
               </View>
               {content.executiveSummary.rows.map((r) => (
                 <View key={r.id} style={styles.tableRow}>
                   <Text style={[styles.cell, styles.cellWide]}>{r.label || "—"}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{r.unit || "—"}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{r.target ?? "—"}</Text>
-                  <Text style={[styles.cell, styles.cellNarrow]}>{r.actual ?? "—"}</Text>
+                  <Text style={styles.cell}>{r.target || "—"}</Text>
+                  <Text style={styles.cell}>{r.actual || "—"}</Text>
+                  <Text style={styles.cell}>{r.delta || "—"}</Text>
                   <Text
                     style={[
                       styles.cell,

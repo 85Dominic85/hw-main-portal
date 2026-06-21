@@ -51,36 +51,17 @@ export default async function ReportViewPage({ params }: PageProps) {
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/reports">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold">{report.title}</h1>
-              {report.status === "draft" && (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Borrador
-                </Badge>
-              )}
-              {report.globalStatus && (
-                <span
-                  className={
-                    report.globalStatus === "verde"
-                      ? "text-status-ok"
-                      : report.globalStatus === "amarillo"
-                        ? "text-status-warn"
-                        : "text-status-danger"
-                  }
-                >
-                  ●
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">{periodLabel}</p>
-          </div>
+          {report.status === "draft" && (
+            <Badge variant="outline" className="text-muted-foreground">
+              Borrador
+            </Badge>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
