@@ -8,7 +8,8 @@ import { requireAdmin } from "@/lib/auth/session";
 import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
 import type { Result } from "@/lib/connectors/types";
-import { buildEmptyContent, parseReportContent } from "@/lib/reports/defaults";
+import { parseReportContent } from "@/lib/reports/defaults";
+import { buildAutofilledContent } from "@/lib/reports/autofill";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
 import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
@@ -101,6 +102,8 @@ export async function createReport(
   let isoYear: number | null = null;
   let isoWeek: number | null = null;
   let title: string;
+  let rangeFrom: Date;
+  let rangeTo: Date;
 
   if (data.type === "weekly") {
     const range = isoWeekToRange(data.isoYear, data.isoWeek);
@@ -109,21 +112,29 @@ export async function createReport(
     periodKey = formatWeekKey(data.isoYear, data.isoWeek);
     periodFrom = range.from.toISOString().slice(0, 10);
     periodTo = range.to.toISOString().slice(0, 10);
+    rangeFrom = range.from;
+    rangeTo = range.to;
     title = `Informe ${periodKey}`;
   } else if (data.type === "monthly") {
     periodKey = `${data.year}-${String(data.month).padStart(2, "0")}`;
     periodFrom = `${data.year}-${String(data.month).padStart(2, "0")}-01`;
     const lastDay = new Date(Date.UTC(data.year, data.month, 0)).getUTCDate();
     periodTo = `${data.year}-${String(data.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    rangeFrom = new Date(Date.UTC(data.year, data.month - 1, 1));
+    rangeTo = new Date(Date.UTC(data.year, data.month, 0, 23, 59, 59, 999));
     title = `Informe ${periodKey}`;
   } else {
     periodKey = `${data.from}--${data.to}`;
     periodFrom = data.from;
     periodTo = data.to;
+    rangeFrom = new Date(`${data.from}T00:00:00Z`);
+    rangeTo = new Date(`${data.to}T23:59:59Z`);
     title = `Informe ${data.from} → ${data.to}`;
   }
 
-  const content = buildEmptyContent();
+  // Auto-relleno desde los conectores (best-effort) + esqueleto de KPIs del
+  // catálogo. Si los conectores fallan, los campos quedan vacíos y editables.
+  const content = await buildAutofilledContent({ from: rangeFrom, to: rangeTo });
   // Autollenado del autor (editable a mano después). En bypass, user.email es
   // el email del Basic Auth admin; user.fullName suele ser null.
   content.author = user.fullName ?? user.email ?? "";
@@ -164,6 +175,87 @@ export async function createReport(
     }
     return { ok: false, error: msg };
   }
+}
+
+/**
+ * Re-rellena un borrador desde los conectores (on-demand). Sobrescribe solo los
+ * campos AUTO (métricas de config/envíos/soporte + target/actual/Δ/semáforo del
+ * resumen ejecutivo por kpiKey), preservando comentarios y todo lo manual
+ * (narrativa, bloqueos, decisiones, cajones, foco, pedidos, RMAs).
+ * Devuelve el content resultante para que el editor lo refleje sin recargar.
+ */
+export async function refreshReportSources(
+  input: unknown,
+): Promise<Result<{ content: ReportContent }>> {
+  await requireAdmin();
+
+  const parsed = reportIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+  const { reportId } = parsed.data;
+
+  const [report] = await db
+    .select({
+      status: reports.status,
+      content: reports.content,
+      periodFrom: reports.periodFrom,
+      periodTo: reports.periodTo,
+    })
+    .from(reports)
+    .where(eq(reports.id, reportId))
+    .limit(1);
+
+  if (!report) return { ok: false, error: "Informe no encontrado." };
+  if (report.status !== "draft") {
+    return { ok: false, error: "Solo se pueden rellenar borradores." };
+  }
+  if (!report.periodFrom || !report.periodTo) {
+    return { ok: false, error: "El informe no tiene periodo definido." };
+  }
+
+  const current = parseReportContent(report.content);
+  const auto = await buildAutofilledContent({
+    from: new Date(`${report.periodFrom}T00:00:00Z`),
+    to: new Date(`${report.periodTo}T23:59:59Z`),
+  });
+
+  // Métricas cuantitativas (sobrescribe).
+  current.configuraciones.totalConfigs = auto.configuraciones.totalConfigs;
+  current.configuraciones.successRate1st = auto.configuraciones.successRate1st;
+  current.configuraciones.successRate2nd = auto.configuraciones.successRate2nd;
+  current.envios.totalOps = auto.envios.totalOps;
+  current.envios.completed = auto.envios.completed;
+  current.envios.shipped = auto.envios.shipped;
+  current.envios.pending = auto.envios.pending;
+  current.envios.grossRevenue = auto.envios.grossRevenue;
+  current.envios.avgDeliveryDays = auto.envios.avgDeliveryDays;
+  current.envios.sla7dPct = auto.envios.sla7dPct;
+  current.soporte.openIncidents = auto.soporte.openIncidents;
+  current.soporte.activeRmas = auto.soporte.activeRmas;
+  current.soporte.sla7dPct = auto.soporte.sla7dPct;
+  current.soporte.reopenRatePct = auto.soporte.reopenRatePct;
+  current.soporte.avgResolutionHours = auto.soporte.avgResolutionHours;
+
+  // Resumen ejecutivo: actualiza valores por kpiKey, conserva comentarios y
+  // las filas manuales (kpiKey fuera del catálogo).
+  const byKey = new Map(current.executiveSummary.rows.map((r) => [r.kpiKey, r]));
+  const autoKeys = new Set(auto.executiveSummary.rows.map((a) => a.kpiKey));
+  const updated = auto.executiveSummary.rows.map((a) => {
+    const existing = byKey.get(a.kpiKey);
+    return existing
+      ? { ...existing, target: a.target, actual: a.actual, delta: a.delta, status: a.status }
+      : a;
+  });
+  const manualRows = current.executiveSummary.rows.filter((r) => !autoKeys.has(r.kpiKey));
+  current.executiveSummary.rows = [...updated, ...manualRows];
+
+  await db
+    .update(reports)
+    .set({ content: current as unknown as Record<string, unknown> })
+    .where(eq(reports.id, reportId));
+
+  revalidateReport(reportId);
+  return { ok: true, data: { content: current } };
 }
 
 export async function saveSection(

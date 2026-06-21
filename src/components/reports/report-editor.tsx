@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Globe, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,13 @@ import { CajonesEditor } from "./sections/cajones-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
 import { DeleteDraftButton } from "./delete-draft-button";
-import { saveSection, publishReport, setGlobalStatus, setReportTitle } from "@/server/actions/reports";
+import {
+  saveSection,
+  publishReport,
+  setGlobalStatus,
+  setReportTitle,
+  refreshReportSources,
+} from "@/server/actions/reports";
 import type { ReportContent } from "@/lib/reports/schema";
 
 interface ReportEditorProps {
@@ -58,6 +64,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
     report.globalStatus,
   );
   const [isPublishing, startPublishing] = useTransition();
+  const [isRefreshing, startRefreshing] = useTransition();
   const [openSections, setOpenSections] = useState<Set<string>>(DEFAULT_OPEN);
 
   const debounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -143,6 +150,20 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
     else toast.error(result.error);
   }
 
+  function handleRefresh() {
+    startRefreshing(async () => {
+      const res = await refreshReportSources({ reportId: report.id });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setContent(res.data.content);
+      setLastSavedAt(new Date());
+      setAutosaveState("saved");
+      toast.success("Datos actualizados desde los conectores (MainOps · HW Tool · HSM).");
+    });
+  }
+
   const isOpen = (key: string) => openSections.has(key);
 
   return (
@@ -174,6 +195,16 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={isRefreshing ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
+            {isRefreshing ? "Rellenando…" : "Rellenar desde fuentes"}
+          </Button>
           <DeleteDraftButton reportId={report.id} redirectTo="/reports" label="Eliminar" />
           <Button onClick={handlePublish} disabled={isPublishing}>
             {isPublishing ? (
