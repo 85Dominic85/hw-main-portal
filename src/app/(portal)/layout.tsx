@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { getCurrentUser } from "@/lib/auth/session";
-import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
 
 /**
@@ -48,7 +47,6 @@ export default async function PortalLayout({
             role: user.role,
             isGuest: user.isGuest,
           }}
-          openMode={AUTH_BYPASS_ENABLED}
         />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
       </div>

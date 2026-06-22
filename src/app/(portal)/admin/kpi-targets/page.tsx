@@ -1,12 +1,14 @@
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPage } from "@/lib/auth/session";
 import { db, schema } from "@/lib/db";
 import { KpiDefinitionsTable } from "@/components/admin/kpi-definitions-table";
 import { asc } from "drizzle-orm";
 
 const { reportKpiDefinitions } = schema;
 
+export const dynamic = "force-dynamic";
+
 export default async function KpiTargetsPage() {
-  await requireAdmin();
+  await requireAdminPage("/admin/kpi-targets");
 
   const definitions = await db
     .select()

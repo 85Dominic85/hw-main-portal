@@ -12,6 +12,7 @@ import {
   getAccountByEmail,
   listAccounts,
   normalizeEmail,
+  isAllowlistedAdmin,
 } from "@/lib/auth/accounts";
 import type { Result } from "@/lib/connectors/types";
 
@@ -33,12 +34,20 @@ async function otherActiveAdmins(exceptId: string): Promise<number> {
 }
 
 export async function createUser(input: unknown): Promise<Result<true>> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
   const { email, name, password, role } = parsed.data;
+
+  // Anti-self-demote: un admin de arranque (sin fila propia) no puede crearse a
+  // sí mismo como viewer — quedaría degradado al instante y sin poder revertirlo
+  // solo (necesitaría a otro admin). Equivale al guard de updateUser. Crearse
+  // como admin sí está permitido (es el flujo normal para fijar tu contraseña).
+  if (normalizeEmail(email) === normalizeEmail(admin.email) && role !== "admin") {
+    return { ok: false, error: "No puedes crearte a ti mismo como viewer." };
+  }
 
   const existing = await getAccountByEmail(email);
   if (existing) return { ok: false, error: "Ya existe una cuenta con ese email." };
@@ -134,6 +143,16 @@ export async function removeUser(input: unknown): Promise<Result<true>> {
 
   if (normalizeEmail(target.email) === normalizeEmail(admin.email)) {
     return { ok: false, error: "No puedes eliminar tu propia cuenta." };
+  }
+  // No eliminar cuentas del allowlist (PORTAL_ADMIN_EMAILS): al quedar sin fila
+  // volverían a entrar con la contraseña de arranque (bootstrap per-email). Para
+  // quitarles acceso, desactívalas (deja fila inactive) o sácalas del allowlist.
+  if (isAllowlistedAdmin(target.email)) {
+    return {
+      ok: false,
+      error:
+        "Esta cuenta está en el allowlist de admins del departamento; no se puede eliminar (volvería a entrar con la contraseña de arranque). Desactívala en su lugar.",
+    };
   }
   if (target.role === "admin" && target.active && (await otherActiveAdmins(target.id)) === 0) {
     return { ok: false, error: "Debe quedar al menos un admin activo." };

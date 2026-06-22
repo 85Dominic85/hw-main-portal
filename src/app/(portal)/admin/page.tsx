@@ -3,12 +3,12 @@ import { Target, Eye, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GuestDashboardsToggle } from "@/components/admin/guest-dashboards-toggle";
 import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPage } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  await requireAdmin();
+  await requireAdminPage("/admin");
   const guestDashboardsEnabled = await getGuestDashboardsEnabled();
 
   return (

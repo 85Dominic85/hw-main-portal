@@ -18,8 +18,6 @@ interface UserMenuProps {
   email: string;
   fullName: string | null;
   role: "admin" | "viewer";
-  /** Si true, el portal está en modo abierto (sin auth real obligatoria). */
-  openMode?: boolean;
   /** Si true, no hay credenciales reales — visitante anónimo. */
   isGuest?: boolean;
 }
@@ -46,7 +44,6 @@ export function UserMenu({
   email,
   fullName,
   role,
-  openMode = false,
   isGuest = false,
 }: UserMenuProps) {
   const [isPending, startTransition] = React.useTransition();
@@ -73,7 +70,7 @@ export function UserMenu({
             <>
               <span className="font-semibold">Invitado</span>
               <span className="text-xs text-muted-foreground">
-                Portal abierto · consulta sin sesión
+                Sin sesión · solo vista pública
               </span>
               <div className="mt-1">
                 <span className="inline-flex w-fit items-center rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -92,14 +89,6 @@ export function UserMenu({
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                   {role}
                 </span>
-                {openMode && (
-                  <span
-                    className="inline-flex w-fit items-center rounded bg-muted/50 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-                    title="Sesión Basic Auth del área admin"
-                  >
-                    admin auth
-                  </span>
-                )}
               </div>
             </>
           )}

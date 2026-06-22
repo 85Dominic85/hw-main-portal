@@ -33,9 +33,6 @@ interface TopbarProps {
     role: "admin" | "viewer";
     isGuest: boolean;
   };
-  /** Si true, el portal está en modo abierto (sin auth real obligatoria).
-   *  El UserMenu adapta el copy según `user.isGuest`. */
-  openMode?: boolean;
 }
 
 /**
@@ -43,7 +40,7 @@ interface TopbarProps {
  * Recibe el `user` como prop desde el layout (Server Component) para no
  * tener que volver a leer la sesión en cliente.
  */
-export function Topbar({ user, openMode = false }: TopbarProps) {
+export function Topbar({ user }: TopbarProps) {
   const pathname = usePathname();
   const title = getTitle(pathname);
 
@@ -77,7 +74,6 @@ export function Topbar({ user, openMode = false }: TopbarProps) {
           email={user.email}
           fullName={user.fullName}
           role={user.role}
-          openMode={openMode}
           isGuest={user.isGuest}
         />
       </div>

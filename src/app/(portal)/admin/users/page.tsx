@@ -2,14 +2,14 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPage } from "@/lib/auth/session";
 import { listAccounts } from "@/lib/auth/accounts";
 import { UsersManager, type AccountRow } from "@/components/admin/users-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersAdminPage() {
-  const admin = await requireAdmin();
+  const admin = await requireAdminPage("/admin/users");
 
   let accounts: AccountRow[] = [];
   let loadError: string | null = null;

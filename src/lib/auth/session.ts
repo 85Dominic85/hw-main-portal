@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import type { PortalRole } from "./roles";
 import { verifySession, SESSION_COOKIE } from "./session-cookie";
@@ -67,6 +68,27 @@ export async function requireAdmin(): Promise<PortalSessionUser> {
   const user = await requireAuth();
   if (user.role !== "admin") {
     throw new Error("FORBIDDEN: se requiere rol admin.");
+  }
+  return user;
+}
+
+/**
+ * Guard para PÁGINAS/LAYOUTS solo-admin. A diferencia de `requireAdmin` (que
+ * lanza y dispara la pantalla de error técnica de error.tsx), redirige limpio:
+ *   - sin sesión → /login?next=...
+ *   - sesión no admin → /
+ * Importante cuando se revoca/degrada una sesión viva: la cookie lleva el rol
+ * "horneado" (admin) y pasa el middleware Edge, pero la BD ya dice viewer; aquí
+ * la revocación aplica con una redirección, no con un 500.
+ * En Server Actions usa `requireAdmin` (ahí sí debe lanzar).
+ */
+export async function requireAdminPage(nextPath?: string): Promise<PortalSessionUser> {
+  const user = await getCurrentUser();
+  if (user.isGuest) {
+    redirect(`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`);
+  }
+  if (user.role !== "admin") {
+    redirect("/");
   }
   return user;
 }
