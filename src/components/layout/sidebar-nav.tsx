@@ -15,6 +15,8 @@ interface NavItem {
   enabled: boolean;
   /** Solo visible para el rol especificado (si se omite, lo ven todos). */
   requiresRole?: "admin";
+  /** Requiere estar autenticado (admin o viewer); oculto a invitados. */
+  requiresAuth?: boolean;
   /** Dashboard de detalle: visible a invitados solo si el toggle está activo. */
   requiresDashboardAccess?: boolean;
 }
@@ -24,21 +26,24 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/mainops", label: "Logística", icon: Package, enabled: true, requiresDashboardAccess: true },
   { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true, requiresDashboardAccess: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true, requiresDashboardAccess: true },
-  { href: "/reports", label: "Informes", icon: FileText, enabled: true, requiresRole: "admin" },
+  { href: "/reports", label: "Informes", icon: FileText, enabled: true, requiresAuth: true },
   { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
 ] as const;
 
 interface SidebarNavProps {
   role: "admin" | "viewer";
+  /** True si es invitado anónimo (sin sesión). */
+  isGuest: boolean;
   /** ¿Pueden los invitados ver los dashboards de detalle? (toggle admin). */
   guestDashboardsEnabled: boolean;
 }
 
-export function SidebarNav({ role, guestDashboardsEnabled }: SidebarNavProps) {
+export function SidebarNav({ role, isGuest, guestDashboardsEnabled }: SidebarNavProps) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => {
     if (item.requiresRole === "admin" && role !== "admin") return false;
-    if (item.requiresDashboardAccess && role !== "admin" && !guestDashboardsEnabled) return false;
+    if (item.requiresAuth && isGuest) return false;
+    if (item.requiresDashboardAccess && isGuest && !guestDashboardsEnabled) return false;
     return true;
   });
 

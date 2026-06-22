@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Download, FileDown, ArrowLeft } from "lucide-react";
 
@@ -21,7 +21,8 @@ interface PageProps {
 export default async function ReportViewPage({ params }: PageProps) {
   const { id } = await params;
   const user = await getCurrentUser();
-  const isAdmin = user?.role === "admin";
+  if (user.isGuest) redirect(`/login?next=/reports/${id}`);
+  const isAdmin = user.role === "admin";
 
   const report = await getReportById(id, isAdmin ? "admin" : "viewer");
   if (!report) notFound();

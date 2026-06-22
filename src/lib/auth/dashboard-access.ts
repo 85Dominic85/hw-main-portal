@@ -14,7 +14,9 @@ import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
  */
 export async function requireDashboardAccess(): Promise<void> {
   const user = await getCurrentUser();
-  if (user?.role === "admin") return;
+  // Usuarios autenticados (admin o viewer) siempre pasan.
+  if (!user.isGuest) return;
+  // Invitados anónimos: solo si el toggle está activo.
   if (await getGuestDashboardsEnabled()) return;
   redirect("/");
 }

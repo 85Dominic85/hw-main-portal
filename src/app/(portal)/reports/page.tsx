@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus, FileText, Clock, CheckCircle2, Archive } from "lucide-react";
 import { Suspense } from "react";
 
@@ -14,14 +15,10 @@ import { DeleteDraftButton } from "@/components/reports/delete-draft-button";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
-  let userError: string | null = null;
-  try {
-    user = await getCurrentUser();
-  } catch (err) {
-    userError = err instanceof Error ? err.message : String(err);
-  }
-  const isAdmin = user?.role === "admin";
+  const user = await getCurrentUser();
+  // Revocación: un invitado (o sesión revocada vía token_version/active) no entra.
+  if (user.isGuest) redirect("/login?next=/reports");
+  const isAdmin = user.role === "admin";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -41,15 +38,6 @@ export default async function ReportsPage() {
           </Button>
         )}
       </div>
-
-      {userError && (
-        <Card>
-          <CardContent className="py-8">
-            <p className="text-sm font-semibold text-destructive">Error en getCurrentUser</p>
-            <pre className="mt-2 overflow-auto text-xs text-muted-foreground">{userError}</pre>
-          </CardContent>
-        </Card>
-      )}
 
       <Suspense fallback={<ReportsListSkeleton />}>
         <ReportsList isAdmin={isAdmin} />

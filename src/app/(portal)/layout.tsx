@@ -35,7 +35,11 @@ export default async function PortalLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <SidebarNav role={user.role} guestDashboardsEnabled={guestDashboardsEnabled} />
+      <SidebarNav
+        role={user.role}
+        isGuest={user.isGuest}
+        guestDashboardsEnabled={guestDashboardsEnabled}
+      />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar
           user={{

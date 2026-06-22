@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { Target, Eye } from "lucide-react";
+import { Target, Eye, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GuestDashboardsToggle } from "@/components/admin/guest-dashboards-toggle";
 import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
+import { requireAdmin } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  await requireAdmin();
   const guestDashboardsEnabled = await getGuestDashboardsEnabled();
 
   return (
@@ -35,6 +37,20 @@ export default async function AdminPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
+        <Link href="/admin/users">
+          <Card className="cursor-pointer transition-colors hover:bg-accent/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Usuarios
+              </CardTitle>
+              <CardDescription>
+                Crear cuentas, permisos (admin/viewer), cambiar contraseñas y activar/desactivar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">Activo</CardContent>
+          </Card>
+        </Link>
         <Link href="/admin/kpi-targets">
           <Card className="cursor-pointer transition-colors hover:bg-accent/30">
             <CardHeader>

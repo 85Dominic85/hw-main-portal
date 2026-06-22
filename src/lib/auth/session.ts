@@ -1,153 +1,68 @@
 import "server-only";
 
 import { cache } from "react";
-import { headers, cookies } from "next/headers";
+import { cookies } from "next/headers";
 
-import { createSupabaseServerClient } from "./supabase-server";
-import { inferRoleFromEmail, type PortalRole } from "./roles";
-import { AUTH_BYPASS_ENABLED } from "./bypass";
-import { validateBasicAuth } from "./admin-basic-auth";
-import { verifyAdminToken, ADMIN_COOKIE } from "./admin-token";
+import type { PortalRole } from "./roles";
+import { verifySession, SESSION_COOKIE } from "./session-cookie";
+import { resolveSession } from "./accounts";
 
 export interface PortalSessionUser {
   id: string;
   email: string;
   role: PortalRole;
   fullName: string | null;
-  /** True si es un visitante anónimo (portal abierto, sin auth real). */
+  /** True si es un visitante anónimo (sin sesión). */
   isGuest: boolean;
 }
 
-const BYPASS_USER_ID = "00000000-0000-0000-0000-000000000000";
-const GUEST_USER_ID = "00000000-0000-0000-0000-00000000guest";
+const SESSION_USER_ID = "00000000-0000-0000-0000-000000000000";
+
+const GUEST: PortalSessionUser = {
+  id: "00000000-0000-0000-0000-00000000guest",
+  email: "",
+  role: "viewer",
+  fullName: "Invitado",
+  isGuest: true,
+};
 
 /**
- * Devuelve el usuario actual con su rol del portal.
+ * Usuario actual a partir de la cookie de sesión firmada.
  *
- * Estrategia de detección de rol (de mejor a peor):
- *   1. JWT custom claim `role` (lo setea el Auth Hook `set_role_claim_on_jwt`).
- *   2. Tabla `portal.portal_users.role` (consulta directa, fallback si no hay claim).
- *   3. Inferido del email vs `PORTAL_ADMIN_EMAILS` (último recurso).
+ * - Sin cookie válida → invitado (solo ve la home).
+ * - Con cookie válida → revalida el rol contra la tabla de cuentas
+ *   (`resolveRoleForEmail`): si la cuenta se desactivó o dejó de ser admin,
+ *   el cambio aplica al instante (no se confía en el rol "horneado" en la cookie).
  *
- * Cacheado por request via `cache()` de React: si una página llama a
- * `getCurrentUser()` 5 veces, se ejecuta una sola.
+ * Cacheado por request con `cache()` de React.
  */
-export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> => {
-  // Modo bypass — portal abierto para consulta. Identificamos al visitante:
-  //   - Si la request actual lleva un Basic Auth header válido (estamos
-  //     viendo /admin/* o el browser sigue mandando el header tras autenticar),
-  //     devolvemos el user real con role admin.
-  //   - Si no, devolvemos un "invitado": viewer sin email, fullName "Invitado".
-  //     El UserMenu lo muestra como tal en lugar de inventar un "Demo admin".
-  if (AUTH_BYPASS_ENABLED) {
-    const headersList = await headers();
-    const result = validateBasicAuth(headersList.get("authorization"));
+export const getCurrentUser = cache(async (): Promise<PortalSessionUser> => {
+  const cookieStore = await cookies();
+  const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
+  if (!session) return GUEST;
 
-    if (result.ok) {
-      return {
-        id: BYPASS_USER_ID,
-        email: result.email,
-        role: "admin",
-        fullName: null,
-        isGuest: false,
-      };
-    }
+  const resolved = await resolveSession(session);
+  if (!resolved) return GUEST;
 
-    // Cookie firmada: el admin autenticó vía Basic Auth en /admin o /reports
-    // (donde el navegador sí envía el header); el middleware dejó la cookie
-    // para reconocerlo también en el resto de páginas.
-    const cookieStore = await cookies();
-    const cookieEmail = await verifyAdminToken(cookieStore.get(ADMIN_COOKIE)?.value);
-    // Revalidar contra la allowlist actual: si el email dejó de ser admin
-    // (rotación/baja), la cookie firmada deja de conceder acceso al instante.
-    if (cookieEmail && inferRoleFromEmail(cookieEmail) === "admin") {
-      return {
-        id: BYPASS_USER_ID,
-        email: cookieEmail,
-        role: "admin",
-        fullName: null,
-        isGuest: false,
-      };
-    }
-
-    return {
-      id: GUEST_USER_ID,
-      email: "",
-      role: "viewer",
-      fullName: "Invitado",
-      isGuest: true,
-    };
-  }
-
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !user.email) return null;
-
-  // 1. JWT claim (rápido, sin query)
-  const claimRole = (user.app_metadata?.role as string | undefined) ??
-    (user.user_metadata?.role as string | undefined);
-  if (claimRole === "admin" || claimRole === "viewer") {
-    return {
-      id: user.id,
-      email: user.email,
-      role: claimRole,
-      fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
-      isGuest: false,
-    };
-  }
-
-  // 2. Query a portal.portal_users
-  try {
-    const { data: portalUser } = await supabase
-      .schema("portal")
-      .from("portal_users")
-      .select("role, full_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (portalUser?.role) {
-      return {
-        id: user.id,
-        email: user.email,
-        role: portalUser.role as PortalRole,
-        fullName: portalUser.full_name ?? null,
-        isGuest: false,
-      };
-    }
-  } catch {
-    // Si RLS impide leer (ej. JWT sin claim role aún), caemos al inferido.
-  }
-
-  // 3. Inferido del email
   return {
-    id: user.id,
-    email: user.email,
-    role: inferRoleFromEmail(user.email),
+    id: SESSION_USER_ID,
+    email: resolved.email,
+    role: resolved.role,
     fullName: null,
     isGuest: false,
   };
 });
 
-/**
- * Igual que getCurrentUser pero throws si no hay sesión.
- * Útil en server actions y server components que requieren auth.
- */
+/** Throws si no hay sesión autenticada (invitado incluido). */
 export async function requireAuth(): Promise<PortalSessionUser> {
   const user = await getCurrentUser();
-  if (!user) {
+  if (user.isGuest) {
     throw new Error("UNAUTHORIZED: no hay sesión activa.");
   }
   return user;
 }
 
-/**
- * Throws si no hay sesión o si el usuario no es admin.
- * Para mutaciones de datos propios del portal (umbrales, notas, metas, etc.).
- */
+/** Throws si no hay sesión o el usuario no es admin. */
 export async function requireAdmin(): Promise<PortalSessionUser> {
   const user = await requireAuth();
   if (user.role !== "admin") {

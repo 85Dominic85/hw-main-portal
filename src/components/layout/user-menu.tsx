@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/server/actions/auth";
+import { logout } from "@/server/actions/auth";
 import { cn } from "@/lib/utils/cn";
 
 interface UserMenuProps {
@@ -111,16 +111,7 @@ export function UserMenu({
             className="cursor-not-allowed text-muted-foreground text-xs"
             title="Visitante anónimo — no hay sesión"
           >
-            Para gestionar configuración, ve a Admin.
-          </DropdownMenuItem>
-        ) : openMode ? (
-          <DropdownMenuItem
-            disabled
-            className="cursor-not-allowed text-muted-foreground text-xs"
-            title="Cierra el navegador para terminar la sesión Basic Auth"
-          >
-            <LogOut className="h-4 w-4 opacity-50" aria-hidden="true" />
-            Cierra el navegador para salir
+            Inicia sesión para acceder al área del departamento.
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
@@ -129,7 +120,7 @@ export function UserMenu({
             onSelect={(e) => {
               e.preventDefault();
               startTransition(async () => {
-                await signOut();
+                await logout();
               });
             }}
           >
