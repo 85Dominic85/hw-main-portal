@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, LogIn } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
@@ -63,6 +63,19 @@ export function Topbar({ user, openMode = false }: TopbarProps) {
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Actualizar</span>
         </Button>
+        {user.isGuest && (
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            {/* Puerta de login: navegación COMPLETA (no Link) para que /reports
+                dispare el prompt nativo de Basic Auth; al validar, el middleware
+                deja la cookie y el admin queda reconocido en todo el portal. Un
+                invitado simplemente no podrá pasar el prompt. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/reports">
+              <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Acceso departamento</span>
+            </a>
+          </Button>
+        )}
         <ThemeToggle />
         <UserMenu
           email={user.email}

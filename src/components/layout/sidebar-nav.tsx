@@ -15,29 +15,32 @@ interface NavItem {
   enabled: boolean;
   /** Solo visible para el rol especificado (si se omite, lo ven todos). */
   requiresRole?: "admin";
+  /** Dashboard de detalle: visible a invitados solo si el toggle está activo. */
+  requiresDashboardAccess?: boolean;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Inicio", icon: Home, enabled: true },
-  { href: "/mainops", label: "Logística", icon: Package, enabled: true },
-  { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true },
-  { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true },
-  { href: "/reports", label: "Informes", icon: FileText, enabled: true },
-  // /admin sigue visible para todos (la auth real la hace Basic Auth en el
-  // middleware). El sidebar no oculta el link a guests para que sepan dónde
-  // está el área administrativa — el prompt aparece al hacer click.
-  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true },
+  { href: "/mainops", label: "Logística", icon: Package, enabled: true, requiresDashboardAccess: true },
+  { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true, requiresDashboardAccess: true },
+  { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true, requiresDashboardAccess: true },
+  { href: "/reports", label: "Informes", icon: FileText, enabled: true, requiresRole: "admin" },
+  { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
 ] as const;
 
 interface SidebarNavProps {
   role: "admin" | "viewer";
+  /** ¿Pueden los invitados ver los dashboards de detalle? (toggle admin). */
+  guestDashboardsEnabled: boolean;
 }
 
-export function SidebarNav({ role }: SidebarNavProps) {
+export function SidebarNav({ role, guestDashboardsEnabled }: SidebarNavProps) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter(
-    (item) => !item.requiresRole || item.requiresRole === role,
-  );
+  const items = NAV_ITEMS.filter((item) => {
+    if (item.requiresRole === "admin" && role !== "admin") return false;
+    if (item.requiresDashboardAccess && role !== "admin" && !guestDashboardsEnabled) return false;
+    return true;
+  });
 
   return (
     <aside

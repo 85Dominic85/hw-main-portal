@@ -1,8 +1,14 @@
 import Link from "next/link";
-import { Target } from "lucide-react";
+import { Target, Eye } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GuestDashboardsToggle } from "@/components/admin/guest-dashboards-toggle";
+import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
 
-export default function AdminPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AdminPage() {
+  const guestDashboardsEnabled = await getGuestDashboardsEnabled();
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
@@ -11,6 +17,22 @@ export default function AdminPage() {
           Gestión de umbrales, notas, metas mensuales y manual entries. Solo admins.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Visibilidad para invitados
+          </CardTitle>
+          <CardDescription>
+            Controla si los visitantes sin credenciales pueden ver los dashboards de
+            detalle (Logística, Configuraciones, HSM). Los informes son siempre privados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GuestDashboardsToggle initialEnabled={guestDashboardsEnabled} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link href="/admin/kpi-targets">

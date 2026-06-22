@@ -27,12 +27,14 @@ import {
 } from "@/lib/mainops/period";
 import { formatEur, formatEurCompact } from "@/lib/utils/format-currency";
 import { formatRelativeTime } from "@/lib/utils/format";
+import { requireDashboardAccess } from "@/lib/auth/dashboard-access";
 
 interface PageProps {
   searchParams: Promise<{ period?: string }>;
 }
 
 export default async function MainOpsPage({ searchParams }: PageProps) {
+  await requireDashboardAccess();
   const params = await searchParams;
   const period: MainOpsPeriod = isValidPeriod(params.period)
     ? params.period

@@ -4,6 +4,7 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { getCurrentUser } from "@/lib/auth/session";
 import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
+import { getGuestDashboardsEnabled } from "@/lib/settings/guest-access";
 
 /**
  * Todas las rutas del portal son dinámicas: dependen de connectors externos
@@ -30,9 +31,11 @@ export default async function PortalLayout({
     redirect("/login");
   }
 
+  const guestDashboardsEnabled = await getGuestDashboardsEnabled();
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <SidebarNav role={user.role} />
+      <SidebarNav role={user.role} guestDashboardsEnabled={guestDashboardsEnabled} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar
           user={{

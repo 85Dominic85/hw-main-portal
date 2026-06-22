@@ -2,24 +2,24 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseMiddlewareClient } from "@/lib/auth/supabase-middleware";
 import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
-import { requireAdminBasicAuth } from "@/lib/auth/admin-basic-auth";
+import { requireAdminBasicAuth, validateBasicAuth } from "@/lib/auth/admin-basic-auth";
+import { signAdminToken, ADMIN_COOKIE } from "@/lib/auth/admin-token";
 
 /**
  * Middleware del portal.
  *
- * Reglas:
- *   - **`/admin/*`**: SIEMPRE pide HTTP Basic Auth (independiente del bypass).
- *     Solo jj.gallego@ y domingo.bueno@ pueden gestionar umbrales, notas,
- *     metas y manual entries. Credenciales en env vars PORTAL_ADMIN_EMAILS
- *     y PORTAL_ADMIN_PASSWORD.
- *   - Si `PORTAL_AUTH_BYPASS=true`: deja pasar todo el resto. Modo abierto.
- *   - Rutas públicas: `/login`, `/api/auth/callback`. Cualquiera entra.
- *   - Resto: requieren sesión Supabase válida (cuando Supabase Auth esté
- *     activo). Si no, redirect a `/login`.
- *   - Si ya estás logueado y entras a `/login`, te manda a `/`.
- *
- * El allowlist `@qamarero.com` se aplica en el trigger SQL `handle_new_auth_user`,
- * no aquí — un email no permitido nunca llega a tener sesión.
+ * Reglas de acceso:
+ *   - **`/admin/*` y `/reports/*`**: SIEMPRE requieren HTTP Basic Auth. Son la
+ *     parte privada del departamento — solo las 3 cuentas (jj.gallego,
+ *     domingo.bueno, guillermo.mateos) con la contraseña compartida.
+ *   - **Home (`/`)**: pública (hero shields).
+ *   - **Dashboards (`/mainops`, `/hwtool`, `/hsm`)**: gated a nivel de página
+ *     según el toggle "guest dashboards" (admin lo controla). No se bloquean
+ *     aquí porque el middleware (Edge) no puede leer ese flag de la BD.
+ *   - Al validar un Basic Auth correcto, se setea una cookie firmada
+ *     (`portal_admin`) para que `getCurrentUser` reconozca al admin en TODAS
+ *     las páginas (el header Basic Auth no se reenvía a rutas no challenged).
+ *   - Si `PORTAL_AUTH_REQUIRED=true`: flujo Supabase (login real).
  */
 
 const PUBLIC_PATHS = ["/login", "/api/auth/callback", "/api/auth"];
@@ -28,34 +28,57 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-function isAdminPath(pathname: string): boolean {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+/** Rutas privadas del departamento: requieren Basic Auth. */
+function isPrivatePath(pathname: string): boolean {
+  return (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/reports" ||
+    pathname.startsWith("/reports/") ||
+    pathname === "/lab" ||
+    pathname.startsWith("/lab/")
+  );
+}
+
+async function attachAdminCookie(res: NextResponse, email: string): Promise<void> {
+  const token = await signAdminToken(email);
+  if (token) {
+    res.cookies.set(ADMIN_COOKIE, token, {
+      httpOnly: true,
+      // En dev/preview sin HTTPS el navegador descartaría una cookie Secure,
+      // dejando al admin sin reconocer fuera de /admin y /reports.
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 12, // 12h
+    });
+  }
 }
 
 export async function middleware(request: NextRequest) {
-  // /admin/* siempre protegido con Basic Auth, antes que cualquier otra regla.
-  // Esto permite que el portal funcione en modo abierto para el resto pero
-  // mantenga las páginas admin tras credenciales.
-  if (isAdminPath(request.nextUrl.pathname)) {
-    const authError = requireAdminBasicAuth(request);
-    if (authError) return authError;
-    // Auth OK → cae al flujo normal (en bypass o con Supabase).
+  const { pathname } = request.nextUrl;
+  const basic = validateBasicAuth(request.headers.get("authorization"));
+
+  // Parte privada: Basic Auth obligatorio (independiente del bypass).
+  if (isPrivatePath(pathname) && !basic.ok) {
+    return requireAdminBasicAuth(request); // 401 (prompt) o 503 (sin config)
   }
 
-  // Modo abierto (default): deja pasar todo y, si alguien entra a /login,
-  // lo redirige a la home (no hay form que rellenar).
+  // Modo abierto (default).
   if (AUTH_BYPASS_ENABLED) {
-    if (request.nextUrl.pathname === "/login") {
+    if (pathname === "/login") {
       return NextResponse.redirect(new URL("/", request.url));
     }
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (basic.ok) await attachAdminCookie(res, basic.email);
+    return res;
   }
 
+  // Flujo Supabase (PORTAL_AUTH_REQUIRED=true).
   const { supabase, response } = createSupabaseMiddlewareClient(request);
-  const { pathname } = request.nextUrl;
 
-  // Sin Supabase configurado (Sprint 0 sin .env.local) → no bloquees nada.
   if (!supabase) {
+    if (basic.ok) await attachAdminCookie(response, basic.email);
     return response;
   }
 
@@ -63,21 +86,19 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Logueado y va a /login → redirect a home
   if (user && pathname === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // No logueado y la ruta no es pública → redirect a /login
   if (!user && !isPublicPath(pathname)) {
     const loginUrl = new URL("/login", request.url);
-    // Preserva el destino para volver tras login
     if (pathname !== "/") {
       loginUrl.searchParams.set("next", pathname);
     }
     return NextResponse.redirect(loginUrl);
   }
 
+  if (basic.ok) await attachAdminCookie(response, basic.email);
   return response;
 }
 

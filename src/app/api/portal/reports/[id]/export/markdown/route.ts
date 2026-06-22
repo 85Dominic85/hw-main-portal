@@ -34,7 +34,7 @@ export async function GET(
     return new NextResponse("Not found", { status: 404 });
   }
 
-  if (user.role !== "admin" && report.status !== "published") {
+  if (user.role !== "admin") {
     return new NextResponse("Forbidden", { status: 403 });
   }
 

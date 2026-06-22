@@ -1,12 +1,13 @@
 import "server-only";
 
 import { cache } from "react";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 import { createSupabaseServerClient } from "./supabase-server";
 import { inferRoleFromEmail, type PortalRole } from "./roles";
 import { AUTH_BYPASS_ENABLED } from "./bypass";
 import { validateBasicAuth } from "./admin-basic-auth";
+import { verifyAdminToken, ADMIN_COOKIE } from "./admin-token";
 
 export interface PortalSessionUser {
   id: string;
@@ -46,6 +47,23 @@ export const getCurrentUser = cache(async (): Promise<PortalSessionUser | null> 
       return {
         id: BYPASS_USER_ID,
         email: result.email,
+        role: "admin",
+        fullName: null,
+        isGuest: false,
+      };
+    }
+
+    // Cookie firmada: el admin autenticó vía Basic Auth en /admin o /reports
+    // (donde el navegador sí envía el header); el middleware dejó la cookie
+    // para reconocerlo también en el resto de páginas.
+    const cookieStore = await cookies();
+    const cookieEmail = await verifyAdminToken(cookieStore.get(ADMIN_COOKIE)?.value);
+    // Revalidar contra la allowlist actual: si el email dejó de ser admin
+    // (rotación/baja), la cookie firmada deja de conceder acceso al instante.
+    if (cookieEmail && inferRoleFromEmail(cookieEmail) === "admin") {
+      return {
+        id: BYPASS_USER_ID,
+        email: cookieEmail,
         role: "admin",
         fullName: null,
         isGuest: false,

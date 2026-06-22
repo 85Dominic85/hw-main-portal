@@ -13,12 +13,14 @@ import {
   periodToFilter,
   type HwToolPeriod,
 } from "@/lib/hwtool/period";
+import { requireDashboardAccess } from "@/lib/auth/dashboard-access";
 
 interface PageProps {
   searchParams: Promise<{ period?: string }>;
 }
 
 export default async function HwToolPage({ searchParams }: PageProps) {
+  await requireDashboardAccess();
   const params = await searchParams;
   const period: HwToolPeriod = isValidPeriod(params.period)
     ? params.period
