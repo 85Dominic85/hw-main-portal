@@ -236,15 +236,38 @@ export async function refreshReportSources(
   current.soporte.reopenRatePct = auto.soporte.reopenRatePct;
   current.soporte.avgResolutionHours = auto.soporte.avgResolutionHours;
 
-  // Resumen ejecutivo: actualiza valores por kpiKey, conserva comentarios y
-  // las filas manuales (kpiKey fuera del catálogo).
+  // Resumen ejecutivo: refresca por kpiKey.
+  //  - KPI auto: sobrescribe métricas (actual/semana anterior/semáforo) + metadatos
+  //    del catálogo (label/unit/target/owner); conserva el comentario.
+  //  - KPI manual: conserva lo escrito a mano (actual/semana anterior/semáforo/
+  //    comentario) y solo refresca metadatos del catálogo (label/unit/target/owner).
+  //  - Filas con kpiKey fuera del catálogo: intactas (manualRows).
   const byKey = new Map(current.executiveSummary.rows.map((r) => [r.kpiKey, r]));
   const autoKeys = new Set(auto.executiveSummary.rows.map((a) => a.kpiKey));
   const updated = auto.executiveSummary.rows.map((a) => {
     const existing = byKey.get(a.kpiKey);
-    return existing
-      ? { ...existing, target: a.target, actual: a.actual, delta: a.delta, status: a.status }
-      : a;
+    if (!existing) return a;
+    if (a.source === "auto") {
+      return {
+        ...existing,
+        label: a.label,
+        unit: a.unit,
+        owner: a.owner,
+        target: a.target,
+        actual: a.actual,
+        delta: a.delta,
+        status: a.status,
+        source: "auto" as const,
+      };
+    }
+    return {
+      ...existing,
+      label: a.label,
+      unit: a.unit,
+      owner: a.owner,
+      target: a.target,
+      source: "manual" as const,
+    };
   });
   const manualRows = current.executiveSummary.rows.filter((r) => !autoKeys.has(r.kpiKey));
   current.executiveSummary.rows = [...updated, ...manualRows];

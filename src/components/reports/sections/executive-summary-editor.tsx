@@ -22,6 +22,7 @@ function newRow(): ExecutiveSummaryRow {
     delta: "",
     source: "manual",
     status: "neutral",
+    owner: "",
     comment: "",
   };
 }
@@ -61,7 +62,8 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
               <th className="min-w-[150px] px-3 py-2 text-left text-xs font-medium text-muted-foreground whitespace-nowrap">KPI</th>
               <th className="min-w-[110px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Target</th>
               <th className="min-w-[120px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Actual</th>
-              <th className="min-w-[120px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Δ vs anterior</th>
+              <th className="min-w-[120px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Semana anterior</th>
+              <th className="min-w-[110px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Owner</th>
               <th className="w-24 px-3 py-2 text-left text-xs font-medium text-muted-foreground">Estado</th>
               <th className="min-w-[160px] px-3 py-2 text-left text-xs font-medium text-muted-foreground">Comentario</th>
               <th className="w-10 px-2 py-2" />
@@ -70,7 +72,7 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-3 py-8 text-center text-sm text-muted-foreground">
                   Sin KPIs — pulsa &ldquo;Añadir KPI&rdquo; para empezar.
                 </td>
               </tr>
@@ -114,8 +116,17 @@ export function ExecutiveSummaryEditor({ value, onChange }: Props) {
                   <input
                     type="text"
                     value={row.delta}
-                    placeholder="+3pp vs W18"
+                    placeholder="valor semana ant."
                     onChange={(e) => handleChange(row.id, { delta: e.target.value })}
+                    className={inputCls}
+                  />
+                </td>
+                <td className="min-w-[110px] px-2 py-1">
+                  <input
+                    type="text"
+                    value={row.owner}
+                    placeholder="Guille / Domi"
+                    onChange={(e) => handleChange(row.id, { owner: e.target.value })}
                     className={inputCls}
                   />
                 </td>

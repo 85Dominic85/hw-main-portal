@@ -6,6 +6,9 @@ import { db, schema } from "@/lib/db";
 import { getMainOpsSummary } from "@/server/queries/mainops";
 import { getHwToolSummary } from "@/server/queries/hwtool";
 import { getHsmSummary } from "@/server/queries/hsm";
+import type { MainOpsMetrics } from "@/lib/connectors/mainops";
+import type { HwToolMetrics } from "@/lib/connectors/hwtool";
+import type { HsmMetrics } from "@/lib/connectors/hsm";
 import { buildEmptyContent } from "./defaults";
 import type { ReportContent } from "./schema";
 
@@ -29,14 +32,6 @@ function formatVal(v: number, unit: string): string {
   return round1(v).toLocaleString("es-ES");
 }
 
-function formatDelta(diff: number, unit: string): string {
-  const d = round1(diff);
-  if (d === 0) return "= vs anterior";
-  const sign = d > 0 ? "+" : "";
-  if (unit === "%") return `${sign}${d} pp vs anterior`;
-  return `${sign}${formatVal(Math.abs(d), unit).replace(/^/, d < 0 ? "-" : "")} vs anterior`;
-}
-
 function computeStatus(
   actual: number | null,
   target: number | null,
@@ -54,115 +49,154 @@ function computeStatus(
   return "rojo";
 }
 
-interface KpiValue {
-  value: number | null;
-  prev: number | null;
+/** Métricas de un periodo (cada conector puede faltar si su fetch falló). */
+interface PeriodSources {
+  mainops: MainOpsMetrics | null;
+  hwtool: HwToolMetrics | null;
+  hsm: HsmMetrics["current"] | null;
+}
+
+/**
+ * Extractores AUTO por `kpiKey`: devuelven el valor numérico del KPI para un
+ * periodo dado (o null si falta el conector). Se aplican al periodo actual y al
+ * anterior para rellenar "Actual" y "Semana anterior". Un KPI sin extractor se
+ * considera MANUAL (fila vacía editable).
+ */
+const AUTO_EXTRACTORS: Record<string, (s: PeriodSources) => number | null> = {
+  "hwtool.configs_confirmed": (s) => s.hwtool?.principal.configuracion ?? null,
+  "hwtool.success_first_try": (s) =>
+    s.hwtool ? round1(s.hwtool.successRateFirstTry) : null,
+  "hwtool.total_sessions": (s) => s.hwtool?.principal.totalSessions ?? null,
+  "mainops.total_shipments": (s) => s.mainops?.kpis.totalOrders ?? null,
+  "mainops.sla_7d": (s) => (s.mainops ? round1(s.mainops.sla.onTimePct * 100) : null),
+  "hsm.incidents_over_7d": (s) =>
+    s.hsm ? s.hsm.agingDistribution.find((a) => a.bucket === "gt_7d")?.count ?? 0 : null,
+};
+
+/** Orden de las filas del resumen ejecutivo (scorecard del departamento). */
+const EXEC_ORDER = [
+  "exec.margin",
+  "hwtool.configs_confirmed",
+  "hwtool.success_first_try",
+  "exec.pnp_coverage",
+  "mainops.total_shipments",
+  "mainops.sla_7d",
+  "hsm.incidents_over_7d",
+  "exec.rma_response_2h",
+  "exec.delivery_rate",
+  "exec.cajones_mrr",
+  "hwtool.total_sessions",
+];
+
+/** Ventana inmediatamente anterior de igual longitud (semana/mes previo). */
+function previousRange(range: Range): Range {
+  const span = range.to.getTime() - range.from.getTime();
+  return {
+    from: new Date(range.from.getTime() - span - 1),
+    to: new Date(range.from.getTime() - 1),
+  };
 }
 
 /**
  * Construye un `ReportContent` pre-rellenado para el periodo dado:
- *  - Métricas de configuraciones/envíos/soporte desde los 3 conectores.
+ *  - Bloques de configuraciones/envíos/soporte desde el periodo actual.
  *  - Filas del resumen ejecutivo desde el catálogo `report_kpi_definitions`,
- *    con actual (conector), target (catálogo), Δ (periodo anterior) y semáforo.
+ *    con Actual (periodo actual), "Semana anterior" (periodo previo real),
+ *    target (catálogo), owner (catálogo) y semáforo.
  *
  * Best-effort: si un conector falla, sus campos quedan vacíos (editables a mano).
- * La narrativa y tablas cualitativas (tesis, bloqueos, decisiones, cajones,
- * foco) siempre quedan vacías para rellenar manualmente.
+ * Los KPIs sin extractor (Margen, Cobertura PnP, Resp. RMA <2h, Tasa entrega,
+ * Cajones MRR) nacen como fila vacía editable. La narrativa y tablas cualitativas
+ * (tesis, bloqueos, decisiones, cajones, foco) siempre quedan vacías.
  */
 export async function buildAutofilledContent(range: Range): Promise<ReportContent> {
   const content = buildEmptyContent();
-  const filter = { from: range.from, to: range.to };
+  const prev = previousRange(range);
 
-  const [mainops, hwtool, hsm, defs] = await Promise.all([
-    getMainOpsSummary(filter),
-    getHwToolSummary(filter),
-    getHsmSummary(filter),
+  const [moCur, htCur, hsmCur, moPrev, htPrev, hsmPrev, defs] = await Promise.all([
+    getMainOpsSummary({ from: range.from, to: range.to }),
+    getHwToolSummary({ from: range.from, to: range.to }),
+    getHsmSummary({ from: range.from, to: range.to }),
+    getMainOpsSummary({ from: prev.from, to: prev.to }),
+    getHwToolSummary({ from: prev.from, to: prev.to }),
+    getHsmSummary({ from: prev.from, to: prev.to }),
     db
       .select()
       .from(reportKpiDefinitions)
       .where(eq(reportKpiDefinitions.active, true)),
   ]);
 
-  const kpi: Record<string, KpiValue> = {};
-  const set = (key: string, value: number | null, prev: number | null = null) => {
-    kpi[key] = { value, prev };
+  const cur: PeriodSources = {
+    mainops: moCur.ok ? moCur.data : null,
+    hwtool: htCur.ok ? htCur.data : null,
+    hsm: hsmCur.ok ? hsmCur.data.current : null,
+  };
+  const prv: PeriodSources = {
+    mainops: moPrev.ok ? moPrev.data : null,
+    hwtool: htPrev.ok ? htPrev.data : null,
+    hsm: hsmPrev.ok ? hsmPrev.data.current : null,
   };
 
-  // ── MainOps → envíos + KPIs ────────────────────────────────────────────────
-  if (mainops.ok) {
-    const m = mainops.data;
-    const completed = m.ops?.totalCompleted ?? Math.round(m.kpis.totalOrders * m.kpis.completedRate);
+  // ── Bloques de sección (periodo actual) ────────────────────────────────────
+  if (moCur.ok) {
+    const m = moCur.data;
+    const completed =
+      m.ops?.totalCompleted ?? Math.round(m.kpis.totalOrders * m.kpis.completedRate);
     const shipped = m.ops?.totalShipped ?? null;
     const pending = m.breakdowns.byStatus.find((s) => s.status === "pendiente")?.count ?? null;
-    const slaPct = round1(m.sla.onTimePct * 100);
-
     content.envios.totalOps = m.kpis.totalOrders;
     content.envios.completed = completed;
     content.envios.shipped = shipped;
     content.envios.pending = pending;
     content.envios.grossRevenue = Math.round(m.kpis.totalRevenueEur);
     content.envios.avgDeliveryDays = round1(m.sla.avgDeliveryDays);
-    content.envios.sla7dPct = slaPct;
-
-    set("mainops.total_orders", m.kpis.totalOrders, m.comparison?.prevTotalOrders ?? null);
-    set("mainops.completed_orders", completed);
-    set("mainops.pending_orders", pending);
-    set("mainops.sla_7d_pct", slaPct);
-    set("mainops.avg_delivery_days", round1(m.sla.avgDeliveryDays));
-    set("mainops.gross_revenue", Math.round(m.kpis.totalRevenueEur), m.comparison?.prevTotalRevenueEur ?? null);
+    content.envios.sla7dPct = round1(m.sla.onTimePct * 100);
   }
 
-  // ── HW Tool → configuraciones ──────────────────────────────────────────────
-  if (hwtool.ok) {
-    const h = hwtool.data;
+  if (htCur.ok) {
+    const h = htCur.data;
     content.configuraciones.totalConfigs = h.principal.configuracion;
     content.configuraciones.successRate1st = round1(h.successRateFirstTry);
     content.configuraciones.successRate2nd = round1(h.secondConfigRate);
-
-    set("hwtool.total_configs", h.principal.configuracion);
-    set("hwtool.success_rate_pct", round1(h.successRateFirstTry));
   }
 
-  // ── HSM → soporte ──────────────────────────────────────────────────────────
-  if (hsm.ok) {
-    const s = hsm.data.current;
-    const p = hsm.data.previous;
+  if (hsmCur.ok) {
+    const s = hsmCur.data.current;
     content.soporte.openIncidents = s.openIncidents;
     content.soporte.activeRmas = s.activeRmas;
     content.soporte.sla7dPct = round1(s.slaCompliancePct);
     content.soporte.reopenRatePct = round1(s.reopenRatePct);
-    content.soporte.avgResolutionHours = s.avgResolutionHours != null ? round1(s.avgResolutionHours) : null;
-
-    set("hsm.open_incidents", s.openIncidents, p.openIncidentsAtClose ?? null);
-    set("hsm.active_rmas", s.activeRmas);
-    set("hsm.sla_compliance_pct", round1(s.slaCompliancePct), round1(p.slaCompliancePct));
-    set(
-      "hsm.avg_resolution_hours",
-      s.avgResolutionHours != null ? round1(s.avgResolutionHours) : null,
-      p.avgResolutionHours != null ? round1(p.avgResolutionHours) : null,
-    );
-    set("hsm.reopen_rate_pct", round1(s.reopenRatePct), round1(p.reopenRatePct));
+    content.soporte.avgResolutionHours =
+      s.avgResolutionHours != null ? round1(s.avgResolutionHours) : null;
   }
 
   // ── Resumen ejecutivo desde el catálogo ─────────────────────────────────────
+  const orderIndex = (k: string) => {
+    const i = EXEC_ORDER.indexOf(k);
+    return i === -1 ? EXEC_ORDER.length : i;
+  };
+
   const rows: ExecRow[] = defs
     .slice()
-    .sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.label.localeCompare(b.label))
+    .sort((a, b) => orderIndex(a.kpiKey) - orderIndex(b.kpiKey) || a.label.localeCompare(b.label))
     .map((d) => {
-      const v = kpi[d.kpiKey];
       const unit = d.unit ?? "";
       const targetNum = d.target != null ? Number(d.target) : null;
-      const actualNum = v?.value ?? null;
+      const extractor = AUTO_EXTRACTORS[d.kpiKey];
+      const isAuto = Boolean(extractor);
+      const actualNum = extractor ? extractor(cur) : null;
+      const prevNum = extractor ? extractor(prv) : null;
       return {
         id: globalThis.crypto.randomUUID(),
         kpiKey: d.kpiKey,
         label: d.label,
         unit,
+        owner: d.owner ?? "",
         target: targetNum != null ? formatVal(targetNum, unit) : "",
         actual: actualNum != null ? formatVal(actualNum, unit) : "",
-        delta: v && v.value != null && v.prev != null ? formatDelta(v.value - v.prev, unit) : "",
-        source: "auto",
-        status: computeStatus(actualNum, targetNum, d.direction),
+        delta: prevNum != null ? formatVal(prevNum, unit) : "",
+        source: isAuto ? "auto" : "manual",
+        status: isAuto ? computeStatus(actualNum, targetNum, d.direction) : "neutral",
         comment: "",
       };
     });

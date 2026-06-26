@@ -10,11 +10,15 @@ export const executiveSummaryRowSchema = z.object({
   // La automatización los rellena con valores formateados; el admin puede editarlos.
   target: z.string().default(""),
   actual: z.string().default(""),
-  // "Δ vs anterior" del informe Notion ("−22% vs W18", "+6,7pp", "Nuevo corte").
+  // "Semana anterior": valor REAL del KPI en el periodo previo al informe
+  // (lo rellena el autofill desde los conectores; editable a mano).
+  // Conserva el nombre `delta` por compatibilidad con informes ya guardados.
   delta: z.string().default(""),
   // source: 'auto' = valor del conector; 'manual' = editado por admin
   source: z.enum(["auto", "manual"]).default("auto"),
   status: z.enum(["verde", "amarillo", "rojo", "neutral"]).default("neutral"),
+  // Responsable del KPI (columna Owner del scorecard).
+  owner: z.string().default(""),
   comment: z.string().default(""),
 });
 

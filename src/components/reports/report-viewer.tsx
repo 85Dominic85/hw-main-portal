@@ -87,13 +87,14 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
       {/* 🚦 Resumen ejecutivo */}
       {c.executiveSummary.rows.length > 0 && (
         <Section emoji="🚦" title="Resumen ejecutivo" subtitle="Lectura rápida para Pablo. El detalle de cada semáforo no verde está más abajo.">
-          <NotionTable head={["KPI", "Target", "Actual", "Δ vs anterior", "Semáforo", "Comentario"]} center={[4]}>
+          <NotionTable head={["KPI", "Target", "Actual", "Semana anterior", "Owner", "Semáforo", "Comentario"]} center={[5]}>
             {c.executiveSummary.rows.map((row) => (
               <tr key={row.id}>
                 <Td className="font-medium">{row.label || "—"}</Td>
                 <Td>{row.target || "—"}</Td>
                 <Td>{row.actual || "—"}</Td>
                 <Td>{row.delta || "—"}</Td>
+                <Td className="font-medium">{row.owner || "—"}</Td>
                 <Td center>
                   <Dot status={row.status} />
                 </Td>

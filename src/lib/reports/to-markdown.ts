@@ -50,13 +50,13 @@ export function contentToMarkdown(
   // 2. Resumen ejecutivo
   if (content.executiveSummary.rows.length > 0) {
     L.push("## 🚦 Resumen ejecutivo", "");
-    L.push("| KPI | Target | Actual | Δ vs anterior | Estado | Comentario |");
-    L.push("| --- | --- | --- | --- | :---: | --- |");
+    L.push("| KPI | Target | Actual | Semana anterior | Owner | Estado | Comentario |");
+    L.push("| --- | --- | --- | --- | --- | :---: | --- |");
     for (const r of content.executiveSummary.rows) {
       const s =
         r.status === "verde" ? "🟢" : r.status === "amarillo" ? "🟡" : r.status === "rojo" ? "🔴" : "—";
       L.push(
-        `| ${r.label || "—"} | ${r.target || "—"} | ${r.actual || "—"} | ${r.delta || "—"} | ${s} | ${r.comment || ""} |`,
+        `| ${r.label || "—"} | ${r.target || "—"} | ${r.actual || "—"} | ${r.delta || "—"} | ${r.owner || "—"} | ${s} | ${r.comment || ""} |`,
       );
     }
     L.push("");

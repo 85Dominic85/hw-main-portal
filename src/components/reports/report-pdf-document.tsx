@@ -229,7 +229,8 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                 <Text style={[styles.cellHeader, styles.cellWide]}>KPI</Text>
                 <Text style={styles.cellHeader}>Target</Text>
                 <Text style={styles.cellHeader}>Actual</Text>
-                <Text style={styles.cellHeader}>Delta vs ant.</Text>
+                <Text style={styles.cellHeader}>Sem. ant.</Text>
+                <Text style={styles.cellHeader}>Owner</Text>
                 <Text style={[styles.cellHeader, styles.cellNarrow]}>Estado</Text>
                 <Text style={[styles.cellHeader, styles.cellWide]}>Comentario</Text>
               </View>
@@ -239,6 +240,7 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                   <Text style={styles.cell}>{r.target || "—"}</Text>
                   <Text style={styles.cell}>{r.actual || "—"}</Text>
                   <Text style={styles.cell}>{r.delta || "—"}</Text>
+                  <Text style={styles.cell}>{r.owner || "—"}</Text>
                   <Text
                     style={[
                       styles.cell,
