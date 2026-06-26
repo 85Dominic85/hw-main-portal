@@ -2,7 +2,11 @@
 
 > **Fuente de verdad para handoffs**. Si retomas el proyecto desde otra sesión, empieza leyendo este archivo. Cubre estado actual, decisiones tomadas, bugs conocidos, credenciales (referencias, sin valores), backlog priorizado, comandos útiles e histórico de iteraciones.
 >
-> Última actualización: **2026-06-21** · v0.5 con feature de **Informes** (editor semanal + publish + export PDF/MD/Notion + clone) y fix del crash de producción (FK de `export_log` en modo bypass) · 51/51 tests verdes.
+> Última actualización: **2026-06-26** · v0.6: **rediseño del resumen ejecutivo** (scorecard curado de 11 KPIs + columna Owner + columna "Semana anterior" con datos reales del periodo previo), **informes históricos sembrados** (W16-W19, W23 y Mayo 2026 mensual) y **auth reconstruida** (login por formulario + cuentas propias `portal_accounts`, traído en el pull del otro puesto). 51/51 tests · build verde. Todo pusheado a `main`.
+>
+> ⚠️ **Flujo de trabajo (2026-06-26)**: el user **no prueba en local, valida en producción**. Norma: tras cada cambio verificado (typecheck/lint/test/build) → **commit + push a `main`** (Vercel auto-deploya). No hace falta pedir permiso para pushear.
+>
+> 🔭 **Tema abierto para el lunes**: desfase de **1 configuración** entre la `analytics-api` de HW Tool (devuelve 27 / 42 sesiones la semana W25) y la app Toolbox (muestra 28 / 43). **No es bug del portal** (refleja fielmente el endpoint); descartado fechas/zona horaria y `crm_test`. Escalado a **Guille** para que alinee su edge function con la vista de su app. Ver Bugs conocidos #10.
 
 ---
 
@@ -77,6 +81,27 @@ La feature crasheaba en Vercel. Tras una tanda de commits de depuración (`debug
 ### Estado actual (2026-06-21)
 
 Crear ✅ · listar/ver ✅ · editar/autosave ✅ · publicar ✅ · **exportar ✅ (arreglado)**. 51/51 tests · build verde.
+
+### v0.6 — Informes históricos + rediseño del resumen ejecutivo (2026-06-26)
+
+**1. Informes históricos sembrados** (commit `15342ff`). Extraídos de los PDF de Notion (W16, W17, W18, W19, W23 semanales + **Mayo 2026 mensual**) al formato `extract` del seed. Total en `portal.reports`: **9 informes publicados** (W16-W23 + Mayo).
+- Soporte **`type='monthly'`** añadido a `scripts/seed-reports.mjs`, `src/lib/reports/seed/build-seed.ts` y el endpoint `/admin/seed-reports` (`period_key='YYYY-MM'`, `iso_year/iso_week` nulos; unicidad por `(type, period_key)`; sin DDL).
+- `example-reports.json` (en `src/lib/reports/seed/`) y `scripts/seed-reports-data.json` se mantienen **byte-idénticos** (el `.mjs` no puede importar con alias `@/`).
+- Re-sembrar: `node --env-file=.env.local scripts/seed-reports.mjs` (idempotente, DELETE+INSERT por `type,period_key`; `SEED_DRY=1` para dry-run).
+
+**2. Rediseño del resumen ejecutivo** (commit `0fee8b2`, migración `sql/0006`). El autofill vertía los 12 KPIs **crudos** del catálogo (Total configs, Completados, Pendientes, RMAs activos…). Ahora produce el **scorecard de negocio** de la foto del informe real:
+- **Catálogo nuevo** `report_kpi_definitions` (`sql/0006`, ya aplicado a la BD): 12 viejos `active=false`, **11 curados** activos. Columnas: `kpi_key, label, unit, source, target, direction, owner`. Set: Margen (€/%), Configs (confirmadas), % éxito 1º (excl. PnP), Cobertura PnP, Envíos totales, SLA <7d, Incidencias >7d, Resp. RMA <2h, Tasa entrega, Cajones MRR, **Total registros (HW Tool)**. `source` decide auto (conector) vs `manual` (fila vacía editable). Orden definido en código (`EXEC_ORDER` en `autofill.ts`).
+- **Autofill** (`src/lib/reports/autofill.ts`): ahora llama a los 3 conectores para el **rango actual Y el anterior** (6 fetches paralelos; `previousRange()` = ventana previa de igual longitud) → rellena **Actual** (periodo) + **"Semana anterior"** (periodo previo real) + Owner + semáforo. Extractores por `kpiKey` en `AUTO_EXTRACTORS`. KPIs sin extractor (Margen, Cobertura PnP, Resp. RMA <2h, Tasa entrega, Cajones MRR) nacen como fila vacía editable. Sigue rellenando los bloques de sección (configuraciones/envíos/soporte) del periodo actual.
+- **Schema** (`executive-summary.ts`): nuevo campo `owner`. El campo `delta` **cambia de semántica** → ahora guarda el *valor real de la semana anterior* (string formateado). Sin migración de datos: los 9 informes sembrados siguen válidos (`owner` default `""`, `delta` histórico se muestra bajo "Semana anterior").
+- **Columnas** (editor/viewer/markdown/PDF): `KPI · Target · Actual · Semana anterior · Owner · Semáforo · Comentario`. Todo editable; se mantienen Semáforo y Comentario.
+- **Refresh** (`refreshReportSources`): los KPI auto se re-rellenan; los **manuales conservan lo escrito a mano** (solo refresca label/target/owner/unit del catálogo). Match por `kpiKey`.
+- ⚠️ **Orden despliegue**: la migración del catálogo ya está viva en la BD; el código que la explota se desplegó en `0fee8b2`. Si se crea un borrador con código viejo y catálogo nuevo, las filas salen con etiquetas nuevas pero valores auto vacíos (los `kpi_key` no casan). Ya resuelto al desplegar.
+
+> **Pendiente de validar en producción** (no se puede en local, requiere login real): crear un borrador nuevo y comprobar que el resumen ejecutivo muestra las 11 filas con Actual + Semana anterior + Owner.
+
+### Auth reconstruida (traída en el pull del 2026-06-26)
+
+El otro puesto reescribió la auth (commits `19db007`, `94d8014`, `6eaa60f`): **login por formulario** + **cuentas propias** en tabla `portal_accounts` (`sql/0005`), gestión de usuarios en `/admin/users`, toggle de dashboards para invitados, sesión por cookie firmada (`PORTAL_SESSION_SECRET`). `getCurrentUser()` verifica la cookie y revalida contra BD (revocación inmediata por `token_version`/`active`). **Esto supera parcialmente la sección "Auth — modo abierto" más abajo** (magic link). `/reports` exige sesión real (no invitado) → por eso el E2E del portal no se puede hacer sin credenciales. El modo bypass (`AUTH_BYPASS_ENABLED = !PORTAL_AUTH_REQUIRED`) sigue existiendo en el código pero `getCurrentUser` ya no lo consulta (devuelve invitado sin cookie).
 
 ---
 
@@ -308,6 +333,15 @@ Las 3 rutas `/api/portal/reports/[id]/export/{pdf,markdown,notion}` insertaban e
 
 No hay migraciones generadas; se ejecutan los `sql/000x` manualmente como `postgres`. Riesgo: que una migración no se aplique en prod y el código asuma el estado post-migración (p.ej. `created_by` nullable). El endpoint `/api/debug-reports` solo hace SELECT, así que no detecta una migración de escritura faltante. **Verificación**: `select is_nullable from information_schema.columns where table_schema='portal' and table_name='reports' and column_name='created_by'` (debe dar `YES`).
 
+### 10. 🔭 ABIERTO — desfase de 1 configuración: `analytics-api` vs app Toolbox (HW Tool)
+
+Al auto-rellenar un informe, "Configuraciones" trae **27** (lo que devuelve la `analytics-api` de HW Tool) pero la app Toolbox muestra **28** para la misma semana (W25, 15-21 jun 2026). El **+1 aparece igual en el total** (API `total_sessions=42` vs Toolbox `43`): hay **exactamente una sesión de tipo "configuración"** que la app cuenta y la edge function NO devuelve, **independiente del rango de fechas y de `crm_test`** (sondeado y descartado).
+
+- **No es bug del portal**: el conector hace passthrough puro de `principal.breakdown.configuracion`. Verificado con sonda directa a la API.
+- **Causa probable** (lado Guille): la edge function filtra por algún criterio que su UI no (estado de sesión, campo obligatorio nulo, dedup, o columna de fecha distinta).
+- **Acción**: escalado a **Guille** para que alinee `analytics-api` con la vista de su app Toolbox. El portal se queda como está (fiel al endpoint).
+- Para localizar la fila exacta haría falta acceso RO a `hw_staging` (proyecto `olcxbtvjkjmofrbvzpat`) — no disponible desde el portal (solo se accede vía la analytics-api).
+
 ---
 
 ## Backlog priorizado
@@ -395,10 +429,19 @@ Decisiones tomadas pero sin ADR formal todavía:
 | **Feature Informes Fases 0-4** (jun) | Infra schema (`reports`, `report_authors`, `report_kpi_definitions`, `report_templates`) + Zod types + ISO week + build-snapshot + server actions (Fase 0). MVP editor (Fase 1). Editores de secciones estructuradas + viewer (Fase 2). PDF + Notion export + Copiar Notion (Fase 3). Clone + admin KPI targets (Fase 4). |
 | **Crash producción + debug** (jun) | Tanda de commits `debug:` + error boundary + endpoint `/api/debug-reports` + `force-dynamic` + import dinámico de `@react-pdf/renderer`. `d58c354` arregla FK de bypass en `reports.ts` (skip ensurePortalUser + null en created_by/published_by/user_id) + migración 0003. |
 | **Fix export FK + hardening** (21-jun) | Arreglado el fallo pendiente: las 3 rutas de export insertaban en `export_log` (NOT NULL FK) con el id sintético de bypass → 500. Fix: omitir el log de auditoría en bypass + try/catch. Además: `parseReportContent` (safeParse + fallback) en viewer/editor/export, validación por sección en `saveSection`, badge de salud del snapshot lee `.ok`, test HSM obsoleto actualizado. 51/51 tests · build verde. |
+| **Auth reconstruida + UX informes** (otro puesto, 22-26 jun) | Login por formulario + cuentas propias `portal_accounts` (`sql/0005`), gestión `/admin/users`, toggle dashboards invitados, sesión cookie firmada. Mejoras informes: fidelidad Notion, autofill al crear + botón refrescar, vista previa en vivo, editor ancho completo, selector semáforo con dots, borrar borradores. Seed inicial W20/W21/W22. |
+| **Informes históricos + monthly** (26-jun) | Extraídos 6 PDF de Notion (W16-W19, W23, Mayo mensual) al seed con un workflow multi-agente; soporte `type='monthly'` en seed (`.mjs` + `build-seed.ts` + endpoint). 9 informes publicados en BD. Commit `15342ff`. |
+| **Diagnóstico HW Tool 27 vs 28** (26-jun) | Sonda a la `analytics-api`: el desfase de 1 config (y +1 en total sesiones) es de la edge function vs la app Toolbox, no del portal. Descartado fechas/zona horaria/`crm_test`. Escalado a Guille (Bug #10). |
+| **Rediseño resumen ejecutivo** (26-jun) | Catálogo curado (11 KPIs + Owner) `sql/0006`. Autofill trae actual + semana anterior (6 fetches a los 3 conectores). Columna Owner + "Semana anterior" en editor/viewer/markdown/PDF. Refresh protege KPIs manuales. Commit `0fee8b2`. 51/51 tests · build verde. |
 
 ### Commits importantes (en `main` del repo del portal)
 
 ```
+0fee8b2 feat(reports): rediseñar resumen ejecutivo (scorecard curado + Owner + semana anterior)  ← v0.6
+15342ff feat(reports): sembrar informes históricos W16-W19, W23 y Mayo 2026 (mensual)
+6eaa60f fix(auth): arreglar auto-lockout al crear usuarios (bootstrap per-email) + endurecer revocación
+94d8014 feat(auth): gestión de usuarios con cuentas propias + login por formulario
+19db007 feat(auth): informes y dashboards privados del departamento + toggle invitados
 0796d2a feat(connectors/hsm): integrar HSM (banner home + pestaña /hsm + spec endpoint)  ← v0.4
 d81f3f0 feat(home): selector de periodo global sobre los 3 escudos
 9d8f417 feat(ui): integrar hub-shield-pulse + 'Hardware Dashboard' en sidebar
@@ -512,15 +555,16 @@ curl -H "X-API-Key: <MAINOPS_API_KEY>" "https://hw-sell-gear-platform-tsm1.verce
 
 ---
 
-## Próxima sesión — agenda según indicación del user (29-04-2026 19:20)
+## Próxima sesión — agenda para el lunes (cierre del 2026-06-26)
 
-> "Mañana realizaremos algunos cambios estéticos y de nomenclatura, antes de proceder con otro tipo de fallos y de integrar HSM."
+Sesión cerrada el viernes 2026-06-26. Todo pusheado a `main`. Retomar con:
 
-Por tanto, prioridad mañana:
-1. **Cambios estéticos** — esperar input del user sobre qué pulir.
-2. **Nomenclatura** — revisar nombres de KPIs, etiquetas, copy.
-3. **Bug fixes pendientes** (lista de "Bugs conocidos" arriba).
-4. **Integración HSM** (después de los puntos anteriores).
+1. **Validar en producción el resumen ejecutivo rediseñado** — crear un borrador nuevo (semana en curso) en `https://hw-main-portal.vercel.app/reports/new` y confirmar las 11 filas con Actual + Semana anterior + Owner. Requiere login (cuentas en `portal_accounts`). Si algo no cuadra, ajustar `EXEC_ORDER`/`AUTO_EXTRACTORS`/targets en `src/lib/reports/autofill.ts` y el catálogo `sql/0006`.
+2. **Respuesta de Guille** sobre el desfase 27-vs-28 (Bug #10). Si da acceso RO a `hw_staging`, localizar la fila exacta; si alinea su edge function, re-verificar con la sonda.
+3. **Más mejoras de informes** según lo que vea el user al revisar en prod (la sesión iba de pulir el editor/scorecard).
+4. **Recordatorio de flujo**: commit + push tras cada cambio (el user valida en prod, no en local).
+
+> Notas de continuidad para otro terminal: hacer `git pull` (los 2 commits de hoy ya están en `origin/main`). Pedir al user el `.env.local` (no se commitea) — incluye `PORTAL_DATABASE_URL`, `HWTOOL_ANALYTICS_API_URL/KEY`, `MAINOPS_BASE_URL/API_KEY`, etc. El catálogo `sql/0006` y los seeds ya están aplicados en la BD (no re-aplicar salvo que se quiera; son idempotentes).
 
 ---
 
