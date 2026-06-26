@@ -34,10 +34,10 @@ export async function GET(req: NextRequest) {
     for (const r of rows) {
       await db
         .delete(reports)
-        .where(and(eq(reports.type, "weekly"), eq(reports.periodKey, r.periodKey)));
+        .where(and(eq(reports.type, r.type), eq(reports.periodKey, r.periodKey)));
 
       await db.insert(reports).values({
-        type: "weekly",
+        type: r.type,
         periodKey: r.periodKey,
         periodFrom: r.periodFrom,
         periodTo: r.periodTo,

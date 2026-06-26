@@ -49,7 +49,17 @@ interface ExtractData {
   nextFocus: ExtractNextFocus[];
   pabloComments: string[];
 }
-interface ExtractReport { key: string; isoWeek: number; isoYear: number; data: ExtractData }
+interface ExtractReport {
+  key: string;
+  type?: "weekly" | "monthly" | "custom";
+  isoWeek?: number | null;
+  isoYear?: number | null;
+  year?: number | null;
+  month?: number | null;
+  from?: string;
+  to?: string;
+  data: ExtractData;
+}
 
 const SEED = rawData as unknown as ExtractReport[];
 
@@ -168,11 +178,12 @@ function buildContent(x: ExtractData): ReportContent {
 }
 
 export interface SeedReportRow {
+  type: "weekly" | "monthly" | "custom";
   periodKey: string;
   periodFrom: string;
   periodTo: string;
-  isoYear: number;
-  isoWeek: number;
+  isoYear: number | null;
+  isoWeek: number | null;
   title: string;
   globalStatus: string;
   publishedAt: Date;
@@ -182,17 +193,50 @@ export interface SeedReportRow {
 /** Construye las filas listas para insertar de los informes de ejemplo. */
 export function buildExampleReports(): SeedReportRow[] {
   return SEED.map((rep) => {
-    const { from, to } = isoWeekToRange(rep.isoYear, rep.isoWeek);
+    const type = rep.type ?? "weekly";
+
+    let periodKey: string;
+    let periodFrom: string;
+    let periodTo: string;
+    let isoYear: number | null = null;
+    let isoWeek: number | null = null;
+    let rangeTo: Date;
+
+    if (type === "monthly") {
+      const y = rep.year as number;
+      const m = rep.month as number;
+      periodKey = `${y}-${pad(m)}`;
+      const from = new Date(Date.UTC(y, m - 1, 1));
+      rangeTo = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+      periodFrom = ymd(from);
+      periodTo = ymd(rangeTo);
+    } else if (type === "custom") {
+      periodKey = `${rep.from}--${rep.to}`;
+      periodFrom = rep.from as string;
+      periodTo = rep.to as string;
+      rangeTo = new Date(`${rep.to}T23:59:59.999Z`);
+    } else {
+      const range = isoWeekToRange(rep.isoYear as number, rep.isoWeek as number);
+      isoYear = rep.isoYear as number;
+      isoWeek = rep.isoWeek as number;
+      periodKey = formatWeekKey(isoYear, isoWeek);
+      periodFrom = ymd(range.from);
+      periodTo = ymd(range.to);
+      rangeTo = range.to;
+    }
+
     const publishedAt = rep.data.publishedAt
       ? new Date(`${rep.data.publishedAt}T12:00:00Z`)
-      : to;
+      : rangeTo;
+
     return {
-      periodKey: formatWeekKey(rep.isoYear, rep.isoWeek),
-      periodFrom: ymd(from),
-      periodTo: ymd(to),
-      isoYear: rep.isoYear,
-      isoWeek: rep.isoWeek,
-      title: rep.data.title || formatWeekKey(rep.isoYear, rep.isoWeek),
+      type,
+      periodKey,
+      periodFrom,
+      periodTo,
+      isoYear,
+      isoWeek,
+      title: rep.data.title || periodKey,
       globalStatus: rep.data.globalStatus,
       publishedAt,
       content: buildContent(rep.data),

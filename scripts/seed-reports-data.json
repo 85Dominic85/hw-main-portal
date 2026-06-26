@@ -1,5 +1,1920 @@
 [
   {
+    "key": "W16",
+    "type": "weekly",
+    "isoWeek": 16,
+    "isoYear": 2026,
+    "data": {
+      "title": "W16 — JJ — Hardware",
+      "author": "jose jesus gallego",
+      "globalStatus": "amarillo",
+      "publishedAt": "2026-04-24",
+      "tesis": [
+        "Mejora real de sistema: calidad de configuraciones en máximos (86% éxito al primer intento vs 67% W15), salida logística limpia (0 envíos pendientes vs 6 en W15) y margen al alza (+31%). La capacidad estuvo limitada por la Feria de Sevilla. Dos fragilidades siguen abiertas: trazabilidad cruzada CX/HW y RMAs, ambas con plan en curso.",
+        "Sobrecarga de trabajo de Domi y Jota, que han trabajado todos los días incluido el festivo para cubrir incidencias y configuraciones.",
+        "Nuevo formato (v1 — iteración W16). Construido para dar una lectura ejecutiva en ~30s (tabla resumen) y permitir bajar al detalle solo donde hace falta. Feedback bienvenido para iterar."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "4.000 €",
+          "actual": "3.002,98 €",
+          "delta": "+31% vs W15 (712,48 €)",
+          "status": "amarillo",
+          "comment": "75% del objetivo. 20 uds vendidas, 6 SKUs. Ver desglose abajo."
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "24",
+          "actual": "25 (L-V, 39 slots ofrecidos)",
+          "delta": "+14 vs W15",
+          "status": "verde",
+          "comment": "Target alcanzado. Ocupación baja en slots pero se completó el volumen objetivo."
+        },
+        {
+          "label": "Configuraciones (% exitosas 1º intento)",
+          "target": "80%",
+          "actual": "88% (22/24 conocidas)",
+          "delta": "+20pp vs W15 (67%)",
+          "status": "verde",
+          "comment": "1 viernes pendiente de confirmar. 2ª config baja de 31% → 5%."
+        },
+        {
+          "label": "PnP entregados",
+          "target": "12",
+          "actual": "7",
+          "delta": "+6 vs W15 (1)",
+          "status": "amarillo",
+          "comment": "58% del target. Marco solo 2 días por Feria. Tendencia claramente al alza."
+        },
+        {
+          "label": "Envíos pendientes",
+          "target": "0",
+          "actual": "0",
+          "delta": "-6 vs W15 (6)",
+          "status": "verde",
+          "comment": "De 6 pendientes a 0. Todo salió."
+        },
+        {
+          "label": "Envíos desde oficina",
+          "target": "12",
+          "actual": "11",
+          "delta": "= vs W15 (11)",
+          "status": "amarillo",
+          "comment": "92% del target. Estable."
+        },
+        {
+          "label": "SLA <7",
+          "target": "100%",
+          "actual": "63,6%",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "Feria + Festivo."
+        },
+        {
+          "label": "Incidencias HW abiertas <7d",
+          "target": "5",
+          "actual": "4 abiertas, todas 3-7d",
+          "delta": "—",
+          "status": "verde",
+          "comment": "Ninguna fuera de SLA. SLA depto 83%. Tasa reapertura 42,9% — a vigilar."
+        },
+        {
+          "label": "RMAs activos",
+          "target": "5",
+          "actual": "7",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "70% bloqueados esperando agentes externos. 2 en proveedor (Pedro Porto + PosiFlex)."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "Margen operativo HW",
+          "rootCause": "Menor volumen semanal vinculado a Feria y mix de producto.",
+          "action": "Empuje de catálogo y revenue en W17; nuevo pedido de 18 uds Pack Essential en camino.",
+          "eta": "W17-W18",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "PnP entregados",
+          "rootCause": "Feria de Sevilla — Marco solo trabajó 2 días.",
+          "action": "Marco vuelve a plena capacidad W17.",
+          "eta": "W17",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "Envíos desde oficina",
+          "rootCause": "1 envío sin completar, causa Feria.",
+          "action": "Seguimiento en logística.",
+          "eta": "W17",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "RMAs activos",
+          "rootCause": "Externa, proveedores.",
+          "action": "Presión a proveedores, envío de sustituciones.",
+          "eta": "N/A",
+          "escalation": "No",
+          "status": "amarillo"
+        }
+      ],
+      "highlights": [
+        "Tipsa > CTT en contingencias urgentes. Se consolida como vía más fiable para envíos críticos de última hora (usado esta semana con Bocatta Club).",
+        "Actualización de la herramienta MAIN OPS: ahora no sólo hace seguimiento de compras, sino que integra las etiquetas de envío. Además contamos con integración con la API de Tipsa, lo que permite pedir los envíos directamente desde dentro de nuestra herramienta.",
+        "Ampliación de red de proveedores: Gesmatec y Muzybar en fase de formalización / alta.",
+        "Activado crédito con Pedro Porto — evita retrasar pedidos de Pack Essential mientras llega el nuevo pedido de 18 equipos ya cursado.",
+        "Se resuelven 3 incidentes, dos de ellas graves, donde no falló el hardware, falló la trazabilidad y el flujo previo. HW resolvió reconstruyendo contexto, asignando owner y definiendo siguiente acción en los tres."
+      ],
+      "blockers": [
+        {
+          "description": "Información operativa fragmentada entre Slack, Intercom, HubSpot, Notion y CX Advisor. MAREABEACH fue el caso más claro esta semana.",
+          "owner": "JJ",
+          "impact": "Trazabilidad cruzada CX/HW frágil — casos invisibles para CX y HW.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "RMA y dashboard de Pablo siguen sin corte visible de Domingo — impide enseñar progreso claro.",
+          "owner": "Domingo",
+          "impact": "Impide enseñar progreso claro.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Muzybar: pendiente validación del alta.",
+          "owner": "JJ",
+          "impact": "Alta de proveedor sin formalizar.",
+          "status": "abierto"
+        },
+        {
+          "description": "Falta de tiempo por parte de Javi para integrar CashDro.",
+          "owner": "Javi",
+          "impact": "Cashdro sigue bloqueado.",
+          "status": "bloqueado"
+        }
+      ],
+      "decisions": [],
+      "configuraciones": {
+        "totalConfigs": 25,
+        "successRate1st": 87,
+        "successRate2nd": 4,
+        "problems": "Target alcanzado: 25 configuraciones (vs target 24). Calidad en máximos: 87% éxito al primer intento vs 67% W15 (+20pp). Requiere 2ª config baja de 31% → 4%. Jueves perfecto: 5/5. Viernes: 2/3 confirmadas OK, 1 pendiente. Riesgo / atención: baja ocupación de slots (54% L-J). Miércoles solo 2/9 huecos ocupados — 1 cliente con equipos incompatibles rescatados, sin aviso previo al cliente. Patrón a revisar: clientes que llegan a cita con HW incompatible sin haber sido informados. Dato clave: 2 no-shows el lunes (uno iPad cita doble), 0 no-shows el resto de la semana. Detalle diario: Lun 20/04 — 11 ofrecidos, 7 ocupados, 4 config OK, 1 2ª config, 2 no-show (una cita doble iPad que hace no-show). Mar 21/04 — 11 ofrecidos, 8 ocupados, 8 OK, 0 2ª, 0 no-show (día perfecto; una cita era equipo PnP, no necesitaba agenda HW). Mié 22/04 — 9 ofrecidos, 2 ocupados, 2 OK (2ª cita: cliente con equipos incompatibles rescatados, pero nadie le informó previamente). Jue 23/04 — 10 ofrecidos, 5 ocupados, 5 OK (día perfecto). Vie 24/04 — 10 ofrecidos, 3 ocupados, 3 OK (día perfecto). TOTAL: 51 ofrecidos, 25 ocupados, 21/24 conocidas OK (87%), 1 2ª config (4%), 2 no-show (8%)."
+      },
+      "envios": {
+        "totalOps": 11,
+        "completed": 3,
+        "shipped": 4,
+        "pending": 4,
+        "grossRevenue": 7788,
+        "avgDeliveryDays": null,
+        "sla7dPct": 63.6,
+        "marginEur": 3003,
+        "coveragePnp": "",
+        "officeVsProvider": "4 envíos físicos salidos esta semana (3 HW + 1 Sunmi sustitución). 4 pendientes al cierre: 2 nuevos (Bar el Punto, Pizzería Toscana) + 2 en proveedor (esperan a Pedro Porto y PosiFlex). Los 0 envíos pendientes de oficina y los 4 pendientes de Domi miden cosas distintas — desde Qamarero todo salió.",
+        "orders": [
+          {
+            "venue": "Lusco Fusco",
+            "status": "completado",
+            "notes": "Envío completado."
+          },
+          {
+            "venue": "Brasil Bites",
+            "status": "completado",
+            "notes": "Envío completado."
+          },
+          {
+            "venue": "El Petit Café",
+            "status": "completado",
+            "notes": "Envío completado."
+          },
+          {
+            "venue": "Bocatta Club",
+            "status": "enviado",
+            "notes": "Contingencia urgente (apertura 24h). Envío Sunmi 2ª mano por Tipsa + workaround Windows + USB mientras llega."
+          },
+          {
+            "venue": "Bar el Punto",
+            "status": "pendiente",
+            "notes": "Nuevo al cierre."
+          },
+          {
+            "venue": "Pizzería Toscana",
+            "status": "pendiente",
+            "notes": "Nuevo al cierre."
+          },
+          {
+            "venue": "Route86",
+            "status": "pendiente",
+            "notes": "Pack Essential en proveedor (Pedro Porto), pendiente envío."
+          },
+          {
+            "venue": "Señora Miriam",
+            "status": "pendiente",
+            "notes": "En espera de envío por PosiFlex."
+          }
+        ]
+      },
+      "soporte": {
+        "openIncidents": 4,
+        "activeRmas": 7,
+        "sla7dPct": 63.6,
+        "sla30dPct": null,
+        "reopenRatePct": 42.9,
+        "avgResolutionHours": 36.4,
+        "rmaResponseUnder2hPct": null,
+        "narrative": [
+          "Inbox HW: semana marcada por incidencias que requirieron reconstrucción manual de contexto. El fallo común no fue de HW, fue de trazabilidad.",
+          "KPIs soporte W16: SLA departamento 83%, 4 incidencias fuera de SLA (resolución media 36,4h). Domi personal: 10 incidencias resueltas, media 12,3h.",
+          "MAREABEACH / Gastrobar Capricho / Komarea Gastrobar: caso reconducido. Expone fallo de trazabilidad por aliases, owner difuso y proveedor externo (Equone) fuera de flujo. En espera controlada para lunes 27/04.",
+          "Bocatta Club: contingencia urgente (apertura 24h). Envío Sunmi 2ª mano + workaround Windows + USB mientras llega.",
+          "Fosters Hollywood: baja solicitada tras incidencia de impresora no resuelta en plazo. El cliente usaba una impresora de Glovo bloqueada / no estándar, configurada mediante workaround por IP y ajustes de permisos, lo que dejaba una operativa técnicamente frágil. La incidencia no quedó registrada ni escalada en un flujo visible, por lo que se perdió seguimiento hasta que AM volvió a levantar el caso. HW/AM intentó recuperar la situación con múltiples llamadas y propuesta de impresora WiFi propia + formación adicional, pero el cliente ya estaba cerrado a alternativas. Acción correctiva: toda configuración con workaround, hardware no estándar o pendiente técnico debe quedar registrada como incidencia escalada con owner, fecha límite de seguimiento y visibilidad para AM / CX / HW.",
+          "Your Choice: aclarado — el pedido válido era 1 impresora, no 2.",
+          "Ciao Pescao (escalado desde AEs): cliente con equipos pagados sin pedido localizado; HW crea pedido reactivamente en MAIN OPS y desbloquea logísticamente.",
+          "Patrones detectados (candidatos a mejora sistémica): venta de equipos sin pasar por #05-qamarero-shopping; casos con varios nombres (aliases) quedan invisibles para CX y HW; clientes llegan a configuración con HW incompatible o sin prerrequisitos claros; reasignaciones entre AMs pueden dejar clientes sin seguimiento operativo."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "MAREABEACH (Cashlogy)",
+          "status": "🟡 Reconducido / espera controlada",
+          "provider": "Cashlogy",
+          "notes": "Reconducido y en espera controlada para lunes 27/04. Riesgo principal ya no es interés del cliente, sino trazabilidad y coordinación previa. Aprendizaje técnico reciente de Cashlogy 1500 útil para siguientes instalaciones."
+        },
+        {
+          "client": "CashGuard",
+          "status": "🟡 Dependencia partner",
+          "provider": "CashGuard / Gabriel",
+          "notes": "Dependencia de Gabriel para API. Sigue dependencia de coordinación previa con partner y contexto técnico correcto antes de entrar en cliente."
+        },
+        {
+          "client": "CashKeeper",
+          "status": "🟡 Sin novedad",
+          "provider": "CashKeeper",
+          "notes": "Sin novedad operativa fuerte esta semana."
+        },
+        {
+          "client": "Cashdro",
+          "status": "🔴 Bloqueado",
+          "provider": "Cashdro",
+          "notes": "Sigue bloqueado por falta de unidad de test / loaner y sesión técnica real."
+        }
+      ],
+      "performance": [
+        {
+          "displayName": "Guillermo — Incidencias + Data (beneficios/costes, métricas stock e inventario)",
+          "member": "guille",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad usada)",
+              "value": "40% (Vacaciones X-V)",
+              "target": "—",
+              "status": "neutral"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Publica guía de reutilización de equipos de la competencia. Sostiene lectura de métricas. Mejora en las configuraciones."
+          ]
+        },
+        {
+          "displayName": "Domingo — Soporte / Logística + herramientas internas",
+          "member": "domi",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad usada)",
+              "value": "120% (mié festivo trabajado + cubrió configuraciones con Guille de vacaciones)",
+              "target": "—",
+              "status": "neutral"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Sostiene soporte y logística los 5 días, incluyendo el miércoles festivo. Cubre configuraciones con Guille de vacaciones. Coordina con Tipsa nuevo acuerdo. Sigue iterando herramientas. Sobrecarga de trabajo."
+          ]
+        },
+        {
+          "displayName": "Marco — Almacén, configuraciones y envíos (descarga operativa)",
+          "member": "marco",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad usada)",
+              "value": "40% (Feria)",
+              "target": "—",
+              "status": "neutral"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Solo 2 días operativos por Feria. Sostiene PnP y descarga envíos/configs dentro del tiempo disponible."
+          ]
+        },
+        {
+          "displayName": "JJ — Cajones + Proveedores + Pipeline",
+          "member": "jj",
+          "kpis": [],
+          "narrative": []
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Cerrar formato de reporting con Rafa Quesada para HW Finance.",
+          "output": "Dashboard primera versión entregada.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "Audit herramienta MO para reducir errores de AEs. Iterar herramienta RMA.",
+          "output": "MO con vista de precios para evitar problemas de multi-item. RMA tools V1 funcional.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Recuperar capacidad completa post-Feria y empujar PnP / envíos.",
+          "output": "PnP y envíos por encima del ritmo W16.",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "MAREABEACH (lun 27/04), revenue + nuevo catálogo, foco en cajones inteligentes, sync con FinOps para pipeline.",
+          "output": "MAREABEACH cerrado o con próximo hito claro, owners y siguiente acción claros. HW FinOps funcional. Nuevo catálogo out. Avances en cajones-CX.",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
+    "key": "W17",
+    "type": "weekly",
+    "isoWeek": 17,
+    "isoYear": 2026,
+    "data": {
+      "title": "W17 — JJ — Hardware",
+      "author": "jose jesus gallego",
+      "globalStatus": "verde",
+      "publishedAt": "2026-05-01",
+      "tesis": [
+        "La semana fue de conversión: de caos operativo a sistema visible. Se aterrizó el reparto definitivo de roles HW, se desbloquearon 4 casos de cajones inteligentes (incluyendo MAREABEACH ya instalado), se lanzó PnP 2.0 con 8/10 entregados, y se puso en marcha la capa financiera con Rafa Quesada asumiendo pagos desde W18. Se lanzó el HW Main Portal (hw-main-portal.vercel.app) y MAIN OPS quedó presentada a David y Ale, lista para la siguiente fase.",
+        "Margen bajo target por mix de producto (8 packs vs 20 uds W16), con dos fragilidades abiertas: RMA, herramienta aún en proceso y capa común HW/Ventas pendiente para cajones inteligentes. La capa con ventas se está trabajando con Alberto. El Dashboard de RMA está WiP pero esta semana nos hemos enfocado en MainOps y en la V1 del portal.",
+        "Nuevo formato (v1 — iteración W17). Construido para dar una lectura ejecutiva en <30s (tabla resumen) y permitirle bajar al detalle solo donde hace falta. Feedback bienvenido para iterar."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "3.200 € (4d)",
+          "actual": "~3.292 €",
+          "delta": "+289 € (+10%) vs W16 (3.002 €)",
+          "status": "verde",
+          "comment": "103% del objetivo ajustado. 5 Pack Pro + 4 Pack Essential + impresoras sueltas + TPV Posiflex. Target superado."
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "19 (4d)",
+          "actual": "30 (configs) / 38 total",
+          "delta": "+5 vs W16 (25)",
+          "status": "verde",
+          "comment": "Target superado (ajustado a 4 días laborables). 38 registros totales (configs + no shows + audits)."
+        },
+        {
+          "label": "Configuraciones (% exitosas 1º intento)",
+          "target": ">80%",
+          "actual": "76% sin problema",
+          "delta": "-12pp vs W16 (88%)",
+          "status": "amarillo",
+          "comment": "30% requieren 2ª config — sube respecto a W16 (4%). Datos muy cercanos al objetivo."
+        },
+        {
+          "label": "PnP entregados",
+          "target": "10 (4d)",
+          "actual": "8/10 piloto entregados",
+          "delta": "+7 vs W16 (1)",
+          "status": "verde",
+          "comment": "PnP 2.0 en piloto con 10 casos. 3/10 formados. 80% del target ajustado a 4 días laborables."
+        },
+        {
+          "label": "Envíos pendientes",
+          "target": "0",
+          "actual": "0",
+          "delta": "= vs W16",
+          "status": "verde",
+          "comment": "Todo salió. 17 enviados, 16 completados."
+        },
+        {
+          "label": "Envíos desde oficina",
+          "target": "10 (4d)",
+          "actual": "17 enviados (+325% vs anterior)",
+          "delta": "+6 vs W16 (11)",
+          "status": "verde",
+          "comment": "Por encima del target (ajustado a 4 días laborables). Logística limpia."
+        },
+        {
+          "label": "SLA <7d",
+          "target": "100%",
+          "actual": "90,9%",
+          "delta": "+27pp vs W16 (63,6%)",
+          "status": "amarillo",
+          "comment": "1 fuera de plazo. Mejora notable vs semana Feria."
+        },
+        {
+          "label": "Incidencias HW abiertas (>7d)",
+          "target": "<5",
+          "actual": "0 activos en riesgo",
+          "delta": "—",
+          "status": "verde",
+          "comment": "Sin pedidos en riesgo activos al cierre."
+        },
+        {
+          "label": "RMAs activos",
+          "target": "<5",
+          "actual": "Sin corte cuantitativo",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "Herramienta RMA próximo objetivo."
+        },
+        {
+          "label": "Cajones inteligentes desbloqueados",
+          "target": "—",
+          "actual": "4 casos / 1.258 € MRR",
+          "delta": "—",
+          "status": "verde",
+          "comment": "MAREABEACH instalado. Hamburguesería Isla en 45 min. La Nou desbloqueada."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "Margen operativo HW",
+          "rootCause": "Target superado (103%). Sin causa raíz negativa.",
+          "action": "—",
+          "eta": "Resuelto",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "SLA <7d",
+          "rootCause": "1 pedido fuera de plazo.",
+          "action": "Seguimiento individual.",
+          "eta": "W18",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "RMAs activos",
+          "rootCause": "Dependencia proveedores externos. Dashboard sin corte visible.",
+          "action": "Domingo itera herramienta RMA V1.",
+          "eta": "—",
+          "escalation": "No",
+          "status": "amarillo"
+        }
+      ],
+      "highlights": [
+        "Reparto operativo HW aterrizado definitivamente: Guillermo — configuraciones, PnP 2.0, compras, stock y beneficios por equipo. Domingo — Intercom, RMA, logística, envíos, dashboard y auditoría. Marco — apoyo flexible en configuraciones, PnP 2.0, RMA y envíos. JJ — cajones inteligentes, proveedores, pipeline, reuniones complejas, catálogo y estructura.",
+        "HW Main Portal lanzado: hw-main-portal.vercel.app — primera versión en producción.",
+        "MAIN OPS presentada a David y Ale, lista para la siguiente fase de integración. Esta semana loom para presentarlo a Pablo, Antonio y Rubén.",
+        "Cajones inteligentes — semana de desbloqueos: MAREABEACH pasó de bloqueado por obras a instalado e integrado el 30/04, 1h invertida. Hamburguesería Isla instalado con Cashlogy en 45 min — mejor marca registrada. MRR desbloqueado: 1.258 €.",
+        "Restaurante La Nou: CashKeeper puede integrarse sin desbloqueo previo — desbloqueado.",
+        "Gusto Preferito: en coordinación técnica para integración Cashlogy vía AnyDesk.",
+        "PnP 2.0 en piloto: comunicado a Cristina, 10 casos activos, 8/10 entregados, 3/10 formados. Pendiente validar si reduce fricción y acelera paso a formación.",
+        "Capa financiera activada: reunión con Ale, Rafa y Guille. Rafa Quesada asume pagos y vencimientos desde W18. Pedido lanzado a Approx. Cajas pedidas a Rajapack (pendiente proforma).",
+        "Asador Mendoza diagnosticado: cuenta prioritaria (2 cajones + 2 planes Total). Alicante necesita soporte/formación. Murcia depende de estabilizar Alicante.",
+        "Bot de HW V1 creado — estado WIP."
+      ],
+      "blockers": [
+        {
+          "description": "Vista canónica HW/CX compartida — sigue sin existir. MAREABEACH fue el caso que más lo expuso en W16; sigue abierto. Esto ha requerido 1:1 con Cristina para abordar estos casos y evitar fricciones.",
+          "owner": "JJ / Cristina",
+          "impact": "Reconstrucción manual de contexto, fricciones en casos de cajones.",
+          "status": "abierto"
+        },
+        {
+          "description": "RMA y dashboard Pablo — sin corte cuantitativo defendible.",
+          "owner": "Domingo",
+          "impact": "Impide enseñar progreso de forma medible.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Posiflex bloqueado hasta pagar facturas pendientes: 3.557,22 €.",
+          "owner": "JJ / Ale",
+          "impact": "Bloqueo proveedor por facturas pendientes.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Rajapack — pendiente de proforma y cierre con Ale.",
+          "owner": "Ale",
+          "impact": "Cajas pedidas pendientes de proforma.",
+          "status": "abierto"
+        },
+        {
+          "description": "Gusto Preferito — pendiente de cita técnica (integración Cashlogy AnyDesk).",
+          "owner": "JJ",
+          "impact": "Integración cajón pendiente de cita técnica.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Delisse — pendiente de respuesta.",
+          "owner": "JJ",
+          "impact": "Sin respuesta del cliente.",
+          "status": "abierto"
+        },
+        {
+          "description": "Solaguren — alerta de canal, depende de nuevo contacto de Covenorte.",
+          "owner": "JJ",
+          "impact": "Depende de nuevo contacto de Covenorte.",
+          "status": "abierto"
+        },
+        {
+          "description": "Muzybar — pendiente validación del alta (arrastrado de W16).",
+          "owner": "JJ",
+          "impact": "Alta sin validar, arrastrado de W16.",
+          "status": "abierto"
+        },
+        {
+          "description": "MAREABEACH — instalado pero con riesgo post-instalación (local en obras al arrancar).",
+          "owner": "JJ",
+          "impact": "Riesgo post-instalación por obras activas.",
+          "status": "en_progreso"
+        }
+      ],
+      "decisions": [
+        {
+          "description": "Paso de Typeform a Main Operations.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": ""
+        },
+        {
+          "description": "Impresoras Sunmi bloqueadas no soportadas como impresoras WiFi con Android.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": ""
+        }
+      ],
+      "configuraciones": {
+        "totalConfigs": 30,
+        "successRate1st": 76,
+        "successRate2nd": 30,
+        "problems": "Avance: 38 registros totales (30 configs, 5 no-shows, 0 auditorías, resto test/SmartCash). 4 días laborables (Sevilla). Daily avg: 9,5 total / 7,5 configs. Calidad: 76% sin problema en primer intento. 30% (10/33) requieren 2ª config — sube respecto a W16 (4%). Dato crítico a investigar esta semana. Casos que requieren 2ª config debidos a flexibilidad (falta de preparación de clientes). Distribución routers: 80% externos, 20% Opal. Origen impresoras: 40% nuestras, 52% externas, 8% sin impresora. SmartCash: 6% de configuraciones incluyen cajón inteligente (2 de 33). PnP Rate: 7 PnP vs 26 manuales — PnP 2.0 mejorando la cifra progresivamente. Riesgo: patrón de clientes con HW externo (63% TPV externo) que puede generar más 2ª configs. Revisar flujo de prerrequisitos. Detalle W17: Total registros 38, Configuraciones 30, No Shows 5, PnP 7, Manual 26, Requiere 2ª config 30% (10/33), Sin problema 76%, Días laborables 4."
+      },
+      "envios": {
+        "totalOps": 17,
+        "completed": 16,
+        "shipped": 17,
+        "pending": 0,
+        "grossRevenue": 8982,
+        "avgDeliveryDays": 3.1,
+        "sla7dPct": 90.9,
+        "marginEur": 3292,
+        "coveragePnp": "PnP Rate: 7 PnP vs 26 manuales (PnP 2.0 mejorando progresivamente). 8/10 entregados en el piloto PnP 2.0.",
+        "officeVsProvider": "17 pedidos enviados desde oficina (+325% vs anterior), 16 completados (+14%). 0 pendientes al cierre. Inventario W17 (26/04–01/05): 32 unidades enviadas en 6 transacciones, 0 recibidas. Plazo manipulación: 14,6d (created → shipped), alto, a vigilar y reducir. Plazo transporte: 3,1d (shipped → delivered, transportista).",
+        "orders": [
+          {
+            "venue": "La Riera de Premià",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          },
+          {
+            "venue": "Botifler",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          },
+          {
+            "venue": "Koine Cafe",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          },
+          {
+            "venue": "Sukaldea Atotxa",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          },
+          {
+            "venue": "Mariu Pizza - Elche",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          },
+          {
+            "venue": "La Toscana",
+            "status": "enviado",
+            "notes": "Cliente enviado esta semana."
+          }
+        ]
+      },
+      "soporte": {
+        "openIncidents": 0,
+        "activeRmas": null,
+        "sla7dPct": 90.9,
+        "sla30dPct": null,
+        "reopenRatePct": null,
+        "avgResolutionHours": null,
+        "rmaResponseUnder2hPct": null,
+        "narrative": [
+          "Principales casos gestionados: MAREABEACH — instalado el 30/04, riesgo post-instalación por obras activas al arrancar. Asador Mendoza — diagnosticado; Alicante prioridad, Murcia depende de Alicante (2 cajones + 2 planes Total). Gusto Preferito — pendiente cita técnica Cashlogy AnyDesk. El Quinto Cono — derivado a Alba de Esomos.",
+          "Patrones detectados (arrastrados de W16 + W17): clientes con HW externo llegan sin prerrequisitos claros → 2ª configs. Falta vista canónica HW/CX → reconstrucción manual de contexto. Reasignaciones AM dejan clientes sin seguimiento operativo.",
+          "Sin pedidos en riesgo activos al cierre (0 incidencias HW abiertas >7d). RMAs activos sin corte cuantitativo defendible — la herramienta RMA es el próximo objetivo. SLA 7d: 90,9% (1 fuera de plazo)."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "MAREABEACH",
+          "status": "✅ Instalado",
+          "provider": "Cashlogy 1500",
+          "notes": "Instalado e integrado el 30/04 en 1h. Riesgo: local en obras al arrancar."
+        },
+        {
+          "client": "Hamburguesería Isla",
+          "status": "✅ Instalado",
+          "provider": "Cashlogy",
+          "notes": "Instalado en 45 min — mejor marca del equipo."
+        },
+        {
+          "client": "Restaurante La Nou",
+          "status": "✅ Desbloqueado",
+          "provider": "CashKeeper",
+          "notes": "Confirmado que integra sin desbloqueo previo. Desbloqueado."
+        },
+        {
+          "client": "Gusto Preferito",
+          "status": "🟡 Coordinación técnica",
+          "provider": "Cashlogy",
+          "notes": "En coordinación técnica. Pendiente cita AnyDesk."
+        },
+        {
+          "client": "El Quinto Cono",
+          "status": "↪ Derivado",
+          "provider": "Esomos (Alba)",
+          "notes": "Derivado a Alba de Esomos."
+        },
+        {
+          "client": "Asador Mendoza",
+          "status": "🟡 Diagnosticado",
+          "provider": "—",
+          "notes": "2 cajones + 2 planes Total. Cuenta prioritaria. Alicante primero, Murcia depende de Alicante."
+        },
+        {
+          "client": "CashGuard",
+          "status": "🔴 Bloqueado",
+          "provider": "CashGuard",
+          "notes": "Sigue con dependencia coordinación previa partner + contexto técnico."
+        },
+        {
+          "client": "Cashdro",
+          "status": "🔴 Bloqueado",
+          "provider": "Cashdro",
+          "notes": "Bloqueado por falta unidad test/loaner y sesión técnica con Javi."
+        }
+      ],
+      "performance": [
+        {
+          "displayName": "Guillermo — Configuraciones + PnP 2.0 + compras/stock + unit economics",
+          "member": "guille",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad)",
+              "value": "100%",
+              "target": "—",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢. Beneficios por equipo documentados. Métricas configuraciones. Cobertura plena."
+          ]
+        },
+        {
+          "displayName": "Domingo — Intercom + RMA + logística + herramientas internas",
+          "member": "domi",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad)",
+              "value": "110% (carga alta)",
+              "target": "—",
+              "status": "amarillo"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 (carga alta). 17 envíos gestionados, 0 pendientes. Itera herramienta RMA. MAIN OPS presentada."
+          ]
+        },
+        {
+          "displayName": "Marco — PnP 2.0 + configuraciones + almacén",
+          "member": "marco",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad)",
+              "value": "100%",
+              "target": "—",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢. 8/10 PnP entregados. Recupera capacidad post-Feria."
+          ]
+        },
+        {
+          "displayName": "JJ — Cajones inteligentes + proveedores + estructura + portal",
+          "member": "jj",
+          "kpis": [
+            {
+              "label": "Carga (% capacidad)",
+              "value": "100%",
+              "target": "—",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢. 4 cajones desbloqueados (1.258 € MRR). Portal lanzado. Reparto roles aterrizado. Finanzas activadas.",
+            "Nota metodológica: el semáforo de agente combina carga vs capacidad y cumplimiento del foco semanal. No mide performance individual aislada, sino riesgo de bloqueo esa semana."
+          ]
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Cerrar reporting HW Finance con Rafa Quesada + reducir 2ª configs.",
+          "output": "Dashboard V1 entregado. Análisis causas raíz 2ª config.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "RMA V1 funcional + auditoría MAIN OPS para reducir errores AEs.",
+          "output": "RMA tools V1 operativa. MO con vista precios multi-item.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Mantener ritmo PnP 2.0 + empujar formaciones (38/10).",
+          "output": "PnP formados >6/10. Envíos sin pendientes.",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "Cerrar Posiflex (pagar facturas), avanzar Gusto Preferito + Asador Mendoza, vista HW/CX.",
+          "output": "Posiflex desbloqueado. Cita técnica Gusto Preferito. Alicante con plan. Vista HW/CX V1.",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
+    "key": "W18",
+    "type": "weekly",
+    "isoWeek": 18,
+    "isoYear": 2026,
+    "data": {
+      "title": "W18 — JJ — Hardware",
+      "author": "jose jesus gallego",
+      "globalStatus": "amarillo",
+      "publishedAt": "2026-05-08",
+      "tesis": [
+        "W18 fue la semana de la ejecución bajo presión real: se cerró Asador Mendoza tras días de escalada técnica compleja, se instaló Solaguren con incidentes in situ, se validó el primer KDS real en La Tapicería con resultado positivo, y se aterrizaron los tres ejes del dashboard de mayo (configuraciones, auditoría de llamadas, cajones inteligentes). Internamente, el equipo desplegó mejoras en las tres herramientas del departamento (Portal HW, MAIN OPS, HSM) y Guillermo entregó la integración HWToolbox ↔ HWAccountant. La semana consolida base técnica y revela patrones CX que retrasan algunas configuraciones."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "4.000 €",
+          "actual": "7.430,99 € (675,54 €/pedido, 11 pedidos totales)",
+          "delta": "126% vs W17 (3.292 €)",
+          "status": "verde",
+          "comment": "Ticket medio sólido. Por encima del target semanal."
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "24",
+          "actual": "43 registros",
+          "delta": "+5 vs W17 (38)",
+          "status": "verde",
+          "comment": "49% remota, 23% PnP, 12% Test CRM, 7% no-show, 9% auditoría."
+        },
+        {
+          "label": "Configuraciones (% éxito 1º intento)",
+          "target": "80%",
+          "actual": "81% citas con requisitos (57% global incl. Test CRM)",
+          "delta": "↓ vs W17 (76%... mejora a 81% en citas con requisitos)",
+          "status": "rojo",
+          "comment": "Test CRM arrastra no-show y 46% requieren 2ª config. Citas con requisitos: 81%."
+        },
+        {
+          "label": "PnP entregados",
+          "target": "12",
+          "actual": "10",
+          "delta": "↓ vs W17",
+          "status": "amarillo",
+          "comment": "PnP 2.0 avanzando. Solo 1 fallo detectado (impresora, resuelto en 6 min)."
+        },
+        {
+          "label": "Envíos desde oficina",
+          "target": "12",
+          "actual": "13 enviados / 18 completados",
+          "delta": "+6 enviados vs W17 (17)",
+          "status": "verde",
+          "comment": "Plazo manipulación: 4,3d (mejora 76% vs W17). Tasa entrega exitosa: 63,6% 🔴."
+        },
+        {
+          "label": "SLA <7d",
+          "target": "100%",
+          "actual": "93,3%",
+          "delta": "↑ vs W17 (90,9%)",
+          "status": "amarillo",
+          "comment": "1 pedido fuera de plazo. 1 activo a vigilar (>5d sin entregar)."
+        },
+        {
+          "label": "Incidencias HW abiertas <7d",
+          "target": "5",
+          "actual": "0 activos en riesgo",
+          "delta": "= W17",
+          "status": "verde",
+          "comment": "5 incidencias gestionadas, todas cerradas/resueltas."
+        },
+        {
+          "label": "Cajones inteligentes",
+          "target": "—",
+          "actual": "Solaguren instalado. 2 nuevos leads.",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "Incidente técnico in situ. Mesón de los Infantes bloqueado por conectividad. HSM↔Intercom integrado."
+        },
+        {
+          "label": "RMAs activos",
+          "target": "5",
+          "actual": "5",
+          "delta": "Sin corte cuantitativo",
+          "status": "amarillo",
+          "comment": "Dashboard RMA pendiente métrica defendible."
+        },
+        {
+          "label": "KDS — La Tapicería",
+          "target": "—",
+          "actual": "✅ Test real positivo. Propuesta Pedro Porto: 25 uds, ~9k€ one-off.",
+          "delta": "Nuevo",
+          "status": "verde",
+          "comment": "Cliente abandona impresora en cocina. 25 uds Qamarero + 25 uds Pedro Porto."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "Config % éxito 1º intento",
+          "rootCause": "Test CRM: citas sin requisitos (sin restaurant-id, AM, cuenta borrada/duplicada). 29% no-show en este segmento. Llamadas de 48-65 min vs 30 min estándar.",
+          "action": "Objetivo mayo: 100% configs gestionadas, hasta 3 intentos, documentar fricciones. Guillermo + Marco.",
+          "eta": "W19",
+          "escalation": "Sí — CX preparación previa",
+          "status": "rojo"
+        },
+        {
+          "kpi": "SLA <7d",
+          "rootCause": "1 pedido fuera de plazo. 1 activo a vigilar (>5d sin entregar, no bloqueado).",
+          "action": "Domi verifica Erreka Jatetxea y monitoriza activo a vigilar.",
+          "eta": "W19",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "PnP entregados",
+          "rootCause": "Pegatinas PnP y T808 pendientes. Ralentiza PnP 2.0 experience completa.",
+          "action": "Hablado con Ale. Pendiente confirmación de Ale.",
+          "eta": "W19",
+          "escalation": "Sí — Ale",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "Tasa entrega exitosa",
+          "rootCause": "63,6% — métrica nueva introducida esta semana desde portal. Contexto y baseline en construcción.",
+          "action": "A evaluar con más semanas desde portal HW. Seguimiento desde portal.",
+          "eta": "W19",
+          "escalation": "No",
+          "status": "rojo"
+        },
+        {
+          "kpi": "Cajones inteligentes",
+          "rootCause": "Solaguren: técnico daña chip monedero in situ (riesgo futuro). Mesón de los Infantes: sin conectividad en sótano.",
+          "action": "Solaguren cerrado con riesgo documentado. Mesón vinculado a Hamburguesería Isla.",
+          "eta": "—",
+          "escalation": "No",
+          "status": "amarillo"
+        }
+      ],
+      "highlights": [
+        "Asador Mendoza — cerrado tras escalada compleja: Problema: velocidades <1Mbps, router reasignando IPs, TPV nuevo sin detectar cable. Técnico CashGuard detecta segunda entrada Ethernet; ajuste IP vía AnyDesk. Sistema estabilizado. JJ valida impresoras WiFi y reinstala barra como Barra_OK. Handoff a Rocío. Riesgo detectado: Murcia y Alicante comparten mismo restaurant ID en HS → reportado. Compensación acordada: no cobrar próxima cuota en ambos locales (pendiente OK final Pablo Pacheco).",
+        "KDS Android 14 (22\") — primer test real positivo: Test de oficina superado. Prueba real en Restaurante La Tapicería con Adrián: cliente deja de usar impresora en cocina, muy contento. Propuesta con Pedro Porto: 25 uds Qamarero + 25 uds Pedro Porto, ~350€/ud + transporte → one-off ~9k€ para Qamarero. Pendiente OK financiero/operativo.",
+        "Solaguren — instalado, con incidente: Técnico externo daña chip del monedero al montar otra pieza. Desbloqueo con serial alternativo. Cajón instalado con Cashlogy/Covenorte. Caso cerrado con riesgo futuro documentado.",
+        "Triple despliegue sub-herramientas internas (Domi + Guille): Portal HW: refactorización módulo métricas, integración HSM como módulo propio. MAIN OPS: agenda de direcciones automática, envíos independientes, descuento 100% en impresoras, pincho WiFi en catálogo, envío en sábado vía TIPSA. Loom grabado y entregado a David. HSM: integración HSM↔Intercom — cambios de estado generan mensajes automáticos en Intercom.",
+        "HWToolbox (Guille): nuevo ítem SmartCash con campos completos, filtros en analíticas, medición Test CRM mejorada, API actualizada.",
+        "HWAccountant (Guille): integración con HWToolbox. Coste exacto por número de serie. Reparto automático de gastos por categoría.",
+        "Admin KPIs en HW Main Portal: nueva sección /admin para gestión de KPIs y objetivos.",
+        "Nuevos leads cajones inteligentes: Lorenzo (nueva apertura Sant Martí, Barcelona) y Vaxto Alicante.",
+        "Objetivo mayo aterrizado con Pablo: 3 líneas medibles: configuraciones + experiencia paquetes, auditoría de llamadas, cajones inteligentes. Paraguas: 100% configs gestionadas, cero cancelaciones como experimento medido (no dogma)."
+      ],
+      "blockers": [
+        {
+          "description": "Pegatinas PnP / T808 / OK de Ale. Frena PnP 2.0 experience completa.",
+          "owner": "JJ / Ale",
+          "impact": "Frena PnP 2.0 experience completa.",
+          "status": "abierto"
+        },
+        {
+          "description": "Gusto Preferito — cita técnica AnyDesk. Integración Cashlogy pendiente.",
+          "owner": "JJ",
+          "impact": "Integración Cashlogy pendiente.",
+          "status": "abierto"
+        },
+        {
+          "description": "Auditoría de llamadas — checklist y guion. Documento WiP para mejora de discurso W18→W19.",
+          "owner": "JJ / Guille",
+          "impact": "Documento WiP para mejora de discurso W18→W19.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Muzybar — validación/firma Ale. Pendiente decidir si proveedor recurrente o puntual.",
+          "owner": "JJ / Ale",
+          "impact": "Pendiente decidir si proveedor recurrente o puntual.",
+          "status": "abierto"
+        },
+        {
+          "description": "Pedro Porto — crédito puente 5.000€. Bloquea crédito.",
+          "owner": "Ale",
+          "impact": "Bloquea crédito.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "KDS Pedro Porto — OK financiero (~9k€). Sin OK no se comprometen 25 uds.",
+          "owner": "Ale / Antonio",
+          "impact": "Sin OK no se comprometen 25 uds.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "CX preparación previa (restaurant-id, AM, cuentas). Bloquea configs: Bar la Bodega, De una, The coffee fox, Mona Menorca.",
+          "owner": "CX",
+          "impact": "Patrón sistémico — escalar.",
+          "status": "bloqueado"
+        }
+      ],
+      "decisions": [
+        {
+          "description": "KDS Pedro Porto — comprometer 25 uds (~9k€ + transporte).",
+          "owner": "Ale / Antonio",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Test real positivo en La Tapicería. Pedido mínimo China: 50 uds. Requiere OK financiero."
+        },
+        {
+          "description": "Compensación Asador Mendoza — no cobrar cuota ambos locales.",
+          "owner": "Pablo Pacheco",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Acordado internamente. Pendiente confirmación final."
+        },
+        {
+          "description": "Crédito puente 5.000€ Pedro Porto.",
+          "owner": "Ale",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "—"
+        },
+        {
+          "description": "Cero cancelaciones — política vs experimento medido.",
+          "owner": "Pablo / JJ",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Medir intentos, coste, tiempo, éxito, no-shows. No dogma."
+        },
+        {
+          "description": "KDS pruebas — ¿cobrar o regalar? Pago Pedro Porto pendiente.",
+          "owner": "Pablo / David",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Mencionado a Pablo y David. Sin decisión al cierre."
+        },
+        {
+          "description": "Muzybar — ¿proveedor recurrente o puntual?",
+          "owner": "Ale",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Pendiente validación/firma."
+        }
+      ],
+      "configuraciones": {
+        "totalConfigs": 43,
+        "successRate1st": 81,
+        "successRate2nd": 46,
+        "problems": "Desglose por tipo: Config remota 21 (49%), Config PnP 10 (23%), Config Test CRM 5 (12%), No-show 3 (7%), Auditoría 4 (9%). % éxito global 1º intento: 57% (con Test CRM) / 81% (citas con requisitos). No-show en Test CRM: 29%. 2ª config necesaria: 46% del segmento Test CRM. Tiempo medio Marco (estándar): 26 min (→17 min sin casos complejos). % éxito Marco (sin PnP): 79%. Fallo PnP detectado: 1 (resuelto en 6 min). Hallazgo crítico: las citas Test CRM tienen 57% éxito y 29% no-show; las citas que cumplen requisitos tienen 81% y <3% no-show. Patrón sistémico: sin restaurant-id, sin AM, cuentas borradas o duplicadas. Escalar a CX. Objetivo mayo: 100% configuraciones gestionadas, sin cancelar de entrada, hasta 3 intentos antes de derivar a AM, documentando motivos y fricciones."
+      },
+      "envios": {
+        "totalOps": 11,
+        "completed": 18,
+        "shipped": 13,
+        "pending": 3,
+        "grossRevenue": 7430.99,
+        "avgDeliveryDays": 3.9,
+        "sla7dPct": 93.3,
+        "marginEur": 7430.99,
+        "coveragePnp": "PnP entregados 10 (target 12). Solo 1 fallo PnP detectado (impresora, resuelto en 6 min).",
+        "officeVsProvider": "13 enviados / 18 completados desde oficina. Pedidos bloqueados 0 (1 abierto al cierre bloqueado: El Descorche). Plazo manipulación depto 4,3d, plazo transporte 2,4d, plazo medio entrega total 3,9d. Cumplimiento envío 5d 76,9%. Tasa entrega exitosa 63,6%.",
+        "orders": [
+          {
+            "venue": "Xiringuito del Riu Nou",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "HOSOMAKI ESPLUGUES",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "La consulta",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Your Choice",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "La Montanera de San Pedro",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Carboneria Villaviciosa",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Lola Cafetería",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Gau Txori",
+            "status": "completado",
+            "notes": "Cliente completado (entregado). RMA."
+          },
+          {
+            "venue": "El Xile",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "DE UNA RESTOBAR",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "LA BARRIKA",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Ottoman Grill",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Moka café",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "La Revuelta Tapas y Copas",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Möna Menorca",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Bocatería Elfos",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "Kenia Inside",
+            "status": "completado",
+            "notes": "Cliente completado (entregado)."
+          },
+          {
+            "venue": "El Descorche",
+            "status": "bloqueado",
+            "notes": "Abierto al cierre — bloqueado (Luis Barroso)."
+          },
+          {
+            "venue": "La bodega",
+            "status": "enviado",
+            "notes": "Abierto al cierre — enviado."
+          },
+          {
+            "venue": "Erreka Jatetxea",
+            "status": "enviado",
+            "notes": "Abierto al cierre — enviado 27/04. Verificar entrega urgente (activo a vigilar)."
+          }
+        ]
+      },
+      "soporte": {
+        "openIncidents": 0,
+        "activeRmas": 5,
+        "sla7dPct": 100,
+        "sla30dPct": null,
+        "reopenRatePct": null,
+        "avgResolutionHours": 39.2,
+        "rmaResponseUnder2hPct": null,
+        "narrative": [
+          "Asador Mendoza — resuelto técnicamente. Handoff a Rocío. Riesgo restaurant ID duplicado en HS.",
+          "MareaBeach — vuelve a escalar por frustración. Riesgo de baja. Cristina/Inés contactan Yessenia.",
+          "Gusto Preferito — OS Sistemes NO responde. Pendiente coordinar AnyDesk.",
+          "Oremos Burguer — se envía Opal sin coste para diagnosticar red.",
+          "Patrón CX crítico: Bar la Bodega, De una, The coffee fox, Mona Menorca — sin restaurant-id, sin AM, cuentas borradas/duplicadas. Bloquean configs de entrada.",
+          "Métricas: incidencias cerradas HSM 5/5 (100%), 5 RMAs activos (sin corte cuantitativo, dashboard RMA pendiente métrica defendible), tiempo medio resolución neto 39,2h, cumplimiento SLA 7d 93,3%."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "Solaguren",
+          "status": "✅ Instalado",
+          "provider": "Cashlogy / Covenorte",
+          "notes": "Incidente in situ (chip dañado). Resuelto con serial alternativo. Riesgo futuro."
+        },
+        {
+          "client": "Lorenzo (Sant Martí, BCN)",
+          "status": "🆕 Lead nuevo",
+          "provider": "—",
+          "notes": "Pipeline CX + deal a Alba de Esomos."
+        },
+        {
+          "client": "Vaxto Alicante",
+          "status": "🆕 Lead nuevo",
+          "provider": "—",
+          "notes": "Interés confirmado."
+        },
+        {
+          "client": "Mesón de los Infantes",
+          "status": "🔴 Bloqueado",
+          "provider": "—",
+          "notes": "Sin conectividad en sótano. Vinculado a Hamburguesería Isla."
+        },
+        {
+          "client": "MareaBeach",
+          "status": "🟡 Riesgo",
+          "provider": "—",
+          "notes": "Post-instalación: frustración cliente, riesgo baja."
+        },
+        {
+          "client": "Gusto Preferito",
+          "status": "🟡 Pendiente",
+          "provider": "Cashlogy",
+          "notes": "Espera cita AnyDesk con OS Sistemes."
+        },
+        {
+          "client": "Asador Mendoza",
+          "status": "🟡 Seguimiento",
+          "provider": "CashGuard",
+          "notes": "Técnico resuelto. Seguimiento ligero."
+        },
+        {
+          "client": "Gesmatec / Cashlogy",
+          "status": "📋 Propuesta recibida",
+          "provider": "Gesmatec",
+          "notes": "Escenario PVP y ~10% descuento. Decisión pendiente (afecta margen)."
+        },
+        {
+          "client": "Paris Toujours",
+          "status": "🔍 Prospecto",
+          "provider": "—",
+          "notes": "Posible cliente prueba báscula."
+        }
+      ],
+      "performance": [
+        {
+          "displayName": "Guillermo — Configuraciones + PnP + Finanzas HW",
+          "member": "guille",
+          "kpis": [
+            {
+              "label": "Configuraciones gestionadas (volumen)",
+              "value": "43 registros totales",
+              "target": "≥24/semana",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito 1º intento (citas con requisitos)",
+              "value": "81%",
+              "target": ">80%",
+              "status": "verde"
+            },
+            {
+              "label": "PnP entregados",
+              "value": "10",
+              "target": "≥12/semana",
+              "status": "amarillo"
+            },
+            {
+              "label": "Finanzas HW — entregable semanal",
+              "value": "✅ HWAccountant integrado",
+              "target": "Sí",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Semana muy sólida. HWToolbox↔HWAccountant integrado. Métricas configuraciones dentro de target en citas con requisitos. PnP ligeramente bajo por pendientes con Ale."
+          ]
+        },
+        {
+          "displayName": "Domingo — Logística + Incidencias + Herramientas",
+          "member": "domi",
+          "kpis": [
+            {
+              "label": "Operaciones cerradas",
+              "value": "85% (17/20)",
+              "target": "≥85% tasa cierre",
+              "status": "verde"
+            },
+            {
+              "label": "SLA incidencias <7d",
+              "value": "100% (5/5)",
+              "target": "100%",
+              "status": "verde"
+            },
+            {
+              "label": "Pedidos abiertos al cierre",
+              "value": "3 (1 bloqueado, 2 en tránsito)",
+              "target": "0",
+              "status": "amarillo"
+            },
+            {
+              "label": "Mejora herramientas — deploy semanal",
+              "value": "3 apps mejoradas",
+              "target": "≥1 mejora",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Semana de alto rendimiento. Triple mejora herramientas desplegada. SLA perfecto. 3 pedidos abiertos al cierre pero 2 son tránsito normal; 1 bloqueado (El Descorche) pendiente de revisar."
+          ]
+        },
+        {
+          "displayName": "Marco — PnP + Test CRM + Almacén",
+          "member": "marco",
+          "kpis": [
+            {
+              "label": "Tiempo medio config estándar",
+              "value": "26 min (→17 min sin casos complejos)",
+              "target": "<25 min",
+              "status": "amarillo"
+            },
+            {
+              "label": "% éxito configs estándar (sin PnP)",
+              "value": "79%",
+              "target": ">80%",
+              "status": "amarillo"
+            },
+            {
+              "label": "Errores de inventario",
+              "value": "0 ✅",
+              "target": "0",
+              "status": "verde"
+            },
+            {
+              "label": "Fallos PnP",
+              "value": "1 (resuelto en 6 min)",
+              "target": "0",
+              "status": "amarillo"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Avance sólido para su nivel de experiencia. Métricas muy cercanas al target; casos complejos explican la desviación. Guille señala que si trabajara solo con citas que cumplen requisitos, sus números serían equivalentes a los suyos."
+          ]
+        },
+        {
+          "displayName": "JJ — Cajones + Proveedores + Pipeline",
+          "member": "jj",
+          "kpis": [],
+          "narrative": []
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Auditoría llamadas → checklist + guion. Análisis causas raíz 2ª config. Cierre finanzas HW.",
+          "output": "Checklist operativo entregado. Documento análisis 2ª config.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "Validar flujo envío sábado (TIPSA). Verificar Erreka Jatetxea. Monitorizar HSM↔Intercom. Desbloquear El Descorche.",
+          "output": "0 pedidos perdidos. Métricas SLA verdes.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Mantener ritmo PnP 2.0. Reducir tiempo medio configs (objetivo <20 min).",
+          "output": "PnP sin fallos. Tiempo medio mejora.",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "Avanzar KDS con Pedro Porto (OK financiero). Gusto Preferito cita AnyDesk. Vista HW/CX V1. Lorenzo + Vaxto en pipeline. Solaguren review de la red. Sync con Javi para update de Qamarero Connect. Push de clientes Cajones inteligentes. Asentar finanzas con Ale y poner al día facturas con nuevo pipeline unificado.",
+          "output": "Posiflex desbloqueado. KDS con decisión. Al menos 1 cajón nuevo cerrado. Qamarero Connect updated con nuevo sistema de seguridad. Finanzas HW despliegue. Cashdro desbloqueado.",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
+    "key": "W19",
+    "type": "weekly",
+    "isoWeek": 19,
+    "isoYear": 2026,
+    "data": {
+      "title": "W19 — JJ — Hardware",
+      "author": "jose jesus gallego",
+      "globalStatus": "amarillo",
+      "publishedAt": "2026-05-15",
+      "tesis": [
+        "W19 deja la sensación de un departamento que opera bien por dentro pero sigue absorbiendo fricciones que vienen de fuera. Los cajones inteligentes avanzan en varios frentes (Solaguren acotado, Mesón de los Infantes resuelto, Asador Mendoza Alicante cerrado, nuevo lead en pipeline). Las tres herramientas del departamento (MainOPS, Portal HW, HSM) siguen mejorando y Domi consolida su mejor SLA histórico (90,5%). El informe de impresoras (solo 0,8% de 2.009 incidencias son HW roto) es la pieza de evidencia más importante de la semana. En paralelo, la integración HWToolbox→CXAdvisor ha amplificado un problema estructural: clientes que llegan a configuración sin restaurant-id, sin AM, o forzados manualmente en BBDD, ahora además no sincronizan con CXAdvisor. La fragilidad de los procesos CX upstream queda más visible que nunca."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "4.000 €",
+          "actual": "1.871 € registrado (MainOPS)",
+          "delta": "vs W18 (7.430 €)",
+          "status": "amarillo",
+          "comment": "Semana baja en volumen de pedidos físicos."
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "24",
+          "actual": "41 registros",
+          "delta": "vs W18 (43)",
+          "status": "verde",
+          "comment": "19 remoto / 4 PnP / 8 Test CRM / 4 audits / 6 no-show."
+        },
+        {
+          "label": "Configuraciones — % éxito citas con requisitos",
+          "target": ">80%",
+          "actual": "~77% (estimado)",
+          "delta": "vs W18 (81%)",
+          "status": "amarillo",
+          "comment": "Calculado a partir del global 68% menos contribución Test CRM. Pendiente confirmar con Guille. 38% requieren 2ª llamada. 18% problema preparación cliente."
+        },
+        {
+          "label": "Configuraciones — % éxito Test CRM",
+          "target": ">50% (mejora vs W18)",
+          "actual": "45%",
+          "delta": "vs W18 (57%)",
+          "status": "amarillo",
+          "comment": "Con miembro extra, viable. 18% problema preparación cliente."
+        },
+        {
+          "label": "Configuraciones — % global (configs + audits)",
+          "target": ">80%",
+          "actual": "68%",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "17% problema preparación cliente. 19% configs requieren 2ª llamada."
+        },
+        {
+          "label": "PnP entregados",
+          "target": "12",
+          "actual": "4",
+          "delta": "vs W18 (10)",
+          "status": "amarillo",
+          "comment": "Volumen entrante bajo."
+        },
+        {
+          "label": "Envíos desde oficina",
+          "target": "12",
+          "actual": "7 operaciones (5 completadas)",
+          "delta": "vs W18 (13)",
+          "status": "amarillo",
+          "comment": "Tasa cierre 71%. Semana de menor volumen. 1 pedido bloqueado."
+        },
+        {
+          "label": "SLA MainOPS 7d",
+          "target": "100%",
+          "actual": "90,5% (mejor histórico)",
+          "delta": "vs W18 (93,3%)",
+          "status": "amarillo",
+          "comment": "Mejor dato desde MainOPS en producción."
+        },
+        {
+          "label": "SLA incidencias HSM",
+          "target": "100%",
+          "actual": "81% (periodo 15 abr – 15 may)",
+          "delta": "—",
+          "status": "rojo",
+          "comment": "2 incidencias fuera de SLA. Reapertura mejora 36,4% → 29,6%."
+        },
+        {
+          "label": "Incidencias HW abiertas (>7d)",
+          "target": "<5",
+          "actual": "3 abiertas (2 esperando cliente)",
+          "delta": "—",
+          "status": "verde",
+          "comment": "Cierre semanal limpio. 9 impresoras RMA gestionadas esta semana."
+        },
+        {
+          "label": "RMAs activos",
+          "target": "<5",
+          "actual": "5 activos (turnaround 9,3d)",
+          "delta": "=",
+          "status": "amarillo",
+          "comment": "Mesón Infantes + Asador Mendoza Alicante + Solaguren acotado. Le Brunch lead."
+        },
+        {
+          "label": "Cajones inteligentes",
+          "target": "—",
+          "actual": "3 casos resueltos. 1 lead nuevo.",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "Escalación: Sí — preparación CX."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "% éxito citas con requisitos",
+          "rootCause": "17% problema preparación cliente persiste. 19% configs requieren 2ª llamada.",
+          "action": "Auditoría llamadas en curso. Análisis causas raíz 2ª llamada.",
+          "eta": "W20",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "% éxito Test CRM",
+          "rootCause": "Citas aceptadas sin cumplir requisitos. 38% requieren 2ª llamada. 18% preparación cliente.",
+          "action": "Evaluar viabilidad sostenida con Marco / miembro extra. Cubriendo Test CRM.",
+          "eta": "W20",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "PnP entregados",
+          "rootCause": "Volumen entrante bajo (4 vs target 12).",
+          "action": "Frena PnP 2.0 experience completa. Hablado con Ale. Pendiente OK.",
+          "eta": "W20",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "SLA incidencias HSM",
+          "rootCause": "Esperas con proveedor y cliente. Ambas fuera de nuestro control.",
+          "action": "Riesgo experiencia cliente. Monitorización en curso.",
+          "eta": "W20",
+          "escalation": "Sí — definir owner restaurant-id",
+          "status": "rojo"
+        },
+        {
+          "kpi": "Margen operativo",
+          "rootCause": "Semana baja en volumen de operaciones físicas (7 vs 11+ W18).",
+          "action": "Volumen depende de pedidos OR cerrados.",
+          "eta": "Continuo",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "SLA MainOPS",
+          "rootCause": "90,5% — mejor dato histórico pero por debajo del 100%. 1 pedido bloqueado (área Pub Café).",
+          "action": "Mejora real, target ambicioso. Domi monitoriza bloqueo.",
+          "eta": "W20",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "RMAs activos",
+          "rootCause": "5 activos en gestión. Turnaround 9,3d.",
+          "action": "9 impresoras gestionadas esta semana, 2 impresoras + 1 TPV refurbished disponibles. Inventario rotando bien.",
+          "eta": "Continuo",
+          "escalation": "No",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "Problema restaurant-id / CXAdvisor",
+          "rootCause": "Integración HWToolbox→CXAdvisor amplificó el problema: clientes forzados manual en BBDD configuran pero no sincronizan con CXAdvisor.",
+          "action": "Trazabilidad rota. 4 casos nuevos esta semana + histórico. Rubén Tineo propuso monitorización con Cristina. JJ preguntará a próximos 5 restaurantes sin AM cómo agendaron cita.",
+          "eta": "W20",
+          "escalation": "Sí — preparación CX",
+          "status": "rojo"
+        }
+      ],
+      "highlights": [
+        "Informe impresoras — evidencia para defender el área: Domi clasificó 2.009 conversaciones de Intercom. Resultado: solo 16 incidencias (0,8%) son HW roto o incompatible. El grueso son software/configuración, red, permisos, Chrome/LNA, JSPM y entorno. Pieza clave para Pablo y Antonio. Disponible en Notion + SOP RMA actualizado a operativa real.",
+        "3 situaciones críticas gestionadas (Domi): Casa Parque — baja evitada. Raul Neira muy insatisfecho con Soporte → contacto telefónico, escucha activa, plan de acción acordado (config impresoras + estudio TPV sustitución). Cliente en seguimiento. La Bella Caffè Tejeringos — TPV perdido en tránsito por GEON. Solución aprobada: envío reacondicionado a coste cero como compensación. Recuperación del original cuando aparezca. Gau Txori — queja por impresora. Revisado internamente: envío correcto. Gestión de conflicto con cliente, situación bajo control.",
+        "Mejor SLA MainOPS histórico — 90,5%: Plazo medio 4,1d, transporte 2,4d, tasa entrega 88,2%. Mejora directa de la corrección de contabilización + proceso de gestión revisado.",
+        "Cajones inteligentes — 3 casos resueltos esta semana: Mesón de los Infantes — cajón instalado y funcionando. Aprendizaje SOP: si Qamarero Connect mantiene estado antiguo tras instalación previa de Azkoyen, usar BCU Uninstaller para limpiar restos completos antes de tocar credenciales. Asador Mendoza Alicante — cajón funcionando tras cambio de router. Bloqueo era red, no integración Qamarero. Solaguren — diagnóstico evolucionó: descartado problema seriales/internet, hipótesis ahora apunta a conexión local TPV-cajón / serial connector. En observación con Covenorte.",
+        "Pipeline cajones — Le Brunch nuevo lead: Contacto Ayadi derivado a ESOMOS.",
+        "Triple mejora herramientas internas (Domi + Guille): MainOPS — integración con HWAccountant (cierre ciclo operativo-financiero), fix visualización unidades, APIs Toolbox configuradas, IVA/IGI canario (impuestos peninsular vs Canarias), bloque restricción Google, mejoras QoL. Portal HW — bugs corregidos, mejoras rendimiento. HSM — avance hacia automatización triaje Intercom → HSM. Mejoras QoL en gestión incidencias y RMA.",
+        "Performance Domi (30 días): 30 incidencias resueltas, media neta 32,8h (vs 49,2h media global del periodo). Reapertura 29,6% (↓ desde 36,4% en abril). Mejora clara de resolución de causa raíz.",
+        "Configuraciones (Guille) — 100% citas atendidas: A pesar de baja demanda CX, se atiende el 100% de las entrantes cumplan o no requisitos. Aumento de preconfiguración PnP. Test CRM con miembro extra empieza a ser viable.",
+        "Almacén operativo: Venta TPV reacondicionado Cosano Catering (400€). 2 impresoras + 1 TPV refurbished identificados como stock de sustituciones operativo. 9 impresoras RMA gestionadas e inventario ordenado."
+      ],
+      "blockers": [
+        {
+          "description": "CX preparación previa / restaurant-id ownership: Configs sin requisitos. Casos sin sync CXAdvisor. Patrón sistémico.",
+          "owner": "CX (Rubén / Cristina)",
+          "impact": "Configs sin requisitos. Casos sin sync CXAdvisor.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Posiflex — conciliación pago: Descuadre 6.018,79 pagado vs 6.941,18 pendientes + 8.296,62 vencimientos. Pendiente aclaración Mario. Pendiente retomar tras festivo Madrid.",
+          "owner": "Mario / Esteve",
+          "impact": "Descuadre 6.018,79 pagado vs 6.941,18 pendientes + 8.296,62 vencimientos.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Cashdro / Bamsistems — IP desatendido: Bloquea avance Javi para integración. Festivo Giuseppe. Pendiente respuesta proveedor.",
+          "owner": "JJ",
+          "impact": "Bloquea avance Javi para integración.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Gusto Preferito — Cashlogy Connector Plus: Integración bloqueada en proveedor externo. Pendiente decisión.",
+          "owner": "Giuseppe / proveedor cajón",
+          "impact": "Integración bloqueada en proveedor externo.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Vaxto — REGNA MURCIA: Instalación Cashlogy Connector Plus pendiente. Pendiente validación Ale. En seguimiento.",
+          "owner": "REGNA MURCIA",
+          "impact": "Instalación Cashlogy Connector Plus pendiente.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "KDS Pedro Porto — OK financiero: 25 uds ~9k€ comprometer (arrastre W18). Pendiente coordinar franja. Auditoría programada con Guille.",
+          "owner": "Ale / Antonio",
+          "impact": "25 uds ~9k€ comprometer (arrastre W18).",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Muzybar — proveedor recurrente o puntual: Respondidos datos fiscales (IAE 845, sin certificado revendedor). Pendiente revisar causa.",
+          "owner": "Ale",
+          "impact": "Respondidos datos fiscales (IAE 845, sin certificado revendedor).",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Bella Tejeringos — paquete perdido (GEON/CTT): Recuperar TPV original enviado como compensación.",
+          "owner": "Domi",
+          "impact": "Recuperar TPV original enviado como compensación.",
+          "status": "abierto"
+        },
+        {
+          "description": "Adriana (De Una Restobar): Incidencia impresora WiFi tras cambio router. Disponible solo 18:30.",
+          "owner": "Domi / Soporte",
+          "impact": "Incidencia impresora WiFi tras cambio router. Disponible solo 18:30.",
+          "status": "abierto"
+        },
+        {
+          "description": "Chisme — lentitud horas punta: Cliente sensible, riesgo experiencia. Auditoría programada con Guille.",
+          "owner": "JJ / Guille",
+          "impact": "Cliente sensible, riesgo experiencia.",
+          "status": "abierto"
+        },
+        {
+          "description": "Bloqueado MainOPS — Pack Pro + Kit Digital, área Pub Café y Copas.",
+          "owner": "Domi",
+          "impact": "Pedido bloqueado en área Pub Café y Copas.",
+          "status": "bloqueado"
+        }
+      ],
+      "decisions": [
+        {
+          "description": "Owner del restaurant-id + proceso CX: Casos sin AM, sin restaurant-id, duplicidades BBDD bloquean configs y rompen sync CXAdvisor.",
+          "owner": "Pablo / Rubén / Cristina",
+          "deadline": "Topic lunes",
+          "status": "pendiente",
+          "resolution": "Topic lunes."
+        },
+        {
+          "description": "Conciliación Posiflex: Cruce por factura + vencimiento + importe (facturas fraccionadas). Sin OK no se cierran 9k.",
+          "owner": "Mario / Esteve",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Arrastre W18. Sin OK no se cierran 9k."
+        },
+        {
+          "description": "KDS Pedro Porto — comprometer 25 uds (~9k€).",
+          "owner": "Ale / Antonio",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Arrastre W18. No cobrar próxima cuota ambos locales."
+        },
+        {
+          "description": "Compensación Asador Mendoza.",
+          "owner": "Pablo Pacheco",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Arrastre W18."
+        },
+        {
+          "description": "Crédito puente 5.000€ Pedro Porto.",
+          "owner": "Ale",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Datos fiscales ya respondidos."
+        },
+        {
+          "description": "Muzybar — recurrente o puntual.",
+          "owner": "Ale",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Datos fiscales ya respondidos."
+        }
+      ],
+      "configuraciones": {
+        "totalConfigs": 41,
+        "successRate1st": 68,
+        "successRate2nd": 19,
+        "problems": "Desglose por tipo (41 registros): Config remota 19 (46%), Config PnP 4 (10%), Config Test CRM 8 (20%), Auditorías 4 (10%), No-show 6 (15%). % éxito global (configs + audits) 68%. % configs requieren 2ª llamada 19%. Principal problema detectado: preparación cliente (17%). Detalle Test CRM (citas sin requisitos): Total registros 11, Configuraciones 8, No-show 3, % éxito 45%, % requieren 2ª llamada 38%, principal problema preparación cliente (18%). Conclusiones Guille: sigue habiendo baja demanda de citas por parte de CX, pero se atiende el 100% de las entrantes cumplan o no requisitos, en parte debido al aumento de preconfiguración PnP. Test CRM cada vez más positivo; con miembro extra en el equipo, este tipo de citas se vuelve viable a pesar de ser menos eficientes. Casos CX problemáticos esta semana: The Coffee Fox, Mona Menorca, Vegetopia, Crítico Restaurante — todos sin restaurant-id, sin AM, duplicidades en BackOffice, altas manuales en BBDD. Gusto Preferito: Marco recuperó la cita tras no-show inicial, configuró impresoras + derivó formación a Mar, detectó falta Cashlogy Connector Plus → escalado a proveedor externo."
+      },
+      "envios": {
+        "totalOps": 7,
+        "completed": 5,
+        "shipped": 2,
+        "pending": null,
+        "grossRevenue": 1871,
+        "avgDeliveryDays": 4.1,
+        "sla7dPct": 90.5,
+        "marginEur": 1871,
+        "coveragePnp": "",
+        "officeVsProvider": "Periodo MainOPS 30 abr – 15 may. Pedidos registrados semana 7 (4 HW + 1 SaaS + 2 otros). Completados / Enviados 5 / 2 (71% tasa cierre). Plazo transporte 2,4 días. Tasa entrega 88,2%. Pedidos bloqueados 1 (área Pub Café y Copas).",
+        "orders": [
+          {
+            "venue": "Oremos Burger",
+            "status": "completado",
+            "notes": "HW-202605-1773. Enrutador OPAL x1. HW / —."
+          },
+          {
+            "venue": "El Garden",
+            "status": "completado",
+            "notes": "HW-202605-1774. Impresora WiFi x1. HW / —."
+          },
+          {
+            "venue": "Santiago Bar",
+            "status": "completado",
+            "notes": "HW-202605-1775. TPV Estándar x1. HW / 758,67 €."
+          },
+          {
+            "venue": "Cosano Catering",
+            "status": "completado",
+            "notes": "HW-202605-1776. TPV M6 Reacondicionado. Otro / 400 €."
+          },
+          {
+            "venue": "Restaurante BILL",
+            "status": "completado",
+            "notes": "HW-202605-1777. Implementación Pro x1. SaaS / 500 €."
+          },
+          {
+            "venue": "La Bella Caffè Tejeringos",
+            "status": "enviado",
+            "notes": "HW-202605-1778. TPV Estándar (compensación). Otro / —."
+          },
+          {
+            "venue": "IES San Fernando",
+            "status": "enviado",
+            "notes": "HW-202605-1779. Impresora TP808 WiFi x1. HW / 212,96 €."
+          }
+        ]
+      },
+      "soporte": {
+        "openIncidents": 3,
+        "activeRmas": 5,
+        "sla7dPct": 81,
+        "sla30dPct": null,
+        "reopenRatePct": 29.6,
+        "avgResolutionHours": 49.2,
+        "rmaResponseUnder2hPct": null,
+        "narrative": [
+          "Periodo HSM 15 abr – 15 may. SLA cumplido 81% (2 fuera SLA). Resolución media 49,2h. Tasa reapertura 29,6% (↓ desde 36,4% abril). Turnaround RMA 9,3 días. RMAs activos 5.",
+          "Domi — incidencias resueltas (30d): 30 (media 32,8h).",
+          "Tendencia semana: Lun 6 / Mar 2 / Mié 3 / Jue 2 / Vie 1. Estado al cierre: 2 esperando cliente, 1 en gestión (<1 día).",
+          "Foco soporte HW — Chisme: cliente sensible por lentitud grave en horas punta. Auditoría programada con Guille.",
+          "Foco soporte HW — Adriana (De Una Restobar): impresora WiFi tras cambio router. Disponibilidad 18:30."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "Mesón de los Infantes",
+          "status": "✅ Resuelto",
+          "provider": "—",
+          "notes": "Cajón funcionando. BCU Uninstaller resolvió bloqueo. Aprendizaje SOP."
+        },
+        {
+          "client": "Asador Mendoza Alicante",
+          "status": "✅ Resuelto",
+          "provider": "CashGuard",
+          "notes": "Cajón funcionando tras cambio router."
+        },
+        {
+          "client": "Solaguren",
+          "status": "🟡 En observación",
+          "provider": "Cashlogy / Covenorte",
+          "notes": "Hipótesis evolucionó: problema TPV-cajón local / serial connector."
+        },
+        {
+          "client": "Le Brunch",
+          "status": "🆕 Lead nuevo",
+          "provider": "—",
+          "notes": "Ayadi → ESOMOS. Pendiente avisar AM."
+        },
+        {
+          "client": "Cashdro / Bamsistems",
+          "status": "🟡 Pendiente",
+          "provider": "Bamsistems",
+          "notes": "Festivo Madrid 15/05 — pendiente IP desatendido para Javi."
+        },
+        {
+          "client": "Vaxto Murcia",
+          "status": "🟡 Pendiente",
+          "provider": "REGNA MURCIA",
+          "notes": "SN 7064724 instalado por REGNA. Pendiente Cashlogy Connector Plus."
+        },
+        {
+          "client": "Gusto Preferito",
+          "status": "↪ Pendiente / Derivado",
+          "provider": "OS Sistemes / Cashlogy",
+          "notes": "Falta Cashlogy Connector Plus. Bloqueo en proveedor externo."
+        },
+        {
+          "client": "María José Vallejo Sánchez",
+          "status": "🔴 Descartado",
+          "provider": "—",
+          "notes": "Lead pasado a Laura de Cashlogy."
+        },
+        {
+          "client": "Acho tu Gastrobar",
+          "status": "🔴 Descartado",
+          "provider": "—",
+          "notes": "Cliente descartó por precio (también ofrecido CashGuard UNI)."
+        },
+        {
+          "client": "Jamonería Manuel Flores",
+          "status": "🔴 Descartado",
+          "provider": "—",
+          "notes": "Cliente confirmó no quiere por ahora."
+        }
+      ],
+      "performance": [
+        {
+          "displayName": "Guillermo — Configuraciones + PnP + Finanzas HW",
+          "member": "guille",
+          "kpis": [
+            {
+              "label": "Configuraciones gestionadas (volumen)",
+              "value": "41 registros",
+              "target": "24/semana",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito global (configs + audits)",
+              "value": "68%",
+              "target": ">80%",
+              "status": "amarillo"
+            },
+            {
+              "label": "% éxito Test CRM",
+              "value": "45%",
+              "target": "—",
+              "status": "amarillo"
+            },
+            {
+              "label": "PnP entregados",
+              "value": "4",
+              "target": "12/semana",
+              "status": "amarillo"
+            },
+            {
+              "label": "Citas entrantes atendidas",
+              "value": "100% (con y sin requisitos)",
+              "target": "100%",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Volumen sólido (41 registros). 100% citas entrantes atendidas. % éxito baja vs W18 porque Test CRM arrastra (45%) y problema preparación cliente persiste (17%). PnP bajo por volumen entrante. Test CRM se vuelve más viable con miembro extra."
+          ]
+        },
+        {
+          "displayName": "Domingo — Logística + Incidencias + Herramientas",
+          "member": "domi",
+          "kpis": [
+            {
+              "label": "Operaciones cerradas",
+              "value": "71% (5/7)",
+              "target": "85% tasa cierre",
+              "status": "amarillo"
+            },
+            {
+              "label": "SLA incidencias <7d",
+              "value": "81% (2 fuera SLA)",
+              "target": "100%",
+              "status": "rojo"
+            },
+            {
+              "label": "Pedidos abiertos al cierre",
+              "value": "3 (2 esperando cliente, 1 gestión)",
+              "target": "0",
+              "status": "amarillo"
+            },
+            {
+              "label": "Mejora herramientas — deploy semanal",
+              "value": "3 apps mejoradas",
+              "target": "1 mejora",
+              "status": "verde"
+            },
+            {
+              "label": "Tasa reapertura",
+              "value": "29,6% (↓ desde 36,4%)",
+              "target": "<30%",
+              "status": "verde"
+            },
+            {
+              "label": "Resolución media (Domi 30d)",
+              "value": "32,8h",
+              "target": "<40h",
+              "status": "verde"
+            },
+            {
+              "label": "Situaciones críticas gestionadas",
+              "value": "3 (Casa Parque, Bella Tej., Gau Txori)",
+              "target": "—",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Semana sólida con 3 situaciones críticas gestionadas (baja evitada en Casa Parque). SLA MainOPS en máximo histórico. SLA incidencias en rojo por 2 casos fuera de plazo en periodo mensual, pero la tendencia de reapertura mejora claramente. Triple mejora herramientas + informe impresoras de 2.009 conversaciones es entregable de alto valor."
+          ]
+        },
+        {
+          "displayName": "Marco — PnP + Test CRM + Almacén",
+          "member": "marco",
+          "kpis": [
+            {
+              "label": "Configs Test CRM atendidas",
+              "value": "100% entrantes",
+              "target": "100% entrantes",
+              "status": "verde"
+            },
+            {
+              "label": "Detección bloqueos proveedor",
+              "value": "Recuperado Gusto Preferito tras no-show + Cashlogy Connector Plus",
+              "target": "—",
+              "status": "verde"
+            },
+            {
+              "label": "Formación derivada correctamente",
+              "value": "Mar (Gusto Preferito)",
+              "target": "—",
+              "status": "verde"
+            },
+            {
+              "label": "PnP entregados (compartido)",
+              "value": "4 (compartido con Guille)",
+              "target": "12/semana",
+              "status": "amarillo"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Buen empuje en Test CRM. Recuperó no-show de Gusto Preferito y configuró impresoras. Detectó correctamente el bloqueo de proveedor externo (Cashlogy Connector Plus). PnP bajo por volumen entrante, no por desempeño."
+          ]
+        },
+        {
+          "displayName": "JJ — Cajones + Proveedores + Pipeline",
+          "member": "jj",
+          "kpis": [],
+          "narrative": []
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Analizar causas raíz 2ª llamada (19% configs). Cerrar auditoría llamadas con checklist + guion. Evaluar viabilidad sostenida Test CRM con miembro extra.",
+          "output": "Documento causa raíz. Checklist auditoría. Decisión Test CRM.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "Recuperar TPV Bella Tejeringos. Coordinar Adriana 18:30. Desbloquear área Pub Café y Copas. Continuar automatización Intercom→HSM.",
+          "output": "TPV recuperado. SLA verde. Bloqueo desbloqueado.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Mantener cobertura Test CRM. Seguimiento Gusto Preferito hasta cierre. Reducir tiempo medio configs.",
+          "output": "Test CRM con éxito sostenido.",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "Preparar propuesta ejecutiva HW + I+D para Antonio. Cerrar conciliación Posiflex con Mario. Retomar Cashdro/Bamsistems (IP). Llevar lunes ownership restaurant-id a discusión. Preguntar a próximos 5 restaurantes sin AM cómo agendaron cita. Reintentar Vaxto vía REGNA MURCIA. Avisar AM Le Brunch. Empujar Giuseppe (Gusto Preferito). Completar Google Sheet KPIs mensuales HW para Antonio. Revisar SOP RMA actualizado por Domi.",
+          "output": "Propuesta HW+I+D entregada. Posiflex conciliado. Cashdro desbloqueado. Owner restaurant-id definido. KPIs mensuales operativos.",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
     "key": "W20",
     "isoWeek": 20,
     "isoYear": 2026,
@@ -1574,6 +3489,1038 @@
           "owner": "JJ",
           "objective": "Activar circuito Pedro Porto con Ale. Confirmar Posiflex 713,23 €/duplicado por escrito. Catálogo a web/Marketing + proyecto Claude HW (Rafa Quesada) + 'paquete ideal' en Notion. KD: criterio IA nº serie + plan clientes de baja. Pedir pegatinas. Seguir Preston / H. Isla. Replantear Murcia.",
           "output": "Circuito Pedro Porto activo, Posiflex confirmado, proyecto Claude HW y paquete ideal, plan KD, stock pegatinas.",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
+    "key": "W23",
+    "type": "weekly",
+    "isoWeek": 23,
+    "isoYear": 2026,
+    "data": {
+      "title": "W23 — JJ — Hardware",
+      "author": "jose jesus gallego",
+      "globalStatus": "verde",
+      "publishedAt": "2026-06-12",
+      "tesis": [
+        "W23 fue una semana de 4 días (festivo jueves 11) con producción completa+ pese al día menos: el margen operativo HW cierra en 8.458,57 € (44,16%), +31% vs W22 y +164% sobre el objetivo proporcional, con 37 configuraciones y 21 envíos, todo muy por encima de target. Se cierran cuatro frentes arrastrados (conciliación Posiflex, recepción Approx, pegatinas, espacio Jaime en Main Ops) y Domingo reconstruye el HSM de cero (V0). En cajones, Cashlogy entra en El Pontet (+100 €/mes, acumulado ~1.124 €/mes) y se cierra la venta de Kalero (Gesmatec).",
+        "El punto crítico fue SUNMI INC-004: en una ventana de partido (09-jun), ~15-20 clientes con impresoras SUNMI Cloud dejaron de imprimir (bloqueo ISP/CDN, no backend Qamarero). SUNMI cambió de CDN (Alibaba→Wangsu) y se enviaron 4 D3 Pro a los más afectados; el domingo 14, en nueva ventana, no se reprodujo la caída → mitigado, no cerrado al 100% (validación ~septiembre). Con >1.000 impresoras SUNMI desplegadas, HW debe avanzar una estrategia de fallback para setups críticos iPad-only + SUNMI Cloud."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "3.200 € (4d)",
+          "actual": "8.458,57 €",
+          "delta": "+31% vs W22 (6.454,21 €)",
+          "status": "verde",
+          "comment": "+164% sobre target proporcional. 44,16% (-5,68pp vs 49,84%). Herramienta unit economics (Gross Rev. 19.152,84 € − COGS 10.694,27 €). Motores: 10POS 10T, XPOS I5, Aqprox USB+WiFi, Syrion."
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "19 (4d)",
+          "actual": "37 config (48 registros)",
+          "delta": "+2 config vs W22 (35)",
+          "status": "verde",
+          "comment": "22 PnP / 14 no-PnP / 1 Test CRM / 4 rev. téc / 6 auditorías / 1 noshow. Producción completa+ en 4 días."
+        },
+        {
+          "label": "Configuraciones (% éxito 1º intento)",
+          "target": ">80%",
+          "actual": "~92% (citas, excl. PnP)",
+          "delta": "-8pp vs W22 (100%)",
+          "status": "verde",
+          "comment": "2ª config sube de 0% a 8,1%. Sigue sobre target; regresión leve a vigilar."
+        },
+        {
+          "label": "Cobertura PnP en envíos",
+          "target": "100%",
+          "actual": "93,3% (14/15)",
+          "delta": "-6,7pp vs W22 (100%)",
+          "status": "amarillo",
+          "comment": "1 pack salió sin PnP por envío urgente justificado (compra tardía, mensajería en puerta). Resto 14/14 con PnP."
+        },
+        {
+          "label": "Envíos totales (oficina + proveedor)",
+          "target": "10 (4d)",
+          "actual": "21",
+          "delta": "+1 vs W22 (20)",
+          "status": "verde",
+          "comment": "15 packs + 6 sueltos. Oficina (Domingo): sin dato limpio."
+        },
+        {
+          "label": "SLA <7d",
+          "target": "100%",
+          "actual": "100%",
+          "delta": "= W22",
+          "status": "verde",
+          "comment": "0 fuera de SLA en completados (La Avenida 7,0d, al límite). Arrastres W22 (George's 11d, La Salut 7d) cerrados esta semana — no cuentan a W23."
+        },
+        {
+          "label": "Incidencias HW abiertas (>7d)",
+          "target": "<5",
+          "actual": "1 (INC-00026)",
+          "delta": "= W22 (1)",
+          "status": "amarillo",
+          "comment": "Target cumplido (1<5), pero INC-00026 (Jorge) en pausa desde 15-may (>1 mes). Domingo lo revisa la semana del 16."
+        },
+        {
+          "label": "Tiempo respuesta RMA cliente",
+          "target": "<2h",
+          "actual": "sin dato fiable",
+          "delta": "—",
+          "status": "amarillo",
+          "comment": "HSM en V0 (rework completo esta semana). 17 equipos en reparación (arrastre); push a fabricantes la semana del 16."
+        },
+        {
+          "label": "Tasa entrega exitosa",
+          "target": "100%",
+          "actual": "~100%",
+          "delta": "=",
+          "status": "verde",
+          "comment": "1 excepción (Keyla/GAUTXORI): dirección errónea dada por el cliente; sustitución enviada."
+        },
+        {
+          "label": "Cajones inteligentes",
+          "target": "—",
+          "actual": "+1 (Cashlogy El Pontet) · +100 €/mes",
+          "delta": "acumulado ~1.124 €/mes",
+          "status": "verde",
+          "comment": "Kalero (Gesmatec) venta cerrada — no suma MRR hasta instalar. Lead Soria a ESOMOS."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "Incidencias HW >7d",
+          "rootCause": "INC-00026 (Jorge) en pausa desde 15-may; HSM en V0 limitó el registro sistemático.",
+          "action": "Revisar/cerrar o escalar INC-00026; estabilizar HSM V0 y registro sistemático.",
+          "eta": "W24",
+          "escalation": "No (interno)",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "Respuesta RMA <2h",
+          "rootCause": "HSM en rework (V0 lanzada al cierre); sin dato fiable de respuesta. 17 equipos en reparación con proveedor.",
+          "action": "Push a fabricantes (5 imp + 9 cajones + 2 TPV + 1 KDS); estabilizar HSM.",
+          "eta": "W24",
+          "escalation": "No",
+          "status": "amarillo"
+        }
+      ],
+      "highlights": [
+        "Margen 8.458,57 € (44,16%), +31% vs W22 y +164% sobre el objetivo proporcional de 4 días. Motores: 10POS 10T (+2.490 €), XPOS I5 (+1.740 €), Aqprox USB+WiFi (+739 €), Syrion (3 ud, +481 €).",
+        "Producción completa+ en 4 días: 37 configuraciones, 21 envíos y 22 ops MAIN OPS pese al festivo del jueves — niveles de semana completa.",
+        "Cuatro frentes arrastrados cerrados: conciliación Posiflex cerrada · recepción Approx completada · pegatinas pedidas · espacio Jaime creado en Main Ops.",
+        "HSM reconstruido de cero (V0): Domingo rehace arquitectura, interfaz e interacción; V0 early lanzada al cierre — avanza el rework que arrastrábamos.",
+        "Main Operation mejorado: precios de catálogo y financiación corregidos; nuevo modal de edición de pedidos que tira del catálogo (no campo libre) → mejor calidad de datos.",
+        "Cajones — El Pontet (Cashlogy, +100 €/mes): acumulado ~1.124 €/mes. Venta de Kalero cerrada vía Gesmatec (Málaga). Lead de Soria (Vinuesa/BIL) derivado a ESOMOS. Incidencias de cajón resueltas por Marco (Cervecería Frankfurt — cambio de router; VAXTO Murcia — Connector Plus).",
+        "2 bajas evitadas (retención): Ángel/KOINE Café (TPV, equipo de sustitución) y cliente de revisión técnica (llamada 1h15, baja evitada → AM).",
+        "SUNMI INC-004 mitigado: CDN cambiado (Alibaba→Wangsu) + 4 D3 Pro a afectados; sin recaída el domingo 14. No cerrado al 100% (validación ~septiembre). Ver sección dedicada.",
+        "I+D: avance del proyecto HW + I+D (Rafa Quesada); lab Flint + WireGuard como base de fallback para SUNMI."
+      ],
+      "blockers": [
+        {
+          "description": "SUNMI INC-004 — exposición cloud. >1.000 impresoras SUNMI y ~100 D3 Pro dependientes de cloud/CDN/ISP; riesgo de corte en ventanas de bloqueo. Mitigado (CDN Alibaba→Wangsu + 4 D3 Pro). No cerrado: validar en ~3 ventanas (2ª, 1ª, Copa) hasta ~septiembre. Falta inventario de clientes expuestos + estrategia de fallback (Flint+WireGuard / impresora LAN).",
+          "owner": "JJ / Javi / Ignacio",
+          "impact": ">1.000 impresoras SUNMI y ~100 D3 Pro dependientes de cloud/CDN/ISP; riesgo de corte en ventanas de bloqueo.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "KD / Kit Digital — capacidad HW. Justificantes/fotos/bajas presionan capacidad; ~556 clientes hasta diciembre. Pendiente criterio definitivo (fotos, bajas, IA, apoyo AMs, reparto de llamadas) con Pablo Madrona.",
+          "owner": "JJ / Marco / Ale",
+          "impact": "Justificantes/fotos/bajas presionan capacidad; ~556 clientes hasta diciembre.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Rajapack — liberación pedido. Pedido PV26-041950 pendiente de liberar. Confirmar liberación tras el pago comunicado el 05-jun.",
+          "owner": "JJ / Ale",
+          "impact": "Pedido PV26-041950 pendiente de liberar.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Facturas/justificantes (Rafa/Ale) — conciliación de proveedores pendiente. PC Mira localizada y enviada (267,41 €). Pendientes: Binary (correo Mario), UPS_ES (en investigación), Jassway (Rafa→Jose Prieto), Mylar (pedir detalle del pago agrupado).",
+          "owner": "JJ / Rafa",
+          "impact": "Conciliación de proveedores pendiente.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Pedro Porto — circuito línea 5.000 €. Crédito; el pedido Syrion consume parte de la línea. Activación del circuito con Ale pendiente; confirmar tracking/salida.",
+          "owner": "JJ / Ale",
+          "impact": "Crédito; el pedido Syrion consume parte de la línea.",
+          "status": "abierto"
+        },
+        {
+          "description": "HSM — estabilización V0. Registro sistemático aún no operativo (V0 early). V0 lanzada; estabilizar y empezar registro sistemático la semana del 16.",
+          "owner": "Domingo",
+          "impact": "Registro sistemático aún no operativo (V0 early).",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Marea Beach / Murobeach — instalación cajón. CashKeeper no instalable sin usuario/contraseña del cliente. Bloqueado a la espera de credenciales del cliente.",
+          "owner": "JJ / Marco",
+          "impact": "CashKeeper no instalable sin usuario/contraseña del cliente.",
+          "status": "bloqueado"
+        },
+        {
+          "description": "Cafetería Preston — riesgo de baja. Necesita integración Cashdro más completa que la disponible. Riesgo de baja; seguimiento con Fernando.",
+          "owner": "JJ / Fernando",
+          "impact": "Necesita integración Cashdro más completa que la disponible.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "VAXTO Murcia — proveedor real. Connector Plus reiniciado por Marco; estabilidad por validar. Confirmar proveedor real con Iván; validar autoarranque tras reinicio del TPV.",
+          "owner": "JJ / Marco",
+          "impact": "Connector Plus reiniciado por Marco; estabilidad por validar.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Johnny / Vicón (retención, Coruña). Oportunidad de captación frente a Vicón (ICG/IOpos + Cashdro 5); bloqueo = confianza en el soporte del Cashdro 5. Validar escenario técnico ICG/IOpos + Cashdro 5 → Qamarero; preparar respuesta de soporte y presupuesto.",
+          "owner": "JJ",
+          "impact": "Oportunidad de captación frente a Vicón (ICG/IOpos + Cashdro 5); bloqueo = confianza en el soporte del Cashdro 5.",
+          "status": "abierto"
+        },
+        {
+          "description": "Financiaciones de equipos — Jaime + Main Ops. Riesgo de desconexión operación-cobros. Espacio Jaime creado en Main Ops; financiación corregida en catálogo. Avanza.",
+          "owner": "Domi / Jaime",
+          "impact": "Riesgo de desconexión operación-cobros.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Hamburguesería Isla / Mesón Infantes. Posible reaparición incidencia del cajón. Sin update.",
+          "owner": "JJ",
+          "impact": "Posible reaparición incidencia del cajón.",
+          "status": "abierto"
+        }
+      ],
+      "decisions": [
+        {
+          "description": "SUNMI — estrategia de fallback para setups críticos iPad-only + SUNMI Cloud. ¿Política de arquitectura: no vender setups críticos cloud-only sin bridge / impresora LAN certificada?",
+          "owner": "JJ / Producto / Pablo / David",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": ""
+        },
+        {
+          "description": "KDS pruebas — ¿cobrar o regalar?",
+          "owner": "—",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Arrastrado. Sin movimiento."
+        },
+        {
+          "description": "KD — criterio de IA para nº de serie en fotos. Cada Cámara de Comercio puede medirlo distinto.",
+          "owner": "Pablo Madrona / Ale",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": ""
+        },
+        {
+          "description": "Murcia (cajón) — replantear según alternativa. Pendiente revisión de continuidad.",
+          "owner": "JJ / comercial",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": ""
+        },
+        {
+          "description": "Conciliación Posiflex.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada esta semana."
+        },
+        {
+          "description": "Recepción Approx.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada esta semana."
+        },
+        {
+          "description": "Pegatinas pedidas.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada esta semana."
+        },
+        {
+          "description": "Espacio Jaime en Main Ops.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada esta semana."
+        },
+        {
+          "description": "HSM V0 lanzado.",
+          "owner": "Domingo",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada esta semana (V0 lanzada al cierre)."
+        },
+        {
+          "description": "SUNMI INC-004 mitigado.",
+          "owner": "JJ / Javi / Ignacio",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Mitigado (validación pendiente ~septiembre)."
+        }
+      ],
+      "configuraciones": {
+        "totalConfigs": 37,
+        "successRate1st": 92,
+        "successRate2nd": 8,
+        "problems": "Total registros 48. Desglose por tipo: Config PnP 22 (46%), Config no-PnP 14 (29%), Test CRM 1 (2%), Revisión técnica 4 (8%), Auditoría de compatibilidad 3 (La Scaletta, Al Fresko de la Sierra x2), Recomendación técnica puntual 3 (arepa power, Bodeguita Albero, Casa de Manolete), No-show 1 (2%). % éxito citas (excluye PnP) ~92%. Requieren 2ª config 8,1%. Configs sin problema 89,2%. Tiempo medio Config 18 min (-28%). Distribución de problemas: 89,2% sin problema / 8,1% prep. cliente / 2,7% otro / 0% nivel tech. Reparto por técnico: Marco 27, Guille 21."
+      },
+      "envios": {
+        "totalOps": 22,
+        "completed": 15,
+        "shipped": 7,
+        "pending": 0,
+        "grossRevenue": 19152.84,
+        "avgDeliveryDays": 3,
+        "sla7dPct": 100,
+        "marginEur": 8458.57,
+        "coveragePnp": "93,3% (14/15; 1 excepción urgente justificada)",
+        "officeVsProvider": "Envíos totales (oficina + proveedor, Guille) 21 (15 packs + 6 sueltos). Envíos desde oficina (Domingo): sin dato limpio. Pendiente/Bloqueada 0/0. Operaciones gestionadas 22/22 (100%).",
+        "orders": [
+          {
+            "venue": "Horma (KD)",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "Vanus",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "Bezoucos",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "La Madrileña",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "Frankfurt Gava",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "Bar BirgBen",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          },
+          {
+            "venue": "Mad Kitchen",
+            "status": "enviado",
+            "notes": "En tránsito al cierre."
+          }
+        ]
+      },
+      "soporte": {
+        "openIncidents": 6,
+        "activeRmas": 17,
+        "sla7dPct": 100,
+        "sla30dPct": null,
+        "reopenRatePct": null,
+        "avgResolutionHours": null,
+        "rmaResponseUnder2hPct": null,
+        "narrative": [
+          "HSM V0: rework completo esta semana (arquitectura/interfaz/interacción rehechas). V0 early lanzada al cierre; inestable la mayor parte de la semana → incidencias gestionadas vía Intercom. Dashboard: 46 total / 40 cerradas / 6 esperando cliente / 0 abiertas / 0 en curso.",
+          "6 incidencias activas (todas 'esperando cliente'): INC-00045 El Encuentro (auditoría, alta, 1d) · INC-00046 La Tablita (logo, baja, 1d) · INC-00042 Asador Los Manueles (conexión, alta, 2d) · INC-00041 SUNMI DLL (alta, 2d) · INC-00040 Pizza y Pollo Cambrils (impresora, alta, 2d) · INC-00026 Jorge (escalado HW, media, desde 15-may).",
+          "RMA: 17 equipos en reparación con proveedor (5 imp + 9 cajones + 2 TPV + 1 KDS). Push a fabricantes la semana del 16. Sin dato fiable de respuesta por el rework del HSM.",
+          "Situaciones críticas gestionadas (4): Keyla/GAUTXORI (dirección errónea del cliente → sustitución enviada; recuperar paquete perdido) · Ángel/KOINE Café (TPV, baja evitada) · Pablo/DELIT (KDS resuelto miércoles; contacto Posiflex para sustitución) · cliente de revisión técnica (malentendido del servicio remoto; llamada 1h15; baja evitada → AM).",
+          "Observación de producto (no HW): Bodeguita Albero reporta lentitud con carga de trabajo pese a equipos OK y LAN <1ms — posible señal de rendimiento de software, no de hardware.",
+          "Incidencias HSM abiertas 6 (todas 'esperando cliente'); Incidencias HSM >7d: 1 (INC-00026, desde 15-may). Equipos en reparación (proveedor) 17 (5 impr. + 9 cajones + 2 TPV + 1 KDS). HSM estado: V0 early (rework completo esta semana; datos limitados)."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "Cafetería Tapería El Pontet",
+          "status": "✅ Cashlogy (operativo)",
+          "provider": "Cashlogy (Gesmatec)",
+          "notes": "+100 €/mes MRR (operativo)."
+        },
+        {
+          "client": "Kalero",
+          "status": "✅ Venta cerrada",
+          "provider": "CashKeeper",
+          "notes": "Málaga (Verónica) · AM María del Mar. No suma MRR hasta instalar."
+        },
+        {
+          "client": "Cervecería Frankfurt",
+          "status": "✅ Incidencia resuelta",
+          "provider": "Cashlogy",
+          "notes": "Causa: cambio de router/internet. Aprendizaje → checklist de soporte. Resuelta por Marco."
+        },
+        {
+          "client": "VAXTO Murcia",
+          "status": "🟡 Incidencia atendida",
+          "provider": "ESOMOS (Alba) / CashKeeper",
+          "notes": "Connector Plus reiniciado + autoarranque (Marco). Confirmar proveedor real con Iván."
+        },
+        {
+          "client": "Vinuesa / BIL Soria",
+          "status": "🆕 Lead derivado",
+          "provider": "Cashdro",
+          "notes": "Soria. ESOMOS cualifica compra/renting."
+        },
+        {
+          "client": "Marea Beach / Murobeach",
+          "status": "🔴 Bloqueado",
+          "provider": "CashKeeper",
+          "notes": "Sin usuario/contraseña del cliente."
+        },
+        {
+          "client": "Cafetería Preston",
+          "status": "🔴 Riesgo de baja",
+          "provider": "Cashdro",
+          "notes": "Necesita integración Cashdro más completa."
+        }
+      ],
+      "performance": [
+        {
+          "member": "guille",
+          "displayName": "Guillermo — Configuraciones + PnP + Finanzas HW",
+          "kpis": [
+            {
+              "label": "Configs gestionadas (volumen)",
+              "value": "37 config (48 registros)",
+              "target": "19/sem (4d)",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito 1º intento citas",
+              "value": "~92% (2ª config 8,1%)",
+              "target": ">80%",
+              "status": "verde"
+            },
+            {
+              "label": "Cobertura PnP en envíos",
+              "value": "93,3% (14/15; 1 excepción urgente)",
+              "target": "100%",
+              "status": "amarillo"
+            },
+            {
+              "label": "Tiempo medio config",
+              "value": "18 min (-28%)",
+              "target": "<25 min",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 (con asterisco) — Volumen y tiempo de récord (18 min) en 4 días. Nota: la 2ª config sube de 0% a 8,1% (foco a recuperar); 1 pack salió sin PnP por urgencia justificada."
+          ]
+        },
+        {
+          "member": "domi",
+          "displayName": "Domingo — Logística + Incidencias + Herramientas",
+          "kpis": [
+            {
+              "label": "Operaciones gestionadas",
+              "value": "100% (22/22; 15 comp + 7 env, 0 pendiente/bloqueada)",
+              "target": "85%",
+              "status": "verde"
+            },
+            {
+              "label": "SLA <7d",
+              "value": "100% (0 fuera)",
+              "target": "100%",
+              "status": "verde"
+            },
+            {
+              "label": "Mejora herramientas",
+              "value": "HSM V0 (rework completo) + mejoras Main Operation",
+              "target": "1",
+              "status": "verde"
+            },
+            {
+              "label": "Incidencias >7d",
+              "value": "1 (INC-00026)",
+              "target": "<5",
+              "status": "amarillo"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Sube de 🟡 (W22): reconstruyó el HSM de cero (V0), 0 pedidos abiertos al cierre, SLA 100% y 2 bajas evitadas. Bajan la nota INC-00026 (en pausa desde 15-may) y que el HSM V0 aún no da métricas fiables. Foco: estabilizar HSM y cerrar/escalar INC-00026."
+          ]
+        },
+        {
+          "member": "marco",
+          "displayName": "Marco — PnP + Configs + Almacén + KD",
+          "kpis": [
+            {
+              "label": "Tiempo medio config estándar",
+              "value": "18 min",
+              "target": "<25 min",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito configs estándar (sin PnP)",
+              "value": "~92%",
+              "target": ">80%",
+              "status": "verde"
+            },
+            {
+              "label": "Errores de inventario",
+              "value": "0",
+              "target": "0",
+              "status": "verde"
+            },
+            {
+              "label": "Fallos PnP",
+              "value": "1 (envío urgente justificado, no fallo de proceso)",
+              "target": "0",
+              "status": "amarillo"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — 27 sesiones (de 48): carga principal de configs. Resolvió 2 incidencias de cajón (Cervecería Frankfurt — router; VAXTO Murcia — Connector Plus). Sigue con el contacto KD. Datos vía reportes de Guille."
+          ]
+        },
+        {
+          "member": "jj",
+          "displayName": "JJ — Cajones + Proveedores + Pipeline + I+D",
+          "kpis": [
+            {
+              "label": "Cajones desbloqueados/cerrados",
+              "value": "El Pontet (Cashlogy, +100 €/mes) + Kalero venta cerrada (Gesmatec)",
+              "target": "1/sem",
+              "status": "verde"
+            },
+            {
+              "label": "Bloqueos proveedor resueltos",
+              "value": "Posiflex conciliación cerrada · Approx recibido · pegatinas pedidas",
+              "target": "—",
+              "status": "verde"
+            },
+            {
+              "label": "Gestión de incidencia crítica",
+              "value": "SUNMI INC-004 coordinada y mitigada",
+              "target": "—",
+              "status": "verde"
+            },
+            {
+              "label": "Pipeline cajones",
+              "value": "El Pontet integrado · Kalero cerrado · lead Soria (ESOMOS) · Johnny/Coruña en estudio",
+              "target": "creciente",
+              "status": "verde"
+            },
+            {
+              "label": "Decisiones escaladas a tiempo",
+              "value": "SUNMI fallback (Producto) · KD criterio IA (Pablo Madrona/Ale)",
+              "target": "Sí",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Proyecto HW + I+D avanzado (Rafa Quesada) · espacio Jaime en Main Ops · pegatinas pedidas · lab Flint + WireGuard como base de fallback SUNMI."
+          ]
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Recuperar 2ª config a 0%. Mantener volumen y tiempos. Llevar catálogo a web/Marketing (flujo trazable).",
+          "output": "",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "Estabilizar HSM V0 y registro sistemático. Cerrar/escalar INC-00026. Push contacto INC-00040/41/42 (alta, esperando cliente). Push RMA a fabricantes (17 equipos, cerrar 2). Confirmar entrega Horma (KD). Localizar paquete perdido (Keyla). Auditoría de red Asador Los Manueles.",
+          "output": "",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Avanzar contacto KD. Mantener PnP/configs. Cerrar instalaciones de cajón pendientes (Marea Beach credenciales; VAXTO proveedor con Iván).",
+          "output": "",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "Estrategia KDS y Departamento.",
+          "output": "",
+          "priority": "alta"
+        }
+      ],
+      "pabloComments": []
+    }
+  },
+  {
+    "key": "Mayo-2026",
+    "type": "monthly",
+    "year": 2026,
+    "month": 5,
+    "data": {
+      "title": "Mayo 2026 — JJ — Hardware (Mensual)",
+      "author": "jose jesus gallego",
+      "globalStatus": "verde",
+      "publishedAt": "2026-05-31",
+      "tesis": [
+        "Mayo fue el mes en que Hardware pasó de apagar fuegos a tener motor propio. El arco es nítido: arranca en modo fricción (W18–W19 en ámbar, % de éxito de citas por debajo de target, restaurant-id rompiendo configuraciones) y cierra en modo estructura (W20–W21 en verde, SLA al 100%, reapertura de incidencias a 0% y resolución en mínimos históricos). El hito de negocio del mes es que los cajones inteligentes se convirtieron en ingreso recurrente: +905 €/mes de MRR nuevo en W21, construido sobre un mes entero de desbloqueos técnicos (Solaguren, Mesón de los Infantes, Asador Mendoza, Gusto Preferito, Cashdro). El margen del mes queda computado limpio por primera vez de punta a punta: 20.042,72 € (50,28%). En paralelo se consolidó el canon de reporting y las herramientas internas (MAIN OPS pasa de \"siguiente fase\" a operativo). Las sombras que se arrastran a junio son conocidas: el % de éxito de citas en el filo del 80% y la conciliación de Posiflex como principal riesgo financiero.",
+        "Cobertura: 4 semanas de reporte (4–8, 11–15, 18–22, 25–29 may). La semana 27 abr–1 may queda fuera (semana de abril; 1 may festivo)."
+      ],
+      "executiveSummary": [
+        {
+          "label": "Margen operativo HW",
+          "target": "~16.000 €",
+          "actual": "20.042,72 € (50,28%)",
+          "delta": "Computado limpio sobre mes completo (+25% sobre target)",
+          "status": "verde",
+          "comment": "Margen computado (income - coste, ligado por nº de serie) sobre 39.863,20 € de income y 19.820,48 € de coste. 50,28% de margen, muy sano. Cifra conservadora: no incluye MRR de cajones ni ventas no serializadas, por lo que el margen HW real es mayor. (W18/W19 reportaron facturación como headline semanal; ya reconciliado a nivel mes.)"
+        },
+        {
+          "label": "Configuraciones (volumen)",
+          "target": "~96",
+          "actual": "173 registros",
+          "delta": "Intramensual: 43 → 41 → 33 → 56. Media 43/sem.",
+          "status": "verde",
+          "comment": "+80% sobre target. Media 43/sem."
+        },
+        {
+          "label": "Config % éxito 1º intento (citas, excl. PnP)",
+          "target": ">80%",
+          "actual": "~79,5% media",
+          "delta": "Intramensual: 81% → ~77% → 84% → 76%",
+          "status": "amarillo",
+          "comment": "Justo bajo target. Recae en W21 (76%) con 2ª config a 16%."
+        },
+        {
+          "label": "Cobertura PnP en envíos",
+          "target": "100%",
+          "actual": "100% (W20–W21), ~96% media",
+          "delta": "Reframe absolutos → cobertura en W20",
+          "status": "verde",
+          "comment": "W18–W19 medían PnP en absolutos (10 y 4); desde W20 cobertura 100%."
+        },
+        {
+          "label": "Envíos gestionados (oficina + proveedor)",
+          "target": "~48",
+          "actual": "~46",
+          "delta": "Intramensual: 13 → 7 → 12 → 14",
+          "status": "verde",
+          "comment": "En línea con target. W19 semana estructuralmente baja. Suma direccional (la unidad cambió a mitad de mes). Cierra el mes en 100% dos semanas seguidas."
+        },
+        {
+          "label": "SLA <7d",
+          "target": "100%",
+          "actual": "100% al cierre (W20–W21)",
+          "delta": "Intramensual: 93,3% → 90,5% → 100% → 100%",
+          "status": "amarillo",
+          "comment": "1 caso >7d fuera de SLA al cierre. Acción prioritaria en junio."
+        },
+        {
+          "label": "Incidencias HW abiertas (>7d)",
+          "target": "<5 (snapshot)",
+          "actual": "1 al cierre (fuera de SLA)",
+          "delta": "Intramensual: 0 → 3 → 0 → 1",
+          "status": "amarillo",
+          "comment": "Mejora clara de resolución de causa raíz. Cierra el bloqueo histórico del dashboard RMA. Cierre completo depende fabricante."
+        },
+        {
+          "label": "Tasa reapertura incidencias",
+          "target": "<30%",
+          "actual": "0% al cierre",
+          "delta": "36,4% (abr) → 29,6% → 0% → 0%",
+          "status": "verde",
+          "comment": "Portal 30d: 91%. Baseline en construcción a inicio de mes."
+        },
+        {
+          "label": "Tiempo respuesta RMA cliente",
+          "target": "<2h",
+          "actual": "<2h (desde W20)",
+          "delta": "Métrica establecida en W20",
+          "status": "verde",
+          "comment": "3ª Vaxto + Preston (Cashdro) + Frankfurt (CashKeeper). Sobre pipeline de todo el mes."
+        },
+        {
+          "label": "Tasa entrega exitosa",
+          "target": "100%",
+          "actual": "100% al cierre (univ. Domingo)",
+          "delta": "63,6% → 88,2% → 100% → 100%",
+          "status": "verde",
+          "comment": "Cierra el mes en 100% dos semanas seguidas."
+        },
+        {
+          "label": "MRR nuevo cajones",
+          "target": "—",
+          "actual": "+905 €/mes",
+          "delta": "Materializa en W21",
+          "status": "verde",
+          "comment": "5 cajones integrados/configurados que ya facturan."
+        }
+      ],
+      "amberRed": [
+        {
+          "kpi": "Config % éxito citas",
+          "rootCause": "Media mensual ~79,5%, justo bajo el 80%. W21 recae a 76% con 2ª config a 16%. Persiste \"preparación cliente\".",
+          "action": "Guille: análisis causas raíz 2ª config + checklist/guion de auditoría.",
+          "eta": "Junio",
+          "escalation": "No (interno)",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "Incidencia HW >7d fuera de SLA",
+          "rootCause": "1 caso abierto >7d al cierre de mayo (W21).",
+          "action": "Domingo: acción prioritaria primera semana de junio.",
+          "eta": "Junio",
+          "escalation": "No (si sigue aislado)",
+          "status": "amarillo"
+        },
+        {
+          "kpi": "SLA incidencias HSM (ventana mensual)",
+          "rootCause": "En W19 la ventana 15 abr–15 may marcó 81% (2 fuera SLA).",
+          "action": "Refactor HSM + triaje Intercom HSM. Recuperado: W20–W21 al 100% semanal.",
+          "eta": "Resuelto 2ª mitad",
+          "escalation": "No",
+          "status": "amarillo"
+        }
+      ],
+      "highlights": [
+        "Margen HW del mes computado limpio: 20.042,72 € (50,28%). Sobre 39.863,20 € de income y 19.820,48 € de coste, ligado por nº de serie (Finance dashboard). Cierra el gap de las dos primeras semanas (W18–W19), donde no se miraba beneficio. Cifra conservadora — no incluye MRR de cajones ni ventas no serializadas. Gastos en logística: 355,89 €. Gastos en personal: 7.500 €.",
+        "Cajones — MRR recurrente: +905 €/mes (W21). 5 cajones integrados/configurados que ya facturan: 3ª Vaxto (Alicante, Murcia, Elche; 169 € c/u), Cafetería Preston vía Cashdro (199 €) y Cervecería Frankfurt vía CashKeeper (199 €). Conversión a ingreso de un pipeline trabajado todo el mes.",
+        "Mes de desbloqueos técnicos en cajones (base del MRR): Solaguren instalado (W18), Mesón de los Infantes y Asador Mendoza Alicante resueltos (W19), Gusto Preferito instalado y Cashdro desbloqueado vía Bamsistems (W20), Cashdro integración real en Preston (W21). Aprendizaje SOP del mes: BCU Uninstaller para limpiar restos de instalaciones previas antes de tocar credenciales.",
+        "KDS — primer test real positivo (W18): La Tapicería deja de usar impresora en cocina. La compra de 25 uds con Pedro Porto acabó aparcada/on hold a cierre de mes.",
+        "Resolución y reapertura en mínimos históricos: reapertura 36,4% (abr) → 29,6% (W19) → 0% (W20–W21); resolución media 49,2h (W19) → 0,7h (W20). Tasa de entrega 63,6% → 100%.",
+        "Informe de impresoras (W19) — evidencia clave: sobre 2.009 conversaciones de Intercom, solo 0,8% (16) son HW roto/incompatible.",
+        "Herramientas internas maduran: MAIN OPS pasa de \"siguiente fase\" a operativo; despliegues constantes (Thermal Printer Manager, Portal admin/usuario, HSM Intercom, integración Slack, fix IGI Canarias, módulo financiación en desarrollo).",
+        "Canon de reporting consolidado: auditoría desdoblada (compatibilidad / revisión técnica), PnP como cobertura %, RMA como tiempo respuesta <2h (cerró el bloqueo histórico del dashboard), envíos oficina vs oficina+proveedor, operaciones \"gestionadas\".",
+        "Proveedores/finanzas: crédito puente 5.000 € Pedro Porto aprobado y circuito activado; pedido Approx recibido (10 cajones + 2 TPVs + impresoras WiFi/USB-LAN); financiaciones de equipos listas (espacio Jaime + Main Ops); Catálogo Hardware 2026 cerrado (todos los TPVs con Windows 11); conciliación Posiflex avanzada (quedan 713,23 €).",
+        "I+D — paraguas de exploración abierto: durante mayo se ha ordenado un paraguas más claro de exploración para nuevas líneas de hardware y automatización. El objetivo no ha sido cerrar decisiones de compra inmediatas, sino ordenar oportunidades, proveedores y casos de uso con potencial para los próximos meses. Jarltech: nuevo mayorista potencial, interesante para explorar hardware Sunmi, KDS, cloud printing y posibles vías de kioskos. Kioskos: línea de investigación abierta, comparando alternativas de hardware, modelos de integración y posible encaje comercial. Robótica: frente exploratorio inicial, pendiente de concretar casos de uso reales, coste operativo y valor diferencial. KDS: se revisan nuevas opciones de proveedor y formato, incluyendo alternativas más competitivas. Autoinstalador y revisor de impresoras: se avanza en reducir dependencia de soporte manual mediante herramientas que validen entorno, configuración e instalación de impresoras de forma más guiada y escalable."
+      ],
+      "blockers": [
+        {
+          "description": "CX preparación previa (restaurant-id / AM / CX Advisor). Sin restaurant-id limpio, HW absorbe trabajo manual. Caso MARANPAU lo evidencia.",
+          "owner": "Pablo",
+          "impact": "Sin restaurant-id limpio, HW absorbe trabajo manual. Caso MARANPAU lo evidencia.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Cashdro Preston — solo cobros. Venía de integración completa; riesgo de descontento. Seguimiento delegado en Fernando. Revisado desde Qamarero; apunta a Cashlogy. Mitigación definida.",
+          "owner": "Fernando",
+          "impact": "Venía de integración completa; riesgo de descontento.",
+          "status": "en_progreso"
+        },
+        {
+          "description": "Hamburguesería Isla / Mesón de los Infantes — estabilidad. Posible reaparición incidencia del cajón.",
+          "owner": "JJ",
+          "impact": "Posible reaparición incidencia del cajón.",
+          "status": "abierto"
+        }
+      ],
+      "decisions": [
+        {
+          "description": "KDS pruebas — ¿cobrar o regalar?",
+          "owner": "Pablo / David",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Arrastrado todo el mes. Sin movimiento."
+        },
+        {
+          "description": "Margen del mes computado limpio (20.042,72 € / 50,28%, por nº de serie).",
+          "owner": "JJ",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrada durante mayo."
+        },
+        {
+          "description": "Crédito puente 5.000 € Pedro Porto + circuito línea de riesgo Pedro Porto activado.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Aprobado y activado durante mayo."
+        },
+        {
+          "description": "Catálogo Hardware 2026 cerrado (todos los TPVs con Windows 11; dato Syrion resuelto).",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerrado durante mayo."
+        },
+        {
+          "description": "Pedido Approx recibido; Financiaciones de equipos (espacio Jaime + Main Ops) listas; Criterios de reporting fijados; Bloqueo dashboard RMA cerrado (métrica <2h); Reframe PnP a cobertura; Auditoría desdoblada.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "cerrada",
+          "resolution": "Cerradas durante mayo."
+        },
+        {
+          "description": "KDS Pedro Porto 25 uds.",
+          "owner": "—",
+          "deadline": "—",
+          "status": "pendiente",
+          "resolution": "Aparcado / on hold (fuera de scope HW)."
+        }
+      ],
+      "configuraciones": {
+        "totalConfigs": 173,
+        "successRate1st": 80,
+        "successRate2nd": 16,
+        "problems": "Total mes: 173 registros (media 43/sem). Desglose por tipo: Config remota 80 (46%), Config PnP 41 (24%), Test CRM 17 (10%), No-show 15 (9%), Auditoría de compatibilidad 13 (8%), Revisión técnica 7 (4%). Nota: \"Revisión técnica\" solo existe desde W20 (desdoble de \"auditoría\"). En W18–W19 las 8 entradas de \"auditoría\" no estaban desdobladas. Evolución semanal — W18 (4–8): 43 registros, 2ª config 46% (Test CRM). W19 (11–15): 41 registros, 81% éxito citas (excl. PnP), 57% éxito global, 2ª config 19%. W20 (18–22): 33 registros, 84% éxito citas, 88% éxito global, 2ª config 10%. W21 (25–29): 56 registros, ~77%/76% éxito citas, 68%/84% éxito global, 2ª config 16%. Media mensual ~79,5% éxito citas, justo bajo el target del 80%; recae en W21 (76%). Persiste el problema de \"preparación cliente\"."
+      },
+      "envios": {
+        "totalOps": 46,
+        "completed": null,
+        "shipped": null,
+        "pending": null,
+        "grossRevenue": 39863,
+        "avgDeliveryDays": 4.3,
+        "sla7dPct": 100,
+        "marginEur": 20042,
+        "coveragePnp": "100% (W20–W21); ~96% media mensual. W18–W19 medían PnP en absolutos (10 y 4); desde W20 cobertura 100%.",
+        "officeVsProvider": "La unidad de \"envíos\" cambió a lo largo del mes (absolutos / oficina → totales oficina+proveedor en W21). El ~46 es direccional, no una suma limpia del mismo KPI. Envíos: oficina (Domingo) vs oficina+proveedor (Guille); KPI ejecutivo = totales. Dispositivos manipulados (W20–W21): 98 (65 + 33).",
+        "orders": []
+      },
+      "soporte": {
+        "openIncidents": 1,
+        "activeRmas": 5,
+        "sla7dPct": 100,
+        "sla30dPct": 91,
+        "reopenRatePct": 0,
+        "avgResolutionHours": 0.7,
+        "rmaResponseUnder2hPct": 100,
+        "narrative": [
+          "Mes de fuerte mejora en gestión de incidencias. Highlights: 3 situaciones críticas gestionadas en W19 (Casa Parque — baja evitada; La Bella Caffè Tejeringos — TPV perdido compensado; Gau Txori). Cierre del bloqueo del dashboard RMA en W20 (métrica defendible: respuesta a cliente <2h). RMAs activos estables ~5 todo el mes.",
+          "Evolución semanal — W19 (11–15): SLA incidencias 100% (5/5) / 81% (ventana mes), resolución media 39,2h y 49,2h, RMA activos 5 (turnaround 9,3 d), respuesta RMA dashboard pendiente / métrica antigua. W20 (18–22): SLA 100%, resolución media 0,7h, 5 RMA activos, respuesta RMA <2h. W21 (25–29): SLA 100% (1 caso >7d), resolución media 1,3h (portal 30d), 5 RMA activos, respuesta RMA <2h.",
+          "Métricas mensuales: reapertura 36,4% (abr) → 29,6% (W19) → 0% (W20–W21); resolución media de 49,2h a 0,7h; tasa de entrega 63,6% → 100%; portal 30d reapertura 91%. 1 incidencia >7d fuera de SLA al cierre (acción prioritaria en junio). Informe de impresoras W19: sobre 2.009 conversaciones de Intercom, solo 0,8% (16) son HW roto/incompatible."
+        ]
+      },
+      "cajones": [
+        {
+          "client": "Solaguren",
+          "status": "✅ Instalado (W18)",
+          "provider": "—",
+          "notes": "Instalado W18; acotado en W19. Base del pipeline del mes."
+        },
+        {
+          "client": "Mesón de los Infantes",
+          "status": "✅ Resuelto (W19)",
+          "provider": "—",
+          "notes": "Resuelto en W19. Estabilidad a vigilar a cierre de mes."
+        },
+        {
+          "client": "Asador Mendoza (Alicante)",
+          "status": "✅ Resuelto (W19)",
+          "provider": "—",
+          "notes": "Resuelto en W19."
+        },
+        {
+          "client": "Gusto Preferito",
+          "status": "✅ Instalado (W20)",
+          "provider": "—",
+          "notes": "Instalado en W20."
+        },
+        {
+          "client": "Cashdro",
+          "status": "✅ Desbloqueado técnico (W20) → integración real Preston (W21)",
+          "provider": "Bamsistems",
+          "notes": "Desbloqueado vía Bamsistems en W20; integración real en Preston en W21."
+        },
+        {
+          "client": "3ª Vaxto (Alicante, Murcia, Elche)",
+          "status": "✅ Integrado / facturando (W21)",
+          "provider": "—",
+          "notes": "169 € c/u. MRR recurrente."
+        },
+        {
+          "client": "Cafetería Preston",
+          "status": "✅ Integrado / facturando (W21)",
+          "provider": "Cashdro",
+          "notes": "199 €/mes. Aviso: solo cobros — riesgo de descontento, apunta a Cashlogy. Seguimiento delegado en Fernando."
+        },
+        {
+          "client": "Cervecería Frankfurt",
+          "status": "✅ Integrado / facturando (W21)",
+          "provider": "CashKeeper",
+          "notes": "199 €/mes. MRR recurrente."
+        },
+        {
+          "client": "Lorenzo",
+          "status": "🆕 Lead (W18) → convertido a MRR (W21)",
+          "provider": "—",
+          "notes": "Lead trabajado durante el mes."
+        },
+        {
+          "client": "Le Brunch",
+          "status": "🆕 Lead (W19)",
+          "provider": "—",
+          "notes": "Lead nuevo en W19."
+        },
+        {
+          "client": "Hamburguesería Isla",
+          "status": "🟡 Estabilidad en observación",
+          "provider": "—",
+          "notes": "Posible reaparición de incidencia del cajón. Arrastra a junio."
+        }
+      ],
+      "performance": [
+        {
+          "displayName": "Guillermo — Configuraciones + PnP + Finanzas HW",
+          "member": "guille",
+          "kpis": [
+            {
+              "label": "Configuraciones gestionadas (volumen)",
+              "value": "173 registros (media 43/sem)",
+              "target": "24/sem",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito 1º intento (citas con requisitos)",
+              "value": "~79,5% (81 → ~77 → 84 → 76)",
+              "target": ">80%",
+              "status": "amarillo"
+            },
+            {
+              "label": "Cobertura PnP en envíos",
+              "value": "100% (W20–W21)",
+              "target": "100%",
+              "status": "verde"
+            },
+            {
+              "label": "Finanzas HW — entregable",
+              "value": "Unit economics + HW Accountant + Catálogo 2026 + Finance dashboard (margen limpio del mes)",
+              "target": "Sí",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Volumen sólido todo el mes y finanzas entregadas cada semana, incluido el margen limpio del mes (20.042,72 € / 50,28%). Reframe PnP a cobertura. A vigilar: el % de éxito de citas en el filo, con la 2ª config repuntando a 16% en W21."
+          ]
+        },
+        {
+          "displayName": "Domingo — Logística + Incidencias + Herramientas",
+          "member": "domi",
+          "kpis": [
+            {
+              "label": "Operaciones cerradas (gestionadas)",
+              "value": "85% → 71% → 70% (criterio afinándose)",
+              "target": "85% tasa cierre",
+              "status": "amarillo"
+            },
+            {
+              "label": "SLA incidencias <7d",
+              "value": "100% semanal salvo ventana W19 (81%); 1 caso >7d al cierre",
+              "target": "100%",
+              "status": "amarillo"
+            },
+            {
+              "label": "Tasa reapertura",
+              "value": "36,4% → 29,6% → 0% → 0%",
+              "target": "<30%",
+              "status": "verde"
+            },
+            {
+              "label": "Mejora herramientas — deploy semanal",
+              "value": "3–4 deploys/semana",
+              "target": "1 mejora",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Excelente en herramientas y en la tendencia de incidencias (reapertura 36,4% → 0%, resolución 49,2h → 0,7h). Lastran la nota la tasa de cierre de operaciones bajo el 85% y 1 incidencia >7d fuera de SLA al cierre."
+          ]
+        },
+        {
+          "displayName": "Marco — PnP + Test CRM + Almacén",
+          "member": "marco",
+          "kpis": [
+            {
+              "label": "Tiempo medio config estándar",
+              "value": "~22 min (26 → 16 → 24)",
+              "target": "<25 min",
+              "status": "verde"
+            },
+            {
+              "label": "% éxito configs estándar (sin PnP)",
+              "value": "~79,7% (79 → 84 → 76)",
+              "target": ">80%",
+              "status": "amarillo"
+            },
+            {
+              "label": "Errores de inventario",
+              "value": "1 (W18, resuelto en 6 min); 0 resto",
+              "target": "0",
+              "status": "verde"
+            },
+            {
+              "label": "Fallos PnP",
+              "value": "0 (todo el mes)",
+              "target": "0",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟡 — Tiempo medio bajo target y cero errores de inventario todo el mes. A vigilar: % éxito de configs estándar en el filo. Datos vía reportes globales de Guille."
+          ]
+        },
+        {
+          "displayName": "JJ — Cajones + Proveedores + Pipeline + I+D",
+          "member": "jj",
+          "kpis": [
+            {
+              "label": "Cajones cerrados / desbloqueados",
+              "value": "1 cada semana → 5 integrados, +905 €/mes en W21",
+              "target": "1/sem",
+              "status": "verde"
+            },
+            {
+              "label": "Pipeline cajones creciente",
+              "value": "Leads (Lorenzo, Vaxto, Le Brunch) convertidos a MRR en W21",
+              "target": "Creciente",
+              "status": "verde"
+            },
+            {
+              "label": "Bloqueos proveedor resueltos",
+              "value": "Crédito + circuito Pedro Porto, Approx recibido, Cashdro técnico; Posiflex en conciliación",
+              "target": "1/sem",
+              "status": "verde"
+            },
+            {
+              "label": "Decisiones escaladas a tiempo",
+              "value": "Sí (restaurant-id, I+D, financiaciones, criterios reporting)",
+              "target": "Sí/No",
+              "status": "verde"
+            }
+          ],
+          "narrative": [
+            "Semáforo global: 🟢 — Mes de desbloqueos reales en cajones culminando en MRR recurrente. Abierto: Posiflex sin cerrar."
+          ]
+        }
+      ],
+      "nextFocus": [
+        {
+          "owner": "Guillermo",
+          "objective": "Recuperar % éxito citas >80% (causas raíz 2ª config + checklist/guion). Mantener volumen. Margen limpio mensual como entregable fijo.",
+          "output": "% éxito citas >80%. Volumen mantenido. Margen limpio mensual entregado.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Domingo",
+          "objective": "Cerrar la incidencia >7d y mantener 0 fuera de SLA. Sostener reapertura 0%. Iterar HSM. Módulo financiación.",
+          "output": "0 incidencias >7d fuera de SLA. Reapertura 0%. HSM iterado. Módulo financiación avanzado.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Marco",
+          "objective": "Recuperar % éxito configs >80%. Ritmo PnP sin fallos. KDS.",
+          "output": "% éxito configs >80%. PnP sin fallos.",
+          "priority": "media"
+        },
+        {
+          "owner": "JJ",
+          "objective": "Cerrar conciliación Posiflex (713,23 € + duplicado 26010565). Crecer MRR cajones sobre la base de +905 €. Avanzar I+D.",
+          "output": "Conciliación Posiflex cerrada. MRR cajones creciente. I+D avanzado.",
+          "priority": "alta"
+        },
+        {
+          "owner": "Pablo / David",
+          "objective": "Fix builder (restaurant-id). Decisión KDS: ¿cobrar o regalar?",
+          "output": "Builder con fix restaurant-id. Decisión KDS tomada.",
           "priority": "alta"
         }
       ],

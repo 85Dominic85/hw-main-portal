@@ -59,6 +59,23 @@ function isoWeekToRange(isoYear, isoWeek) {
 const pad = (n) => String(n).padStart(2, "0");
 const ymd = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 
+/** Resuelve type/period a partir de la entrada del seed (weekly por defecto). */
+function periodFor(rep) {
+  const type = rep.type || "weekly";
+  if (type === "monthly") {
+    const from = new Date(Date.UTC(rep.year, rep.month - 1, 1));
+    const to = new Date(Date.UTC(rep.year, rep.month, 0, 23, 59, 59, 999));
+    return { type, periodKey: `${rep.year}-${pad(rep.month)}`, from, to, isoYear: null, isoWeek: null };
+  }
+  if (type === "custom") {
+    const from = new Date(`${rep.from}T00:00:00Z`);
+    const to = new Date(`${rep.to}T23:59:59.999Z`);
+    return { type, periodKey: `${rep.from}--${rep.to}`, from, to, isoYear: null, isoWeek: null };
+  }
+  const { from, to } = isoWeekToRange(rep.isoYear, rep.isoWeek);
+  return { type, periodKey: `W${rep.isoWeek}-${rep.isoYear}`, from, to, isoYear: rep.isoYear, isoWeek: rep.isoWeek };
+}
+
 const MEMBERS = [
   ["guille", "Guille"],
   ["domi", "Domi"],
@@ -214,7 +231,7 @@ if (DRY) {
       tesisParas: c.tesis.doc.content.length,
       highlightParas: c.highlights.doc.content.length,
     };
-    console.log(`[dry] W${rep.isoWeek}-${rep.isoYear} "${rep.data.title}" autor=${c.author}`);
+    console.log(`[dry] ${periodFor(rep).periodKey} (${periodFor(rep).type}) "${rep.data.title}" autor=${c.author}`);
     console.log("      ", JSON.stringify(counts));
   }
   console.log("\nDry run OK (contenido construido, sin tocar la BD).");
@@ -225,20 +242,19 @@ const sql = postgres(url, { prepare: false, max: 1 });
 
 try {
   for (const rep of DATA) {
-    const { from, to } = isoWeekToRange(rep.isoYear, rep.isoWeek);
-    const periodKey = `W${rep.isoWeek}-${rep.isoYear}`;
+    const { type, periodKey, from, to, isoYear, isoWeek } = periodFor(rep);
     const content = buildContent(rep.data);
     const publishedAt = rep.data.publishedAt
       ? new Date(`${rep.data.publishedAt}T12:00:00Z`)
       : to;
 
-    await sql`delete from portal.reports where type = 'weekly' and period_key = ${periodKey}`;
+    await sql`delete from portal.reports where type = ${type} and period_key = ${periodKey}`;
     await sql`
       insert into portal.reports
         (type, period_key, period_from, period_to, iso_year, iso_week,
          status, global_status, title, content, content_version, published_at, created_by)
       values
-        ('weekly', ${periodKey}, ${ymd(from)}, ${ymd(to)}, ${rep.isoYear}, ${rep.isoWeek},
+        (${type}, ${periodKey}, ${ymd(from)}, ${ymd(to)}, ${isoYear}, ${isoWeek},
          'published', ${rep.data.globalStatus ?? null}, ${rep.data.title || periodKey},
          ${sql.json(content)}, 1, ${publishedAt}, null)
     `;
