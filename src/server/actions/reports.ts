@@ -227,14 +227,16 @@ export async function refreshReportSources(
   current.envios.completed = auto.envios.completed;
   current.envios.shipped = auto.envios.shipped;
   current.envios.pending = auto.envios.pending;
-  current.envios.grossRevenue = auto.envios.grossRevenue;
   current.envios.avgDeliveryDays = auto.envios.avgDeliveryDays;
   current.envios.sla7dPct = auto.envios.sla7dPct;
   current.soporte.openIncidents = auto.soporte.openIncidents;
+  current.soporte.incidentsOver7d = auto.soporte.incidentsOver7d;
   current.soporte.activeRmas = auto.soporte.activeRmas;
   current.soporte.sla7dPct = auto.soporte.sla7dPct;
+  current.soporte.criticalInSlaPct = auto.soporte.criticalInSlaPct;
   current.soporte.reopenRatePct = auto.soporte.reopenRatePct;
   current.soporte.avgResolutionHours = auto.soporte.avgResolutionHours;
+  current.soporte.avgRmaTurnaroundDays = auto.soporte.avgRmaTurnaroundDays;
 
   // Resumen ejecutivo: refresca por kpiKey.
   //  - KPI auto: sobrescribe métricas (actual/semana anterior/semáforo) + metadatos
@@ -487,7 +489,6 @@ function buildClonedContent(src: ReportContent): ReportContent {
     ...src,
     tesis: { doc: EMPTY_DOC },
     highlights: { doc: EMPTY_DOC },
-    pabloComments: { doc: EMPTY_DOC },
     executiveSummary: {
       rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: "", delta: "", comment: "" })),
     },
@@ -500,6 +501,7 @@ function buildClonedContent(src: ReportContent): ReportContent {
       successRate1st: null,
       successRate2nd: null,
       problems: "",
+      highlights: { doc: EMPTY_DOC },
     },
     envios: {
       ...src.envios,
@@ -507,25 +509,30 @@ function buildClonedContent(src: ReportContent): ReportContent {
       completed: null,
       shipped: null,
       pending: null,
-      grossRevenue: null,
       avgDeliveryDays: null,
       sla7dPct: null,
       orders: src.envios.orders.filter(
         (r) => r.status === "pendiente" || r.status === "bloqueado",
       ),
+      highlights: { doc: EMPTY_DOC },
     },
     soporte: {
       ...src.soporte,
       openIncidents: null,
+      incidentsOver7d: null,
       activeRmas: null,
       sla7dPct: null,
-      sla30dPct: null,
+      criticalInSlaPct: null,
       reopenRatePct: null,
       avgResolutionHours: null,
+      avgRmaTurnaroundDays: null,
       rmaResponseUnder2hPct: null,
+      incidents: [],
       narrative: EMPTY_DOC,
+      highlights: { doc: EMPTY_DOC },
     },
-    cajones: src.cajones,
+    cajones: { ...src.cajones, highlights: { doc: EMPTY_DOC } },
+    marco: { ...src.marco, highlights: { doc: EMPTY_DOC }, narrative: EMPTY_DOC },
     performance: {
       members: src.performance.members.map((m) => ({
         ...m,

@@ -1,6 +1,7 @@
 "use client";
 
 import { EditableTable, type ColDef } from "../editable-table";
+import { DeptExtrasEditor } from "./dept-extras-editor";
 import type { Cajones, CajonRow } from "@/lib/reports/schema";
 
 const COLUMNS: ColDef<CajonRow>[] = [
@@ -58,12 +59,16 @@ interface Props {
 }
 
 export function CajonesEditor({ value, onChange }: Props) {
+  function patch(partial: Partial<Cajones>) {
+    onChange({ ...value, ...partial });
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <EditableTable<CajonRow>
         columns={COLUMNS}
         value={value.rows}
-        onChange={(rows) => onChange({ rows })}
+        onChange={(rows) => patch({ rows })}
         newRow={newRow}
         addLabel="Añadir cajon"
       />
@@ -77,6 +82,13 @@ export function CajonesEditor({ value, onChange }: Props) {
           </span>
         </p>
       )}
+
+      <DeptExtrasEditor
+        highlights={value.highlights}
+        blockers={value.blockers}
+        onHighlightsChange={(highlights) => patch({ highlights })}
+        onBlockersChange={(blockers) => patch({ blockers })}
+      />
     </div>
   );
 }

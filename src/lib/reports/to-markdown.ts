@@ -2,6 +2,8 @@ import type {
   ReportContent,
   KpiSnapshot,
   TiptapDoc,
+  Highlights,
+  Blockers,
 } from "./schema";
 
 type PmNode = {
@@ -121,10 +123,10 @@ export function contentToMarkdown(
     }
   }
 
-  // 7. Configuraciones
+  // 7. Activaciones
   const cfg = content.configuraciones;
-  if (cfg.totalConfigs !== null || cfg.techBreakdown.length > 0 || cfg.problems) {
-    L.push("## 🛠 Configuraciones", "");
+  if (cfg.totalConfigs !== null || cfg.techBreakdown.length > 0 || cfg.problems || hasDeptExtras(cfg)) {
+    L.push("## 🛠 Activaciones (Guille)", "");
     if (cfg.totalConfigs !== null) L.push(`- **Total configuraciones:** ${cfg.totalConfigs}`);
     if (cfg.successRate1st !== null) L.push(`- **Éxito 1ª config:** ${cfg.successRate1st}%`);
     if (cfg.successRate2nd !== null) L.push(`- **Éxito 2ª config:** ${cfg.successRate2nd}%`);
@@ -139,6 +141,7 @@ export function contentToMarkdown(
       L.push("");
     }
     if (cfg.problems) L.push("**Problemas / Incidencias**", "", cfg.problems, "");
+    pushDeptExtras(L, cfg.highlights, cfg.blockers);
   }
 
   // 8. Envíos
@@ -146,20 +149,16 @@ export function contentToMarkdown(
   if (
     env.totalOps !== null ||
     env.orders.length > 0 ||
-    env.marginEur !== null ||
     env.coveragePnp ||
-    env.officeVsProvider
+    env.officeVsProvider ||
+    hasDeptExtras(env)
   ) {
-    L.push("## 🛠 Envíos · Logística · Stock", "");
+    L.push("## 🛠 Envíos y Logística (Domi)", "");
     const items = [
       env.totalOps !== null ? `**Total ops:** ${env.totalOps}` : null,
       env.completed !== null ? `**Completadas:** ${env.completed}` : null,
       env.shipped !== null ? `**Enviadas:** ${env.shipped}` : null,
       env.pending !== null ? `**Pendientes:** ${env.pending}` : null,
-      env.grossRevenue !== null
-        ? `**Facturación bruta:** ${env.grossRevenue.toLocaleString("es-ES")} €`
-        : null,
-      env.marginEur !== null ? `**Margen:** ${env.marginEur.toLocaleString("es-ES")} €` : null,
       env.avgDeliveryDays !== null ? `**Plazo medio:** ${env.avgDeliveryDays} días` : null,
       env.sla7dPct !== null ? `**SLA 7d:** ${env.sla7dPct}%` : null,
       env.coveragePnp ? `**Cobertura PnP:** ${env.coveragePnp}` : null,
@@ -182,6 +181,7 @@ export function contentToMarkdown(
       }
       L.push("");
     }
+    pushDeptExtras(L, env.highlights, env.blockers);
   }
 
   // 9. Soporte
@@ -189,21 +189,36 @@ export function contentToMarkdown(
   const sopNarrative = tipTap(sop.narrative);
   if (
     sop.openIncidents !== null ||
+    sop.incidents.length > 0 ||
     sop.rmas.length > 0 ||
-    sopNarrative
+    sopNarrative ||
+    hasDeptExtras(sop)
   ) {
-    L.push("## 🛠 Soporte HW", "");
+    L.push("## 🛠 Soporte HW (Domi)", "");
     const sopItems = [
-      sop.openIncidents !== null ? `**Incidencias >7d:** ${sop.openIncidents}` : null,
+      sop.openIncidents !== null ? `**Incidencias abiertas:** ${sop.openIncidents}` : null,
+      sop.incidentsOver7d !== null ? `**Incidencias >7d:** ${sop.incidentsOver7d}` : null,
       sop.activeRmas !== null ? `**RMAs activos:** ${sop.activeRmas}` : null,
-      sop.sla7dPct !== null ? `**SLA 7d:** ${sop.sla7dPct}%` : null,
-      sop.sla30dPct !== null ? `**SLA 30d:** ${sop.sla30dPct}%` : null,
+      sop.sla7dPct !== null ? `**SLA cumplimiento:** ${sop.sla7dPct}%` : null,
+      sop.criticalInSlaPct !== null ? `**% críticas en SLA:** ${sop.criticalInSlaPct}%` : null,
       sop.reopenRatePct !== null ? `**Tasa reapertura:** ${sop.reopenRatePct}%` : null,
       sop.avgResolutionHours !== null ? `**Resolución media:** ${sop.avgResolutionHours}h` : null,
+      sop.avgRmaTurnaroundDays !== null ? `**Turnaround RMA:** ${sop.avgRmaTurnaroundDays} días` : null,
       sop.rmaResponseUnder2hPct !== null ? `**RMA resp. <2h:** ${sop.rmaResponseUnder2hPct}%` : null,
     ].filter(Boolean);
     if (sopItems.length > 0) L.push(...sopItems.map((i) => `- ${i}`), "");
     if (sopNarrative) L.push(sopNarrative, "");
+    if (sop.incidents.length > 0) {
+      L.push("**Incidencias destacadas**", "");
+      L.push("| Cliente / Venue | Prioridad | Estado | Días | Comentario |");
+      L.push("| --- | --- | --- | ---: | --- |");
+      for (const r of sop.incidents) {
+        L.push(
+          `| ${r.customer || "—"} | ${r.priority} | ${r.status || "—"} | ${r.daysOpen ?? "—"} | ${r.comment || "—"} |`,
+        );
+      }
+      L.push("");
+    }
     if (sop.rmas.length > 0) {
       L.push("**RMAs activos**", "");
       L.push("| Proveedor | Dispositivo | Estado | Días | Notas |");
@@ -215,23 +230,37 @@ export function contentToMarkdown(
       }
       L.push("");
     }
+    pushDeptExtras(L, sop.highlights, sop.blockers);
   }
 
   // 10. Cajones inteligentes
-  if (content.cajones.rows.length > 0) {
-    L.push("## 🗄 Cajones inteligentes", "");
-    L.push("| Cliente | Estado | Proveedor | Notas | MRR (€) |");
-    L.push("| --- | --- | --- | --- | ---: |");
-    for (const r of content.cajones.rows) {
-      L.push(
-        `| ${r.client || "—"} | ${r.status || "—"} | ${r.provider || "—"} | ${r.notes || "—"} | ${r.mrr != null ? r.mrr.toLocaleString("es-ES") : "—"} |`,
-      );
+  const caj = content.cajones;
+  if (caj.rows.length > 0 || hasDeptExtras(caj)) {
+    L.push("## 🗄 Cajones inteligentes (JJ)", "");
+    if (caj.rows.length > 0) {
+      L.push("| Cliente | Estado | Proveedor | Notas | MRR (€) |");
+      L.push("| --- | --- | --- | --- | ---: |");
+      for (const r of caj.rows) {
+        L.push(
+          `| ${r.client || "—"} | ${r.status || "—"} | ${r.provider || "—"} | ${r.notes || "—"} | ${r.mrr != null ? r.mrr.toLocaleString("es-ES") : "—"} |`,
+        );
+      }
+      const totalMrr = caj.rows.reduce((s, r) => s + (r.mrr ?? 0), 0);
+      if (totalMrr > 0) {
+        L.push(`|  |  |  | **Total MRR** | **${totalMrr.toLocaleString("es-ES")} €** |`);
+      }
+      L.push("");
     }
-    const totalMrr = content.cajones.rows.reduce((s, r) => s + (r.mrr ?? 0), 0);
-    if (totalMrr > 0) {
-      L.push(`|  |  |  | **Total MRR** | **${totalMrr.toLocaleString("es-ES")} €** |`);
-    }
-    L.push("");
+    pushDeptExtras(L, caj.highlights, caj.blockers);
+  }
+
+  // 11. Marco Informe
+  const marco = content.marco;
+  const marcoNarrative = tipTap(marco.narrative);
+  if (marcoNarrative || hasDeptExtras(marco)) {
+    L.push("## 🧭 Marco Informe", "");
+    if (marcoNarrative) L.push(marcoNarrative, "");
+    pushDeptExtras(L, marco.highlights, marco.blockers);
   }
 
   // 11. Performance del equipo
@@ -269,11 +298,33 @@ export function contentToMarkdown(
     L.push("");
   }
 
-  // 13. Comentarios Pablo
-  const pablo = tipTap(content.pabloComments.doc);
-  if (pablo) L.push("## 💬 Comentarios Pablo", "", pablo, "");
-
   return L.join("\n");
+}
+
+// ── Highlights + Bloqueos por departamento ──────────────────────────────────
+
+function hasDeptExtras(d: { highlights: Highlights; blockers: Blockers }): boolean {
+  return (d.highlights.doc.content?.length ?? 0) > 0 || d.blockers.rows.length > 0;
+}
+
+function pushDeptExtras(L: string[], highlights: Highlights, blockers: Blockers): void {
+  const hl = tipTap(highlights.doc);
+  if (hl) L.push("**Highlights**", "", hl, "");
+  if (blockers.rows.length > 0) {
+    L.push("**Bloqueos**", "");
+    L.push("| Descripción | Owner | Impacto | Estado |");
+    L.push("| --- | --- | --- | --- |");
+    for (const r of blockers.rows) {
+      const s =
+        r.status === "bloqueado"
+          ? "🔴 Bloqueado"
+          : r.status === "en_progreso"
+            ? "🟡 En progreso"
+            : "🟢 Abierto";
+      L.push(`| ${r.description || "—"} | ${r.owner || "—"} | ${r.impact || "—"} | ${s} |`);
+    }
+    L.push("");
+  }
 }
 
 // ── TipTap → Markdown ────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import { ConfiguracionesEditor } from "./sections/configuraciones-editor";
 import { EnviosEditor } from "./sections/envios-editor";
 import { SoporteEditor } from "./sections/soporte-editor";
 import { CajonesEditor } from "./sections/cajones-editor";
+import { MarcoEditor } from "./sections/marco-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
 import { DeleteDraftButton } from "./delete-draft-button";
@@ -312,8 +313,8 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         />
       </EditorSection>
 
-      {/* 🛠 Configuraciones */}
-      <EditorSection title="🛠 Configuraciones (Guille)" sectionKey="configuraciones" open={isOpen("configuraciones")} onToggle={() => toggleSection("configuraciones")}>
+      {/* 🛠 Activaciones */}
+      <EditorSection title="🛠 Activaciones (Guille)" sectionKey="configuraciones" open={isOpen("configuraciones")} onToggle={() => toggleSection("configuraciones")}>
         <ConfiguracionesEditor
           value={content.configuraciones}
           onChange={(v) => updateSection("configuraciones", v)}
@@ -321,7 +322,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
       </EditorSection>
 
       {/* 🛠 Envíos */}
-      <EditorSection title="🛠 Envíos / Logística (Domi)" sectionKey="envios" open={isOpen("envios")} onToggle={() => toggleSection("envios")}>
+      <EditorSection title="🛠 Envíos y Logística (Domi)" sectionKey="envios" open={isOpen("envios")} onToggle={() => toggleSection("envios")}>
         <EnviosEditor
           value={content.envios}
           onChange={(v) => updateSection("envios", v)}
@@ -329,7 +330,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
       </EditorSection>
 
       {/* 🛠 Soporte */}
-      <EditorSection title="🛠 Soporte HW (Domi + JJ)" sectionKey="soporte" open={isOpen("soporte")} onToggle={() => toggleSection("soporte")}>
+      <EditorSection title="🛠 Soporte HW (Domi)" sectionKey="soporte" open={isOpen("soporte")} onToggle={() => toggleSection("soporte")}>
         <SoporteEditor
           value={content.soporte}
           onChange={(v) => updateSection("soporte", v)}
@@ -341,6 +342,14 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         <CajonesEditor
           value={content.cajones}
           onChange={(v) => updateSection("cajones", v)}
+        />
+      </EditorSection>
+
+      {/* 🧭 Marco Informe */}
+      <EditorSection title="🧭 Marco Informe" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
+        <MarcoEditor
+          value={content.marco}
+          onChange={(v) => updateSection("marco", v)}
         />
       </EditorSection>
 
@@ -360,14 +369,6 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         />
       </EditorSection>
 
-      {/* 💬 Comentarios Pablo */}
-      <EditorSection title="💬 Comentarios Pablo" sectionKey="pabloComments" open={isOpen("pabloComments")} onToggle={() => toggleSection("pabloComments")}>
-        <TiptapEditor
-          value={content.pabloComments.doc}
-          onChange={(doc) => updateSection("pabloComments", { doc })}
-          placeholder="Placeholder para respuesta de Pablo…"
-        />
-      </EditorSection>
         </div>
 
         {/* Columna derecha — vista previa en vivo (formato publicado) */}

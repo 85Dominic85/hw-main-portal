@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { TiptapContent } from "./tiptap-content";
-import type { ReportContent, KpiSnapshot } from "@/lib/reports/schema";
+import type { ReportContent, KpiSnapshot, Highlights, Blockers } from "@/lib/reports/schema";
 import { cn } from "@/lib/utils/cn";
 
 // Colores del semáforo (fijos, fieles al informe Notion; válidos en claro y oscuro).
@@ -171,8 +171,9 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
           {/* 1. Configuraciones */}
           {(c.configuraciones.totalConfigs != null ||
             c.configuraciones.techBreakdown.length > 0 ||
-            c.configuraciones.problems) && (
-            <SubSection title="1. Configuraciones">
+            c.configuraciones.problems ||
+            deptHasExtras(c.configuraciones)) && (
+            <SubSection title="1. Activaciones (Guille)">
               <MetricTable
                 rows={[
                   ["Total registros", c.configuraciones.totalConfigs],
@@ -195,20 +196,22 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
               {c.configuraciones.problems && (
                 <p className="mt-3 text-sm text-muted-foreground">{c.configuraciones.problems}</p>
               )}
+              <DeptExtras highlights={c.configuraciones.highlights} blockers={c.configuraciones.blockers} />
             </SubSection>
           )}
 
           {/* 2. Envíos */}
-          {(c.envios.totalOps != null || c.envios.orders.length > 0 || c.envios.coveragePnp) && (
-            <SubSection title="2. Envíos · Logística · Stock">
+          {(c.envios.totalOps != null ||
+            c.envios.orders.length > 0 ||
+            c.envios.coveragePnp ||
+            deptHasExtras(c.envios)) && (
+            <SubSection title="2. Envíos y Logística (Domi)">
               <MetricTable
                 rows={[
                   ["Operaciones registradas", c.envios.totalOps],
                   ["Completados", c.envios.completed],
                   ["Enviados", c.envios.shipped],
                   ["Pendientes / Nuevos", c.envios.pending],
-                  ["Facturación bruta", eur(c.envios.grossRevenue)],
-                  ["Margen operativo HW (est.)", eur(c.envios.marginEur)],
                   ["Plazo medio entrega", c.envios.avgDeliveryDays != null ? `${c.envios.avgDeliveryDays} días` : null],
                   ["Cumplimiento SLA 7d", pct(c.envios.sla7dPct)],
                   ["Cobertura PnP en envíos", c.envios.coveragePnp || null],
@@ -226,23 +229,43 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
                   ))}
                 </NotionTable>
               )}
+              <DeptExtras highlights={c.envios.highlights} blockers={c.envios.blockers} />
             </SubSection>
           )}
 
           {/* 3. Soporte HW */}
-          {(c.soporte.openIncidents != null || c.soporte.rmas.length > 0 || hasDoc(c.soporte.narrative)) && (
-            <SubSection title="3. Soporte HW">
+          {(c.soporte.openIncidents != null ||
+            c.soporte.incidents.length > 0 ||
+            c.soporte.rmas.length > 0 ||
+            hasDoc(c.soporte.narrative) ||
+            deptHasExtras(c.soporte)) && (
+            <SubSection title="3. Soporte HW (Domi)">
               <MetricTable
                 rows={[
                   ["Incidencias abiertas", c.soporte.openIncidents],
+                  ["Incidencias >7d", c.soporte.incidentsOver7d],
                   ["RMAs activos", c.soporte.activeRmas],
-                  ["SLA 7d", pct(c.soporte.sla7dPct)],
-                  ["SLA 30d", pct(c.soporte.sla30dPct)],
+                  ["SLA cumplimiento", pct(c.soporte.sla7dPct)],
+                  ["% críticas en SLA", pct(c.soporte.criticalInSlaPct)],
                   ["Tasa reapertura", pct(c.soporte.reopenRatePct)],
                   ["Resolución media", c.soporte.avgResolutionHours != null ? `${c.soporte.avgResolutionHours}h` : null],
+                  ["Turnaround RMA", c.soporte.avgRmaTurnaroundDays != null ? `${c.soporte.avgRmaTurnaroundDays} días` : null],
                   ["RMA respuesta <2h", pct(c.soporte.rmaResponseUnder2hPct)],
                 ]}
               />
+              {c.soporte.incidents.length > 0 && (
+                <NotionTable head={["Cliente / Venue", "Prioridad", "Estado", "Días", "Comentario"]} center={[3]}>
+                  {c.soporte.incidents.map((row) => (
+                    <tr key={row.id}>
+                      <Td className="font-medium">{row.customer || "—"}</Td>
+                      <Td className="whitespace-nowrap">{PRIORITY_LABEL[row.priority] ?? row.priority}</Td>
+                      <Td>{row.status || "—"}</Td>
+                      <Td center>{row.daysOpen ?? "—"}</Td>
+                      <Td className="text-muted-foreground">{row.comment || "—"}</Td>
+                    </tr>
+                  ))}
+                </NotionTable>
+              )}
               {c.soporte.rmas.length > 0 && (
                 <NotionTable head={["Proveedor", "Dispositivo", "Estado", "Días", "Notas"]} center={[3]}>
                   {c.soporte.rmas.map((row) => (
@@ -261,25 +284,41 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
                   <TiptapContent doc={c.soporte.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
                 </div>
               )}
+              <DeptExtras highlights={c.soporte.highlights} blockers={c.soporte.blockers} />
             </SubSection>
           )}
 
           {/* 4. Cajones inteligentes */}
-          {c.cajones.rows.length > 0 && (
-            <SubSection title="4. Cajones inteligentes">
-              <NotionTable head={["Cliente", "Estado", "Proveedor", "MRR", "Notas"]} center={[3]}>
-                {c.cajones.rows.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="font-medium">{row.client || "—"}</Td>
-                    <Td>{row.status || "—"}</Td>
-                    <Td>{row.provider || "—"}</Td>
-                    <Td center>{eur(row.mrr) ?? "—"}</Td>
-                    <Td className="text-muted-foreground">{row.notes || "—"}</Td>
-                  </tr>
-                ))}
-              </NotionTable>
+          {(c.cajones.rows.length > 0 || deptHasExtras(c.cajones)) && (
+            <SubSection title="4. Cajones inteligentes (JJ)">
+              {c.cajones.rows.length > 0 && (
+                <NotionTable head={["Cliente", "Estado", "Proveedor", "MRR", "Notas"]} center={[3]}>
+                  {c.cajones.rows.map((row) => (
+                    <tr key={row.id}>
+                      <Td className="font-medium">{row.client || "—"}</Td>
+                      <Td>{row.status || "—"}</Td>
+                      <Td>{row.provider || "—"}</Td>
+                      <Td center>{eur(row.mrr) ?? "—"}</Td>
+                      <Td className="text-muted-foreground">{row.notes || "—"}</Td>
+                    </tr>
+                  ))}
+                </NotionTable>
+              )}
+              <DeptExtras highlights={c.cajones.highlights} blockers={c.cajones.blockers} />
             </SubSection>
           )}
+        </Section>
+      )}
+
+      {/* 🧭 Marco Informe */}
+      {(hasDoc(c.marco.highlights.doc) ||
+        c.marco.blockers.rows.length > 0 ||
+        hasDoc(c.marco.narrative)) && (
+        <Section emoji="🧭" title="Marco Informe">
+          {hasDoc(c.marco.narrative) && (
+            <TiptapContent doc={c.marco.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
+          )}
+          <DeptExtras highlights={c.marco.highlights} blockers={c.marco.blockers} />
         </Section>
       )}
 
@@ -336,13 +375,6 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
         </Section>
       )}
 
-      {/* 💬 Comentarios Pablo */}
-      {hasDoc(c.pabloComments.doc) && (
-        <Section emoji="💬" title="Comentarios Pablo">
-          <TiptapContent doc={c.pabloComments.doc} className="prose prose-sm max-w-none dark:prose-invert" />
-        </Section>
-      )}
-
       {/* KPI Snapshot — provenance técnica (congelado al publicar) */}
       {snapshot && (
         <div className="mt-10 border-t border-border pt-4 text-xs text-muted-foreground">
@@ -380,18 +412,73 @@ function eur(v: number | null | undefined): string | null {
   return v == null ? null : v.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
+const PRIORITY_LABEL: Record<string, string> = {
+  critica: "🔴 Crítica",
+  alta: "🟠 Alta",
+  media: "🟡 Media",
+  baja: "🟢 Baja",
+};
+
+function hasDocContent(doc: { content?: unknown[] }): boolean {
+  return Array.isArray(doc.content) && doc.content.length > 0;
+}
+
+function deptHasExtras(d: { highlights: Highlights; blockers: Blockers }): boolean {
+  return hasDocContent(d.highlights.doc) || d.blockers.rows.length > 0;
+}
+
 function hasOperativas(c: ReportContent): boolean {
   return (
     c.configuraciones.totalConfigs != null ||
     c.configuraciones.techBreakdown.length > 0 ||
     !!c.configuraciones.problems ||
+    deptHasExtras(c.configuraciones) ||
     c.envios.totalOps != null ||
     c.envios.orders.length > 0 ||
     !!c.envios.coveragePnp ||
+    deptHasExtras(c.envios) ||
     c.soporte.openIncidents != null ||
+    c.soporte.incidents.length > 0 ||
     c.soporte.rmas.length > 0 ||
-    (Array.isArray(c.soporte.narrative.content) && c.soporte.narrative.content.length > 0) ||
-    c.cajones.rows.length > 0
+    hasDocContent(c.soporte.narrative) ||
+    deptHasExtras(c.soporte) ||
+    c.cajones.rows.length > 0 ||
+    deptHasExtras(c.cajones)
+  );
+}
+
+function DeptExtras({ highlights, blockers }: { highlights: Highlights; blockers: Blockers }) {
+  const hasHl = hasDocContent(highlights.doc);
+  const hasBlk = blockers.rows.length > 0;
+  if (!hasHl && !hasBlk) return null;
+  return (
+    <div className="mt-4 space-y-3">
+      {hasHl && (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Highlights
+          </p>
+          <TiptapContent doc={highlights.doc} className="prose prose-sm max-w-none dark:prose-invert" />
+        </div>
+      )}
+      {hasBlk && (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Bloqueos
+          </p>
+          <NotionTable head={["Bloqueo", "Owner", "Impacto", "Estado"]}>
+            {blockers.rows.map((row) => (
+              <tr key={row.id}>
+                <Td>{row.description || "—"}</Td>
+                <Td className="font-medium">{row.owner || "—"}</Td>
+                <Td className="text-muted-foreground">{row.impact || "—"}</Td>
+                <Td><StatusChip status={row.status} /></Td>
+              </tr>
+            ))}
+          </NotionTable>
+        </div>
+      )}
+    </div>
   );
 }
 

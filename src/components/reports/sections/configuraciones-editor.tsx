@@ -1,6 +1,7 @@
 "use client";
 
 import { EditableTable, type ColDef } from "../editable-table";
+import { DeptExtrasEditor } from "./dept-extras-editor";
 import type { Configuraciones, ConfigTechBreakdownRow } from "@/lib/reports/schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -127,6 +128,13 @@ export function ConfiguracionesEditor({ value, onChange }: Props) {
           onChange={(e) => patch({ problems: e.target.value })}
         />
       </div>
+
+      <DeptExtrasEditor
+        highlights={value.highlights}
+        blockers={value.blockers}
+        onHighlightsChange={(highlights) => patch({ highlights })}
+        onBlockersChange={(blockers) => patch({ blockers })}
+      />
     </div>
   );
 }

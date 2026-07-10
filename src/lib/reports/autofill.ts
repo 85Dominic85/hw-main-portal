@@ -148,7 +148,6 @@ export async function buildAutofilledContent(range: Range): Promise<ReportConten
     content.envios.completed = completed;
     content.envios.shipped = shipped;
     content.envios.pending = pending;
-    content.envios.grossRevenue = Math.round(m.kpis.totalRevenueEur);
     content.envios.avgDeliveryDays = round1(m.sla.avgDeliveryDays);
     content.envios.sla7dPct = round1(m.sla.onTimePct * 100);
   }
@@ -163,11 +162,17 @@ export async function buildAutofilledContent(range: Range): Promise<ReportConten
   if (hsmCur.ok) {
     const s = hsmCur.data.current;
     content.soporte.openIncidents = s.openIncidents;
+    content.soporte.incidentsOver7d =
+      s.agingDistribution.find((a) => a.bucket === "gt_7d")?.count ?? 0;
     content.soporte.activeRmas = s.activeRmas;
     content.soporte.sla7dPct = round1(s.slaCompliancePct);
+    content.soporte.criticalInSlaPct =
+      s.criticalInSlaPct != null ? round1(s.criticalInSlaPct) : null;
     content.soporte.reopenRatePct = round1(s.reopenRatePct);
     content.soporte.avgResolutionHours =
       s.avgResolutionHours != null ? round1(s.avgResolutionHours) : null;
+    content.soporte.avgRmaTurnaroundDays =
+      s.avgRmaTurnaroundDays != null ? round1(s.avgRmaTurnaroundDays) : null;
   }
 
   // ── Resumen ejecutivo desde el catálogo ─────────────────────────────────────

@@ -1,6 +1,6 @@
 import React from "react";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
-import type { ReportContent, KpiSnapshot, TiptapDoc } from "@/lib/reports/schema";
+import type { ReportContent, KpiSnapshot, TiptapDoc, Highlights, Blockers } from "@/lib/reports/schema";
 
 // ── Estilos ──────────────────────────────────────────────────────────────────
 
@@ -151,6 +151,53 @@ function TiptapBlock({ doc }: { doc: TiptapDoc }) {
   );
 }
 
+function hasExtras(d: { highlights: Highlights; blockers: Blockers }): boolean {
+  return hasDoc(d.highlights.doc) || d.blockers.rows.length > 0;
+}
+
+function DeptExtrasBlock({ highlights, blockers }: { highlights: Highlights; blockers: Blockers }) {
+  const hasHl = hasDoc(highlights.doc);
+  const hasBlk = blockers.rows.length > 0;
+  if (!hasHl && !hasBlk) return null;
+  return (
+    <View style={{ marginTop: 6 }}>
+      {hasHl && (
+        <>
+          <SubTitle>Highlights</SubTitle>
+          <TiptapBlock doc={highlights.doc} />
+        </>
+      )}
+      {hasBlk && (
+        <>
+          <SubTitle>Bloqueos</SubTitle>
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.cellHeader, styles.cellWide]}>Descripcion</Text>
+              <Text style={styles.cellHeader}>Owner</Text>
+              <Text style={styles.cellHeader}>Impacto</Text>
+              <Text style={styles.cellHeader}>Estado</Text>
+            </View>
+            {blockers.rows.map((r) => (
+              <View key={r.id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.cellWide]}>{r.description || "—"}</Text>
+                <Text style={styles.cell}>{r.owner || "—"}</Text>
+                <Text style={[styles.cell, { color: "#6b7280" }]}>{r.impact || "—"}</Text>
+                <Text style={styles.cell}>
+                  {r.status === "bloqueado"
+                    ? "Bloqueado"
+                    : r.status === "en_progreso"
+                      ? "En progreso"
+                      : "Abierto"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 // ── Documento principal ───────────────────────────────────────────────────────
 
 interface Props {
@@ -171,19 +218,28 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
   const hasBlockers = content.blockers.rows.length > 0;
   const hasDecisions = content.decisions.rows.length > 0;
   const hasCfg =
-    content.configuraciones.totalConfigs !== null || content.configuraciones.techBreakdown.length > 0;
+    content.configuraciones.totalConfigs !== null ||
+    content.configuraciones.techBreakdown.length > 0 ||
+    hasExtras(content.configuraciones);
   const hasEnvios =
-    content.envios.totalOps !== null || content.envios.orders.length > 0;
+    content.envios.totalOps !== null ||
+    content.envios.orders.length > 0 ||
+    hasExtras(content.envios);
   const hasSoporte =
     content.soporte.openIncidents !== null ||
+    content.soporte.incidents.length > 0 ||
     content.soporte.rmas.length > 0 ||
-    hasDoc(content.soporte.narrative);
-  const hasCajones = content.cajones.rows.length > 0;
+    hasDoc(content.soporte.narrative) ||
+    hasExtras(content.soporte);
+  const hasCajones = content.cajones.rows.length > 0 || hasExtras(content.cajones);
   const hasPerf = content.performance.members.some(
     (m) => m.kpis.length > 0 || hasDoc(m.narrative),
   );
   const hasNextFocus = content.nextFocus.rows.length > 0;
-  const hasPablo = hasDoc(content.pabloComments.doc);
+  const hasMarco =
+    hasDoc(content.marco.highlights.doc) ||
+    content.marco.blockers.rows.length > 0 ||
+    hasDoc(content.marco.narrative);
 
   return (
     <Document
@@ -409,13 +465,13 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
       </Page>
 
       {/* ── Página 2: Secciones operativas + Performance ── */}
-      {(hasCfg || hasEnvios || hasSoporte || hasCajones || hasPerf || hasPablo) && (
+      {(hasCfg || hasEnvios || hasSoporte || hasCajones || hasPerf || hasMarco) && (
         <Page size="A4" style={styles.page}>
 
-          {/* ── Configuraciones ── */}
+          {/* ── Activaciones ── */}
           {hasCfg && (
             <View style={styles.section}>
-              <SectionTitle>Configuraciones</SectionTitle>
+              <SectionTitle>Activaciones (Guille)</SectionTitle>
               <View style={styles.metricGrid}>
                 {content.configuraciones.totalConfigs !== null && (
                   <View style={styles.metricBox}>
@@ -466,13 +522,17 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                   {content.configuraciones.problems}
                 </Text>
               )}
+              <DeptExtrasBlock
+                highlights={content.configuraciones.highlights}
+                blockers={content.configuraciones.blockers}
+              />
             </View>
           )}
 
           {/* ── Envios ── */}
           {hasEnvios && (
             <View style={styles.section}>
-              <SectionTitle>Envios - Logistica - Stock</SectionTitle>
+              <SectionTitle>Envios y Logistica (Domi)</SectionTitle>
               <View style={styles.metricGrid}>
                 {([
                   ["Total ops", content.envios.totalOps],
@@ -506,21 +566,24 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                   ))}
                 </View>
               )}
+              <DeptExtrasBlock highlights={content.envios.highlights} blockers={content.envios.blockers} />
             </View>
           )}
 
           {/* ── Soporte ── */}
           {hasSoporte && (
             <View style={styles.section}>
-              <SectionTitle>Soporte HW</SectionTitle>
+              <SectionTitle>Soporte HW (Domi)</SectionTitle>
               <View style={styles.metricGrid}>
                 {([
-                  ["Incidencias >7d", content.soporte.openIncidents],
+                  ["Incidencias abiertas", content.soporte.openIncidents],
+                  ["Incidencias >7d", content.soporte.incidentsOver7d],
                   ["RMAs activos", content.soporte.activeRmas],
-                  ["SLA 7d (%)", content.soporte.sla7dPct],
-                  ["SLA 30d (%)", content.soporte.sla30dPct],
+                  ["SLA cumpl. (%)", content.soporte.sla7dPct],
+                  ["Criticas en SLA (%)", content.soporte.criticalInSlaPct],
                   ["Reapertura (%)", content.soporte.reopenRatePct],
                   ["Resolucion (h)", content.soporte.avgResolutionHours],
+                  ["Turnaround RMA (d)", content.soporte.avgRmaTurnaroundDays],
                 ] as [string, number | null][]).filter(([, v]) => v !== null).map(([label, value]) => (
                   <View key={label} style={styles.metricBox}>
                     <Text style={styles.metricLabel}>{label}</Text>
@@ -530,6 +593,31 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
               </View>
               {hasDoc(content.soporte.narrative) && (
                 <TiptapBlock doc={content.soporte.narrative} />
+              )}
+              {content.soporte.incidents.length > 0 && (
+                <>
+                  <SubTitle>Incidencias destacadas</SubTitle>
+                  <View style={styles.table}>
+                    <View style={styles.tableHeaderRow}>
+                      <Text style={styles.cellHeader}>Cliente</Text>
+                      <Text style={[styles.cellHeader, styles.cellNarrow]}>Prioridad</Text>
+                      <Text style={styles.cellHeader}>Estado</Text>
+                      <Text style={[styles.cellHeader, styles.cellNarrow]}>Dias</Text>
+                      <Text style={[styles.cellHeader, styles.cellWide]}>Comentario</Text>
+                    </View>
+                    {content.soporte.incidents.map((r) => (
+                      <View key={r.id} style={styles.tableRow}>
+                        <Text style={styles.cell}>{r.customer || "—"}</Text>
+                        <Text style={[styles.cell, styles.cellNarrow]}>{r.priority}</Text>
+                        <Text style={styles.cell}>{r.status || "—"}</Text>
+                        <Text style={[styles.cell, styles.cellNarrow]}>{r.daysOpen ?? "—"}</Text>
+                        <Text style={[styles.cell, styles.cellWide, { color: "#6b7280" }]}>
+                          {r.comment || "—"}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
               )}
               {content.soporte.rmas.length > 0 && (
                 <>
@@ -556,35 +644,48 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                   </View>
                 </>
               )}
+              <DeptExtrasBlock highlights={content.soporte.highlights} blockers={content.soporte.blockers} />
             </View>
           )}
 
           {/* ── Cajones ── */}
           {hasCajones && (
             <View style={styles.section}>
-              <SectionTitle>Cajones inteligentes</SectionTitle>
-              <View style={styles.table}>
-                <View style={styles.tableHeaderRow}>
-                  <Text style={[styles.cellHeader, styles.cellWide]}>Cliente</Text>
-                  <Text style={styles.cellHeader}>Estado</Text>
-                  <Text style={styles.cellHeader}>Proveedor</Text>
-                  <Text style={[styles.cellHeader, styles.cellWide]}>Notas</Text>
-                  <Text style={[styles.cellHeader, styles.cellNarrow]}>MRR (EUR)</Text>
-                </View>
-                {content.cajones.rows.map((r) => (
-                  <View key={r.id} style={styles.tableRow}>
-                    <Text style={[styles.cell, styles.cellWide]}>{r.client || "—"}</Text>
-                    <Text style={styles.cell}>{r.status || "—"}</Text>
-                    <Text style={styles.cell}>{r.provider || "—"}</Text>
-                    <Text style={[styles.cell, styles.cellWide, { color: "#6b7280" }]}>
-                      {r.notes || "—"}
-                    </Text>
-                    <Text style={[styles.cell, styles.cellNarrow]}>
-                      {r.mrr != null ? r.mrr.toLocaleString("es-ES") : "—"}
-                    </Text>
+              <SectionTitle>Cajones inteligentes (JJ)</SectionTitle>
+              {content.cajones.rows.length > 0 && (
+                <View style={styles.table}>
+                  <View style={styles.tableHeaderRow}>
+                    <Text style={[styles.cellHeader, styles.cellWide]}>Cliente</Text>
+                    <Text style={styles.cellHeader}>Estado</Text>
+                    <Text style={styles.cellHeader}>Proveedor</Text>
+                    <Text style={[styles.cellHeader, styles.cellWide]}>Notas</Text>
+                    <Text style={[styles.cellHeader, styles.cellNarrow]}>MRR (EUR)</Text>
                   </View>
-                ))}
-              </View>
+                  {content.cajones.rows.map((r) => (
+                    <View key={r.id} style={styles.tableRow}>
+                      <Text style={[styles.cell, styles.cellWide]}>{r.client || "—"}</Text>
+                      <Text style={styles.cell}>{r.status || "—"}</Text>
+                      <Text style={styles.cell}>{r.provider || "—"}</Text>
+                      <Text style={[styles.cell, styles.cellWide, { color: "#6b7280" }]}>
+                        {r.notes || "—"}
+                      </Text>
+                      <Text style={[styles.cell, styles.cellNarrow]}>
+                        {r.mrr != null ? r.mrr.toLocaleString("es-ES") : "—"}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <DeptExtrasBlock highlights={content.cajones.highlights} blockers={content.cajones.blockers} />
+            </View>
+          )}
+
+          {/* ── Marco Informe ── */}
+          {hasMarco && (
+            <View style={styles.section}>
+              <SectionTitle>Marco Informe</SectionTitle>
+              {hasDoc(content.marco.narrative) && <TiptapBlock doc={content.marco.narrative} />}
+              <DeptExtrasBlock highlights={content.marco.highlights} blockers={content.marco.blockers} />
             </View>
           )}
 
@@ -630,14 +731,6 @@ export function ReportPdfDocument({ report, content, snapshot: _snapshot }: Prop
                     )}
                   </View>
                 ))}
-            </View>
-          )}
-
-          {/* ── Comentarios Pablo ── */}
-          {hasPablo && (
-            <View style={styles.section}>
-              <SectionTitle>Comentarios Pablo</SectionTitle>
-              <TiptapBlock doc={content.pabloComments.doc} />
             </View>
           )}
 

@@ -2,7 +2,8 @@
 
 import { EditableTable, type ColDef } from "../editable-table";
 import { TiptapEditor } from "../tiptap-editor";
-import type { Soporte, RmaRow } from "@/lib/reports/schema";
+import { DeptExtrasEditor } from "./dept-extras-editor";
+import type { Soporte, RmaRow, IncidentHighlightRow } from "@/lib/reports/schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
@@ -55,6 +56,60 @@ function newRmaRow(): RmaRow {
   };
 }
 
+const INCIDENT_COLUMNS: ColDef<IncidentHighlightRow>[] = [
+  {
+    key: "customer",
+    header: "Cliente / Venue",
+    type: "text",
+    placeholder: "Nombre",
+    cellClassName: "min-w-[140px]",
+  },
+  {
+    key: "priority",
+    header: "Prioridad",
+    type: "select",
+    options: [
+      { value: "critica", label: "🔴 Crítica" },
+      { value: "alta", label: "🟠 Alta" },
+      { value: "media", label: "🟡 Media" },
+      { value: "baja", label: "🟢 Baja" },
+    ],
+    cellClassName: "w-32",
+  },
+  {
+    key: "status",
+    header: "Estado",
+    type: "text",
+    placeholder: "Abierta / En curso…",
+    cellClassName: "w-36",
+  },
+  {
+    key: "daysOpen",
+    header: "Días",
+    type: "number",
+    placeholder: "0",
+    cellClassName: "w-20",
+  },
+  {
+    key: "comment",
+    header: "Comentario relevante",
+    type: "textarea",
+    placeholder: "Qué contar de este caso…",
+    cellClassName: "min-w-[220px]",
+  },
+];
+
+function newIncidentRow(): IncidentHighlightRow {
+  return {
+    id: crypto.randomUUID(),
+    customer: "",
+    priority: "media",
+    status: "",
+    daysOpen: null,
+    comment: "",
+  };
+}
+
 interface Props {
   value: Soporte;
   onChange: (v: Soporte) => void;
@@ -76,11 +131,13 @@ export function SoporteEditor({ value, onChange }: Props) {
           {(
             [
               { key: "openIncidents", label: "Incidencias abiertas" },
+              { key: "incidentsOver7d", label: "Incidencias >7d" },
               { key: "activeRmas", label: "RMAs activos" },
-              { key: "sla7dPct", label: "SLA 7d %" },
-              { key: "sla30dPct", label: "SLA 30d %" },
+              { key: "sla7dPct", label: "SLA cumplimiento %" },
+              { key: "criticalInSlaPct", label: "% críticas en SLA" },
               { key: "reopenRatePct", label: "Tasa reapertura %" },
               { key: "avgResolutionHours", label: "Resolución media h" },
+              { key: "avgRmaTurnaroundDays", label: "Turnaround RMA (días)" },
             ] as Array<{ key: keyof Soporte; label: string }>
           ).map(({ key, label }) => (
             <div key={key} className="space-y-1">
@@ -112,6 +169,20 @@ export function SoporteEditor({ value, onChange }: Props) {
         />
       </div>
 
+      {/* Incidencias destacadas */}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Incidencias destacadas
+        </p>
+        <EditableTable<IncidentHighlightRow>
+          columns={INCIDENT_COLUMNS}
+          value={value.incidents}
+          onChange={(incidents) => patch({ incidents })}
+          newRow={newIncidentRow}
+          addLabel="Añadir incidencia"
+        />
+      </div>
+
       {/* Tabla RMAs */}
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -137,6 +208,13 @@ export function SoporteEditor({ value, onChange }: Props) {
           placeholder="Contexto, análisis de incidencias, tendencias…"
         />
       </div>
+
+      <DeptExtrasEditor
+        highlights={value.highlights}
+        blockers={value.blockers}
+        onHighlightsChange={(highlights) => patch({ highlights })}
+        onBlockersChange={(blockers) => patch({ blockers })}
+      />
     </div>
   );
 }

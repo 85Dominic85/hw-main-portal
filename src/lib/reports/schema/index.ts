@@ -13,7 +13,7 @@ import {
 } from "./sections/operations";
 import { performanceSchema } from "./sections/performance";
 import { nextFocusSchema } from "./sections/next-focus";
-import { pabloCommentsSchema } from "./sections/pablo-comments";
+import { marcoInformeSchema } from "./sections/marco";
 
 export const REPORT_CURRENT_VERSION = 1 as const;
 
@@ -32,9 +32,9 @@ export const reportContentSchemaV1 = z.object({
   envios: enviosSchema.default({}),
   soporte: soporteSchema.default({}),
   cajones: cajonesSchema.default({}),
+  marco: marcoInformeSchema.default({}),
   performance: performanceSchema.default({}),
   nextFocus: nextFocusSchema.default({}),
-  pabloComments: pabloCommentsSchema.default({}),
 });
 
 export type ReportContentV1 = z.infer<typeof reportContentSchemaV1>;
@@ -54,12 +54,13 @@ export type {
   EnviosOrderRow,
   Soporte,
   RmaRow,
+  IncidentHighlightRow,
   Cajones,
   CajonRow,
 } from "./sections/operations";
 export type { Performance, MemberBlock, MemberKpiRow } from "./sections/performance";
 export type { NextFocus, NextFocusRow } from "./sections/next-focus";
-export type { PabloComments } from "./sections/pablo-comments";
+export type { MarcoInforme } from "./sections/marco";
 export type { KpiSnapshot, KpiSnapshotEntry, SourceHealth } from "./kpi-snapshot";
 export { kpiSnapshotSchema } from "./kpi-snapshot";
 export { tiptapDocSchema } from "./tiptap";

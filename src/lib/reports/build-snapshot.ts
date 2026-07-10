@@ -47,7 +47,6 @@ export async function buildKpiSnapshot(range: SnapshotRange): Promise<KpiSnapsho
       { key: "mainops.pending_orders",    value: pending,                      unit: "pedidos", source: "mainops" },
       { key: "mainops.sla_7d_pct",        value: m.sla.onTimePct * 100,        unit: "%",       source: "mainops" },
       { key: "mainops.avg_delivery_days", value: m.sla.avgDeliveryDays,        unit: "días",    source: "mainops" },
-      { key: "mainops.gross_revenue",     value: m.kpis.totalRevenueEur,       unit: "€",       source: "mainops" },
     );
   }
 
@@ -64,11 +63,14 @@ export async function buildKpiSnapshot(range: SnapshotRange): Promise<KpiSnapsho
   if (hsmResult.ok) {
     const s = hsmResult.data.current;
     entries.push(
-      { key: "hsm.open_incidents",       value: s.openIncidents,       unit: "#",  source: "hsm" },
-      { key: "hsm.active_rmas",          value: s.activeRmas,          unit: "#",  source: "hsm" },
-      { key: "hsm.sla_compliance_pct",   value: s.slaCompliancePct,    unit: "%",  source: "hsm" },
-      { key: "hsm.avg_resolution_hours", value: s.avgResolutionHours,  unit: "h",  source: "hsm" },
-      { key: "hsm.reopen_rate_pct",      value: s.reopenRatePct,       unit: "%",  source: "hsm" },
+      { key: "hsm.open_incidents",         value: s.openIncidents,                                                      unit: "#",    source: "hsm" },
+      { key: "hsm.incidents_over_7d",      value: s.agingDistribution.find((a) => a.bucket === "gt_7d")?.count ?? 0,     unit: "#",    source: "hsm" },
+      { key: "hsm.active_rmas",            value: s.activeRmas,                                                         unit: "#",    source: "hsm" },
+      { key: "hsm.sla_compliance_pct",     value: s.slaCompliancePct,                                                   unit: "%",    source: "hsm" },
+      { key: "hsm.critical_in_sla_pct",    value: s.criticalInSlaPct,                                                   unit: "%",    source: "hsm" },
+      { key: "hsm.reopen_rate_pct",        value: s.reopenRatePct,                                                      unit: "%",    source: "hsm" },
+      { key: "hsm.avg_resolution_hours",   value: s.avgResolutionHours,                                                 unit: "h",    source: "hsm" },
+      { key: "hsm.avg_rma_turnaround_days", value: s.avgRmaTurnaroundDays,                                              unit: "días", source: "hsm" },
     );
   }
 

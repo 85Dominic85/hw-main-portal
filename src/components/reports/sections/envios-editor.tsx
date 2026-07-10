@@ -1,6 +1,7 @@
 "use client";
 
 import { EditableTable, type ColDef } from "../editable-table";
+import { DeptExtrasEditor } from "./dept-extras-editor";
 import type { Envios, EnviosOrderRow } from "@/lib/reports/schema";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -67,7 +68,6 @@ export function EnviosEditor({ value, onChange }: Props) {
               { key: "completed", label: "Completadas" },
               { key: "shipped", label: "Enviadas" },
               { key: "pending", label: "Pendientes" },
-              { key: "grossRevenue", label: "Facturación bruta €" },
               { key: "avgDeliveryDays", label: "Días entrega prom." },
               { key: "sla7dPct", label: "SLA 7d %" },
             ] as Array<{ key: keyof Envios; label: string }>
@@ -92,18 +92,7 @@ export function EnviosEditor({ value, onChange }: Props) {
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Manual
         </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Margen €</Label>
-            <Input
-              type="number"
-              value={value.marginEur ?? ""}
-              placeholder="—"
-              onChange={(e) =>
-                patch({ marginEur: e.target.value === "" ? null : Number(e.target.value) })
-              }
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label className="text-xs">Cobertura PnP</Label>
             <Input
@@ -138,6 +127,13 @@ export function EnviosEditor({ value, onChange }: Props) {
           addLabel="Añadir pedido"
         />
       </div>
+
+      <DeptExtrasEditor
+        highlights={value.highlights}
+        blockers={value.blockers}
+        onHighlightsChange={(highlights) => patch({ highlights })}
+        onBlockersChange={(blockers) => patch({ blockers })}
+      />
     </div>
   );
 }
