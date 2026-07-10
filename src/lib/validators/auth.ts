@@ -44,10 +44,12 @@ export const requestResetSchema = z.object({
 
 export type RequestResetInput = z.infer<typeof requestResetSchema>;
 
-/** Envío del formulario de nueva contraseña (con token del email). */
+/**
+ * Envío del formulario de nueva contraseña. La identidad se prueba con la
+ * sesión de Supabase (magic link), no con un token en el body.
+ */
 export const resetPasswordSchema = z
   .object({
-    token: z.string().min(1, "Falta el token."),
     password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
     confirm: z.string().min(1, "Confirma la contraseña."),
   })

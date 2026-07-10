@@ -8,9 +8,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { resetPasswordWithToken } from "@/server/actions/password-reset";
+import { setPasswordFromSession } from "@/server/actions/password-reset";
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({ email }: { email: string }) {
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -30,20 +30,25 @@ export function ResetPasswordForm({ token }: { token: string }) {
     }
 
     setSubmitting(true);
-    const result = await resetPasswordWithToken({ token, password, confirm });
+    const result = await setPasswordFromSession({ password, confirm });
     if (!result.ok) {
       setSubmitting(false);
       setError(result.error);
       return;
     }
 
-    toast.success("Contraseña actualizada. Ya puedes iniciar sesión.");
-    // Navegación dura para que el middleware re-evalúe en /login.
-    window.location.assign("/login?reset=1");
+    toast.success("Contraseña actualizada. Ya estás dentro.");
+    // El reset deja la sesión iniciada → a la home.
+    window.location.assign("/");
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <p className="text-sm text-muted-foreground">
+        Estableciendo la contraseña de{" "}
+        <span className="font-medium text-foreground">{email}</span>.
+      </p>
+
       <div className="space-y-2">
         <Label htmlFor="password">Nueva contraseña</Label>
         <Input

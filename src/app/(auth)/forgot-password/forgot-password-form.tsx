@@ -35,8 +35,8 @@ export function ForgotPasswordForm() {
         <CheckCircle2 className="mx-auto h-10 w-10 text-status-ok" aria-hidden="true" />
         <p className="text-sm text-muted-foreground">
           Si existe una cuenta con <span className="font-medium text-foreground">{email}</span>, te
-          hemos enviado un enlace para restablecer la contraseña. Revisa tu correo (caduca en 30
-          minutos).
+          hemos enviado un enlace de acceso a tu correo. Ábrelo (el más reciente) y podrás elegir tu
+          nueva contraseña.
         </p>
         <Button asChild variant="outline" className="w-full">
           <Link href="/login">

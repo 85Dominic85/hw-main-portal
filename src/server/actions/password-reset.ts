@@ -1,6 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
+
 import { requestResetSchema, resetPasswordSchema } from "@/lib/validators/auth";
+import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import {
   getAccountByEmail,
   setAccountPassword,
@@ -8,29 +11,32 @@ import {
   normalizeEmail,
   isAllowlistedAdmin,
 } from "@/lib/auth/accounts";
-import { signResetToken, verifyResetToken } from "@/lib/auth/reset-token";
-import { sendEmail } from "@/lib/email/send";
-import { passwordResetEmail } from "@/lib/email/password-reset-email";
+import {
+  signSession,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE,
+  type SessionRole,
+} from "@/lib/auth/session-cookie";
 import type { PortalAccount } from "@/lib/db/schema/accounts";
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
 function appUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
 }
 
 /**
- * Solicita un enlace de restablecimiento.
+ * Solicita un enlace de recuperación. Usa el MAGIC LINK de Supabase como canal
+ * de email y prueba de propiedad del correo — NO se añade proveedor externo.
  *
- * Anti-enumeración: SIEMPRE responde ok (salvo email malformado), exista o no
- * la cuenta, para no revelar qué emails están registrados.
+ * El enlace apunta a /api/auth/callback?next=/reset-password: al pulsarlo,
+ * Supabase crea una sesión y aterriza en /reset-password, donde el usuario fija
+ * su nueva contraseña (que se guarda en portal_accounts, el sistema real).
  *
- * - Cuenta activa → token con su token_version actual.
- * - Email del allowlist sin fila → token con tv=0 (al resetear se crea la fila).
- * - Otro caso → no se envía nada (pero responde ok igualmente).
+ * Anti-enumeración: responde ok exista o no la cuenta (salvo rate-limit, que sí
+ * se comunica porque es útil y no revela existencia).
  *
- * Si el envío falla o Resend no está configurado, se loguea el enlace en el
- * servidor (Vercel logs) como fallback para no quedarse sin vía de recuperación.
+ * Requiere que las Redirect URLs de Supabase incluyan el callback (dashboard).
  */
 export async function requestPasswordReset(input: unknown): Promise<Result<true>> {
   const parsed = requestResetSchema.safeParse(input);
@@ -39,66 +45,70 @@ export async function requestPasswordReset(input: unknown): Promise<Result<true>
   }
   const email = normalizeEmail(parsed.data.email);
 
-  let account: PortalAccount | null = null;
   try {
-    account = await getAccountByEmail(email);
-  } catch {
-    account = null; // error transitorio → tratamos como sin fila
-  }
+    const supabase = await createSupabaseServerClient();
+    const redirect = new URL("/api/auth/callback", appUrl());
+    redirect.searchParams.set("next", "/reset-password");
 
-  // ¿A quién le emitimos token? Cuenta activa, o admin del allowlist sin fila.
-  let tv: number | null = null;
-  if (account) {
-    if (account.active) tv = account.tokenVersion;
-  } else if (isAllowlistedAdmin(email)) {
-    tv = 0;
-  }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: redirect.toString(),
+        // Crea el usuario de Supabase Auth si no existe (el trigger SQL valida
+        // el dominio @qamarero.com). Necesario para admins que nunca han usado
+        // magic link y solo viven en portal_accounts.
+        shouldCreateUser: true,
+      },
+    });
 
-  // Sin destinatario válido → responde ok sin enviar (anti-enumeración).
-  if (tv === null) return { ok: true, data: true };
-
-  const token = await signResetToken({ email, tv });
-  if (!token) {
-    // Falta PORTAL_SESSION_SECRET: no se puede firmar. Fail-secure pero visible.
-    console.error("[password-reset] PORTAL_SESSION_SECRET no configurada; no se puede emitir token.");
-    return { ok: true, data: true };
-  }
-
-  const resetUrl = `${appUrl()}/reset-password?token=${encodeURIComponent(token)}`;
-  const { subject, html, text } = passwordResetEmail(resetUrl);
-
-  const result = await sendEmail({ to: email, subject, html, text });
-  if (!result.ok) {
-    // Fallback: dejamos el enlace en los logs del servidor.
-    console.warn(
-      `[password-reset] No se pudo enviar el email (${result.error}). ` +
-        `Enlace de reset para ${email}: ${resetUrl}`,
-    );
+    if (error) {
+      if (error.status === 429) {
+        return { ok: false, error: "Has solicitado demasiados enlaces. Espera un minuto." };
+      }
+      // Otros errores (config, dominio) → log servidor; anti-enumeración al UI.
+      console.warn(`[password-reset] signInWithOtp (${email}): ${error.message}`);
+    }
+  } catch (err) {
+    console.error("[password-reset] Supabase no disponible:", err);
   }
 
   return { ok: true, data: true };
 }
 
 /**
- * Establece la nueva contraseña a partir del token del email.
+ * Fija la nueva contraseña. La identidad se toma de la SESIÓN de Supabase
+ * establecida por el magic link (getUser). Escribe en portal_accounts y deja
+ * al usuario logueado en el portal (cookie propia).
  *
- * - Verifica firma + caducidad del token.
- * - Cuenta existente: exige token_version coincidente (un solo uso) y activa.
- * - Sin fila pero email del allowlist: crea la cuenta admin con la contraseña.
+ * - Cuenta existente y activa → cambia la contraseña.
+ * - Sin fila pero email del allowlist → crea la cuenta admin.
+ * - @qamarero.com sin fila y no-allowlist → se rechaza (no self-registro; un
+ *   admin debe crear la cuenta viewer primero).
  */
-export async function resetPasswordWithToken(input: unknown): Promise<Result<true>> {
+export async function setPasswordFromSession(input: unknown): Promise<Result<true>> {
   const parsed = resetPasswordSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
-  const { token, password } = parsed.data;
+  const { password } = parsed.data;
 
-  const payload = await verifyResetToken(token);
-  if (!payload) {
-    return { ok: false, error: "El enlace no es válido o ha caducado. Solicita uno nuevo." };
+  // 1. Email verificado desde la sesión Supabase (prueba del magic link).
+  let email: string;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user?.email) {
+      return {
+        ok: false,
+        error: "Tu enlace de recuperación no es válido o ha caducado. Solicita uno nuevo.",
+      };
+    }
+    email = normalizeEmail(data.user.email);
+  } catch {
+    return { ok: false, error: "No se pudo validar la sesión. Inténtalo de nuevo." };
   }
-  const email = normalizeEmail(payload.email);
 
+  // 2. Escribe la contraseña en portal_accounts.
   let account: PortalAccount | null = null;
   try {
     account = await getAccountByEmail(email);
@@ -111,23 +121,45 @@ export async function resetPasswordWithToken(input: unknown): Promise<Result<tru
       if (!account.active) {
         return { ok: false, error: "Esta cuenta está desactivada. Contacta con un admin." };
       }
-      if (payload.tv !== account.tokenVersion) {
-        return { ok: false, error: "El enlace ya se ha usado o ha caducado. Solicita uno nuevo." };
-      }
       await setAccountPassword(account.id, password);
-      return { ok: true, data: true };
+    } else if (isAllowlistedAdmin(email)) {
+      await createAccount({ email, name: null, password, role: "admin" });
+    } else {
+      return {
+        ok: false,
+        error: "No tienes una cuenta en el portal. Pide a un admin que te cree una.",
+      };
     }
-
-    // Sin fila: solo los emails del allowlist pueden crear cuenta vía reset.
-    if (!isAllowlistedAdmin(email)) {
-      return { ok: false, error: "El enlace no es válido. Solicita uno nuevo." };
-    }
-    await createAccount({ email, name: null, password, role: "admin" });
-    return { ok: true, data: true };
   } catch (err) {
     return {
       ok: false,
       error: err instanceof Error ? err.message : "No se pudo actualizar la contraseña.",
     };
   }
+
+  // 3. Auto-login en el portal (cookie propia) con el estado fresco.
+  try {
+    const fresh = await getAccountByEmail(email);
+    const role: SessionRole = fresh?.role === "admin" ? "admin" : "viewer";
+    const tv = fresh?.tokenVersion ?? 0;
+    const token = await signSession({ email, role, tv });
+    if (token) {
+      const jar = await cookies();
+      jar.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_MAX_AGE,
+      });
+    }
+    // Cierra la sesión Supabase: ya cumplió su función (prueba de email).
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut();
+  } catch (err) {
+    // La contraseña ya está cambiada; si el auto-login falla, entra manualmente.
+    console.warn("[password-reset] auto-login tras reset falló:", err);
+  }
+
+  return { ok: true, data: true };
 }
