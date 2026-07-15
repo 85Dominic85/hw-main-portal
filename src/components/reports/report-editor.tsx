@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useTransition } from "react";
+import { useState, useCallback, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw, Eye, EyeOff, Lock } from "lucide-react";
@@ -40,13 +40,20 @@ interface ReportEditorProps {
   };
   initialContent: ReportContent;
   currentUserEmail: string;
+  /** Si true, dispara "Rellenar desde fuentes" al montar (informe recién creado). */
+  autofillOnMount?: boolean;
 }
 
 type SectionKey = keyof ReportContent;
 
 const DEFAULT_OPEN = new Set(["tesis", "executiveSummary"]);
 
-export function ReportEditor({ report, initialContent, currentUserEmail }: ReportEditorProps) {
+export function ReportEditor({
+  report,
+  initialContent,
+  currentUserEmail,
+  autofillOnMount = false,
+}: ReportEditorProps) {
   const canPerf = canSeePerformance(currentUserEmail);
   const router = useRouter();
   const [content, setContent] = useState<ReportContent>(initialContent);
@@ -158,6 +165,18 @@ export function ReportEditor({ report, initialContent, currentUserEmail }: Repor
       toast.success("Datos actualizados desde los conectores (MainOps · HW Tool · HSM).");
     });
   }
+
+  // Relleno automático tras crear el borrador: el insert nace con solo el
+  // esqueleto del catálogo (rápido), y aquí traemos los valores en vivo. Se
+  // dispara una sola vez y limpia el `?autofill=1` para que un reload no repita.
+  const autofillFiredRef = useRef(false);
+  useEffect(() => {
+    if (!autofillOnMount || autofillFiredRef.current) return;
+    autofillFiredRef.current = true;
+    handleRefresh();
+    window.history.replaceState(null, "", `/reports/${report.id}/edit`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isOpen = (key: string) => openSections.has(key);
 
@@ -280,11 +299,11 @@ export function ReportEditor({ report, initialContent, currentUserEmail }: Repor
         />
       </EditorSection>
 
-      {/* 🧭 Marco */}
-      <EditorSection title="🧭 Marco" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
+      {/* 🧭 Guillermo */}
+      <EditorSection title="🧭 Guillermo" sectionKey="guillermo" open={isOpen("guillermo")} onToggle={() => toggleSection("guillermo")}>
         <MemberEditor
-          value={content.marco}
-          onChange={(v) => updateSection("marco", v)}
+          value={content.guillermo}
+          onChange={(v) => updateSection("guillermo", v)}
         />
       </EditorSection>
 
@@ -296,11 +315,11 @@ export function ReportEditor({ report, initialContent, currentUserEmail }: Repor
         />
       </EditorSection>
 
-      {/* 🧭 Guillermo */}
-      <EditorSection title="🧭 Guillermo" sectionKey="guillermo" open={isOpen("guillermo")} onToggle={() => toggleSection("guillermo")}>
+      {/* 🧭 Marco */}
+      <EditorSection title="🧭 Marco" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
         <MemberEditor
-          value={content.guillermo}
-          onChange={(v) => updateSection("guillermo", v)}
+          value={content.marco}
+          onChange={(v) => updateSection("marco", v)}
         />
       </EditorSection>
 

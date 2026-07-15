@@ -82,9 +82,9 @@ export function contentToMarkdown(
   }
 
   // 4-6. Secciones por persona
-  pushMember(L, "Marco", content.marco);
-  pushMember(L, "Domingo", content.domingo);
   pushMember(L, "Guillermo", content.guillermo);
+  pushMember(L, "Domingo", content.domingo);
+  pushMember(L, "Marco", content.marco);
 
   // 7. Performance del equipo (solo jj)
   if (showPerformance) {

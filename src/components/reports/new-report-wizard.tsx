@@ -56,7 +56,9 @@ export function NewReportWizard({ defaultIsoYear, defaultIsoWeek }: NewReportWiz
         return;
       }
       toast.success("Borrador creado.");
-      router.push(`/reports/${result.data.id}/edit`);
+      // `?autofill=1` → el editor dispara "Rellenar desde fuentes" al montar,
+      // así los valores en vivo llegan en el editor y no en esta pantalla.
+      router.push(`/reports/${result.data.id}/edit?autofill=1`);
     });
   }
 

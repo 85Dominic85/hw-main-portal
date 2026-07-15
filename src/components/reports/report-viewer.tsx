@@ -134,9 +134,9 @@ export function ReportViewer({ report, content, snapshot, currentUserEmail }: Re
       )}
 
       {/* 🧭 Secciones por persona */}
-      <MemberView title="Marco" data={c.marco} />
-      <MemberView title="Domingo" data={c.domingo} />
       <MemberView title="Guillermo" data={c.guillermo} />
+      <MemberView title="Domingo" data={c.domingo} />
+      <MemberView title="Marco" data={c.marco} />
 
       {/* 👥 Performance — solo jj.gallego */}
       {canPerf

@@ -9,7 +9,7 @@ import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
 import type { Result } from "@/lib/connectors/types";
 import { parseReportContent } from "@/lib/reports/defaults";
-import { buildAutofilledContent } from "@/lib/reports/autofill";
+import { buildAutofilledContent, buildSkeletonContent } from "@/lib/reports/autofill";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
 import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
@@ -102,8 +102,6 @@ export async function createReport(
   let isoYear: number | null = null;
   let isoWeek: number | null = null;
   let title: string;
-  let rangeFrom: Date;
-  let rangeTo: Date;
 
   if (data.type === "weekly") {
     const range = isoWeekToRange(data.isoYear, data.isoWeek);
@@ -112,29 +110,25 @@ export async function createReport(
     periodKey = formatWeekKey(data.isoYear, data.isoWeek);
     periodFrom = range.from.toISOString().slice(0, 10);
     periodTo = range.to.toISOString().slice(0, 10);
-    rangeFrom = range.from;
-    rangeTo = range.to;
     title = `Informe ${periodKey}`;
   } else if (data.type === "monthly") {
     periodKey = `${data.year}-${String(data.month).padStart(2, "0")}`;
     periodFrom = `${data.year}-${String(data.month).padStart(2, "0")}-01`;
     const lastDay = new Date(Date.UTC(data.year, data.month, 0)).getUTCDate();
     periodTo = `${data.year}-${String(data.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-    rangeFrom = new Date(Date.UTC(data.year, data.month - 1, 1));
-    rangeTo = new Date(Date.UTC(data.year, data.month, 0, 23, 59, 59, 999));
     title = `Informe ${periodKey}`;
   } else {
     periodKey = `${data.from}--${data.to}`;
     periodFrom = data.from;
     periodTo = data.to;
-    rangeFrom = new Date(`${data.from}T00:00:00Z`);
-    rangeTo = new Date(`${data.to}T23:59:59Z`);
     title = `Informe ${data.from} → ${data.to}`;
   }
 
-  // Auto-relleno desde los conectores (best-effort) + esqueleto de KPIs del
-  // catálogo. Si los conectores fallan, los campos quedan vacíos y editables.
-  const content = await buildAutofilledContent({ from: rangeFrom, to: rangeTo });
+  // Esqueleto de KPIs del catálogo SIN llamar a los conectores → el insert es
+  // instantáneo. Los valores en vivo (MainOps/HW Tool/HSM) se rellenan justo
+  // después en el editor (autofill al abrir, ver `?autofill=1`), evitando que
+  // el usuario espere a 6 fetches externos en la pantalla "Creando…".
+  const content = await buildSkeletonContent();
   // Autollenado del autor (editable a mano después). En bypass, user.email es
   // el email del Basic Auth admin; user.fullName suele ser null.
   content.author = user.fullName ?? user.email ?? "";

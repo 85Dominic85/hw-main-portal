@@ -11,10 +11,12 @@ import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ autofill?: string }>;
 }
 
-export default async function ReportEditPage({ params }: PageProps) {
+export default async function ReportEditPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { autofill } = await searchParams;
   const user = await getCurrentUser();
 
   if (user?.role !== "admin") redirect(`/reports/${id}`);
@@ -60,6 +62,7 @@ export default async function ReportEditPage({ params }: PageProps) {
         }}
         initialContent={content}
         currentUserEmail={user.email}
+        autofillOnMount={autofill === "1"}
       />
     </div>
   );

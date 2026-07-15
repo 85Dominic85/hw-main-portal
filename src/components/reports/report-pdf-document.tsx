@@ -347,9 +347,9 @@ export function ReportPdfDocument({ report, content, showPerformance = false }: 
       {/* ── Página 2: Secciones por persona + Performance + I+D + Foco ── */}
       {hasPage2 && (
         <Page size="A4" style={styles.page}>
-          <MemberPdfSection title="Marco" data={content.marco} />
-          <MemberPdfSection title="Domingo" data={content.domingo} />
           <MemberPdfSection title="Guillermo" data={content.guillermo} />
+          <MemberPdfSection title="Domingo" data={content.domingo} />
+          <MemberPdfSection title="Marco" data={content.marco} />
 
           {/* ── Performance (solo jj) ── */}
           {hasPerf && (

@@ -19,6 +19,7 @@ interface Range {
   to: Date;
 }
 
+type KpiDef = typeof reportKpiDefinitions.$inferSelect;
 type ExecRow = ReportContent["executiveSummary"]["rows"][number];
 type SemStatus = ExecRow["status"];
 
@@ -97,6 +98,65 @@ function previousRange(range: Range): Range {
 }
 
 /**
+ * Construye las filas del resumen ejecutivo desde el catálogo.
+ * Si `cur`/`prv` son null (esqueleto), deja Actual/Semana anterior vacíos y el
+ * semáforo neutral; solo se rellenan las columnas del catálogo (label/target/
+ * owner/unit). Con fuentes presentes, los KPIs AUTO calculan valor y semáforo.
+ */
+function buildExecRows(
+  defs: KpiDef[],
+  cur: PeriodSources | null,
+  prv: PeriodSources | null,
+): ExecRow[] {
+  const orderIndex = (k: string) => {
+    const i = EXEC_ORDER.indexOf(k);
+    return i === -1 ? EXEC_ORDER.length : i;
+  };
+
+  return defs
+    .slice()
+    .sort((a, b) => orderIndex(a.kpiKey) - orderIndex(b.kpiKey) || a.label.localeCompare(b.label))
+    .map((d) => {
+      const unit = d.unit ?? "";
+      const targetNum = d.target != null ? Number(d.target) : null;
+      const extractor = AUTO_EXTRACTORS[d.kpiKey];
+      const isAuto = Boolean(extractor);
+      const actualNum = extractor && cur ? extractor(cur) : null;
+      const prevNum = extractor && prv ? extractor(prv) : null;
+      return {
+        id: globalThis.crypto.randomUUID(),
+        kpiKey: d.kpiKey,
+        label: d.label,
+        unit,
+        owner: d.owner ?? "",
+        target: targetNum != null ? formatVal(targetNum, unit) : "",
+        actual: actualNum != null ? formatVal(actualNum, unit) : "",
+        delta: prevNum != null ? formatVal(prevNum, unit) : "",
+        source: isAuto ? ("auto" as const) : ("manual" as const),
+        status: isAuto && cur ? computeStatus(actualNum, targetNum, d.direction) : "neutral",
+        comment: "",
+      };
+    });
+}
+
+/**
+ * Construye un `ReportContent` con solo el esqueleto de KPIs generales desde el
+ * catálogo (label/target/owner), SIN tocar los conectores externos. Es la vía
+ * rápida usada al crear un borrador: el insert no espera a MainOps/HW Tool/HSM.
+ * Los valores en vivo se rellenan después con `refreshReportSources` (botón
+ * "Rellenar desde fuentes" o autofill al abrir el editor).
+ */
+export async function buildSkeletonContent(): Promise<ReportContent> {
+  const content = buildEmptyContent();
+  const defs = await db
+    .select()
+    .from(reportKpiDefinitions)
+    .where(eq(reportKpiDefinitions.active, true));
+  content.executiveSummary.rows = buildExecRows(defs, null, null);
+  return content;
+}
+
+/**
  * Construye un `ReportContent` pre-rellenado para el periodo dado:
  *  - Filas del resumen ejecutivo (KPIs generales) desde el catálogo
  *    `report_kpi_definitions`, con Actual (periodo actual), "Semana anterior"
@@ -135,38 +195,8 @@ export async function buildAutofilledContent(range: Range): Promise<ReportConten
     hsm: hsmPrev.ok ? hsmPrev.data.current : null,
   };
 
-  // ── Resumen ejecutivo (KPIs generales) desde el catálogo ────────────────────
-  const orderIndex = (k: string) => {
-    const i = EXEC_ORDER.indexOf(k);
-    return i === -1 ? EXEC_ORDER.length : i;
-  };
-
-  const rows: ExecRow[] = defs
-    .slice()
-    .sort((a, b) => orderIndex(a.kpiKey) - orderIndex(b.kpiKey) || a.label.localeCompare(b.label))
-    .map((d) => {
-      const unit = d.unit ?? "";
-      const targetNum = d.target != null ? Number(d.target) : null;
-      const extractor = AUTO_EXTRACTORS[d.kpiKey];
-      const isAuto = Boolean(extractor);
-      const actualNum = extractor ? extractor(cur) : null;
-      const prevNum = extractor ? extractor(prv) : null;
-      return {
-        id: globalThis.crypto.randomUUID(),
-        kpiKey: d.kpiKey,
-        label: d.label,
-        unit,
-        owner: d.owner ?? "",
-        target: targetNum != null ? formatVal(targetNum, unit) : "",
-        actual: actualNum != null ? formatVal(actualNum, unit) : "",
-        delta: prevNum != null ? formatVal(prevNum, unit) : "",
-        source: isAuto ? "auto" : "manual",
-        status: isAuto ? computeStatus(actualNum, targetNum, d.direction) : "neutral",
-        comment: "",
-      };
-    });
-
-  content.executiveSummary.rows = rows;
+  // ── Resumen ejecutivo (KPIs generales) desde el catálogo + conectores ───────
+  content.executiveSummary.rows = buildExecRows(defs, cur, prv);
 
   return content;
 }
