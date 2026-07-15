@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
 
 import { TiptapContent } from "./tiptap-content";
-import type { ReportContent, KpiSnapshot, Highlights, Blockers } from "@/lib/reports/schema";
+import type {
+  ReportContent,
+  KpiSnapshot,
+  Highlights,
+  Blockers,
+  MemberSection,
+} from "@/lib/reports/schema";
+import { canSeePerformance } from "@/lib/reports/report-access";
 import { cn } from "@/lib/utils/cn";
 
 // Colores del semáforo (fijos, fieles al informe Notion; válidos en claro y oscuro).
@@ -32,12 +39,11 @@ interface ReportViewerProps {
   };
   content: ReportContent;
   snapshot: KpiSnapshot | null;
+  /** Email del usuario que ve el informe (gate de la sección Performance). */
+  currentUserEmail?: string;
 }
 
-export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
-  const hasDoc = (doc: { content?: unknown[] }) =>
-    Array.isArray(doc.content) && doc.content.length > 0;
-
+export function ReportViewer({ report, content, snapshot, currentUserEmail }: ReportViewerProps) {
   const fechaEntrega = report.publishedAt
     ? new Date(report.publishedAt).toLocaleDateString("es-ES", {
         day: "2-digit",
@@ -47,6 +53,8 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
     : "Borrador";
 
   const c = content;
+  const canPerf = canSeePerformance(currentUserEmail);
+  const hasPerf = c.performance.members.some((m) => hasDocContent(m.narrative));
 
   return (
     <article className="mx-auto max-w-3xl rounded-xl border border-border bg-card px-6 py-8 text-[15px] leading-relaxed text-foreground sm:px-12 sm:py-10">
@@ -78,15 +86,15 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
       </div>
 
       {/* 🎯 Tesis */}
-      {hasDoc(c.tesis.doc) && (
+      {hasDocContent(c.tesis.doc) && (
         <Callout emoji="🎯" title="Tesis de la semana">
           <TiptapContent doc={c.tesis.doc} className="prose prose-sm max-w-none dark:prose-invert" />
         </Callout>
       )}
 
-      {/* 🚦 Resumen ejecutivo */}
+      {/* 🚦 KPIs generales */}
       {c.executiveSummary.rows.length > 0 && (
-        <Section emoji="🚦" title="Resumen ejecutivo" subtitle="Lectura rápida para Pablo. El detalle de cada semáforo no verde está más abajo.">
+        <Section emoji="🚦" title="KPIs generales">
           <NotionTable head={["KPI", "Target", "Actual", "Semana anterior", "Owner", "Semáforo", "Comentario"]} center={[5]}>
             {c.executiveSummary.rows.map((row) => (
               <tr key={row.id}>
@@ -125,241 +133,52 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
         </Section>
       )}
 
-      {/* ✅ Highlights */}
-      {hasDoc(c.highlights.doc) && (
-        <Section emoji="✅" title="Highlights de la semana">
-          <TiptapContent doc={c.highlights.doc} className="prose prose-sm max-w-none dark:prose-invert" />
-        </Section>
-      )}
+      {/* 🧭 Secciones por persona */}
+      <MemberView title="Marco" data={c.marco} />
+      <MemberView title="Domingo" data={c.domingo} />
+      <MemberView title="Guillermo" data={c.guillermo} />
 
-      {/* 🚧 Bloqueos */}
-      {c.blockers.rows.length > 0 && (
-        <Section emoji="🚧" title="Bloqueos abiertos">
-          <NotionTable head={["Bloqueo", "Owner", "Impacto", "Estado"]}>
-            {c.blockers.rows.map((row) => (
-              <tr key={row.id}>
-                <Td>{row.description || "—"}</Td>
-                <Td className="font-medium">{row.owner || "—"}</Td>
-                <Td className="text-muted-foreground">{row.impact || "—"}</Td>
-                <Td><StatusChip status={row.status} /></Td>
-              </tr>
-            ))}
-          </NotionTable>
-        </Section>
-      )}
-
-      {/* 🔴 Decisiones */}
-      {c.decisions.rows.length > 0 && (
-        <Section emoji="🔴" title="Decisiones pendientes">
-          <NotionTable head={["Decisión", "Owner", "Estado", "Fecha", "Resolución"]}>
-            {c.decisions.rows.map((row) => (
-              <tr key={row.id}>
-                <Td>{row.description || "—"}</Td>
-                <Td className="font-medium">{row.owner || "—"}</Td>
-                <Td><StatusChip status={row.status} /></Td>
-                <Td className="whitespace-nowrap">{row.deadline || "—"}</Td>
-                <Td className="text-muted-foreground">{row.resolution || "—"}</Td>
-              </tr>
-            ))}
-          </NotionTable>
-        </Section>
-      )}
-
-      {/* 🛠 Áreas operativas */}
-      {(hasOperativas(c)) && (
-        <Section emoji="🛠" title="Áreas operativas">
-          {/* 1. Configuraciones */}
-          {(c.configuraciones.totalConfigs != null ||
-            c.configuraciones.techBreakdown.length > 0 ||
-            c.configuraciones.problems ||
-            deptHasExtras(c.configuraciones)) && (
-            <SubSection title="1. Activaciones (Guille)">
-              <MetricTable
-                rows={[
-                  ["Total registros", c.configuraciones.totalConfigs],
-                  ["% éxito 1ª config", pct(c.configuraciones.successRate1st)],
-                  ["% requieren 2ª config", pct(c.configuraciones.successRate2nd)],
-                ]}
-              />
-              {c.configuraciones.techBreakdown.length > 0 && (
-                <NotionTable head={["Técnico", "Configs", "Min. prom.", "% éxito"]} center={[1, 2, 3]}>
-                  {c.configuraciones.techBreakdown.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-medium">{row.technician || "—"}</Td>
-                      <Td center>{row.count ?? "—"}</Td>
-                      <Td center>{row.avgMinutes ?? "—"}</Td>
-                      <Td center>{pct(row.successRate) ?? "—"}</Td>
-                    </tr>
-                  ))}
-                </NotionTable>
-              )}
-              {c.configuraciones.problems && (
-                <p className="mt-3 text-sm text-muted-foreground">{c.configuraciones.problems}</p>
-              )}
-              <DeptExtras highlights={c.configuraciones.highlights} blockers={c.configuraciones.blockers} />
-            </SubSection>
+      {/* 👥 Performance — solo jj.gallego */}
+      {canPerf
+        ? hasPerf && (
+            <Section emoji="👥" title="Performance del equipo">
+              <div className="space-y-4">
+                {c.performance.members.map((member) => (
+                  <div key={member.member}>
+                    <p className="mb-2 text-base font-bold">{member.displayName}</p>
+                    {hasDocContent(member.narrative) ? (
+                      <div className="rounded-md bg-muted/40 px-3 py-2">
+                        <TiptapContent doc={member.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">—</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )
+        : (
+            <Section emoji="👥" title="Performance del equipo">
+              <p
+                className="flex cursor-not-allowed items-center gap-2 text-sm text-muted-foreground"
+                title="Solo visible para JJ (jj.gallego@qamarero.com)"
+              >
+                🔒 Sección restringida — solo visible para JJ.
+              </p>
+            </Section>
           )}
 
-          {/* 2. Envíos */}
-          {(c.envios.totalOps != null ||
-            c.envios.orders.length > 0 ||
-            c.envios.coveragePnp ||
-            deptHasExtras(c.envios)) && (
-            <SubSection title="2. Envíos y Logística (Domi)">
-              <MetricTable
-                rows={[
-                  ["Operaciones registradas", c.envios.totalOps],
-                  ["Completados", c.envios.completed],
-                  ["Enviados", c.envios.shipped],
-                  ["Pendientes / Nuevos", c.envios.pending],
-                  ["Plazo medio entrega", c.envios.avgDeliveryDays != null ? `${c.envios.avgDeliveryDays} días` : null],
-                  ["Cumplimiento SLA 7d", pct(c.envios.sla7dPct)],
-                  ["Cobertura PnP en envíos", c.envios.coveragePnp || null],
-                  ["Oficina vs proveedor", c.envios.officeVsProvider || null],
-                ]}
-              />
-              {c.envios.orders.length > 0 && (
-                <NotionTable head={["Local", "Estado", "Notas"]}>
-                  {c.envios.orders.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-medium">{row.venue || "—"}</Td>
-                      <Td><StatusChip status={row.status} /></Td>
-                      <Td className="text-muted-foreground">{row.notes || "—"}</Td>
-                    </tr>
-                  ))}
-                </NotionTable>
-              )}
-              <DeptExtras highlights={c.envios.highlights} blockers={c.envios.blockers} />
-            </SubSection>
-          )}
-
-          {/* 3. Soporte HW */}
-          {(c.soporte.openIncidents != null ||
-            c.soporte.incidents.length > 0 ||
-            c.soporte.rmas.length > 0 ||
-            hasDoc(c.soporte.narrative) ||
-            deptHasExtras(c.soporte)) && (
-            <SubSection title="3. Soporte HW (Domi)">
-              <MetricTable
-                rows={[
-                  ["Incidencias abiertas", c.soporte.openIncidents],
-                  ["Incidencias >7d", c.soporte.incidentsOver7d],
-                  ["RMAs activos", c.soporte.activeRmas],
-                  ["SLA cumplimiento", pct(c.soporte.sla7dPct)],
-                  ["% críticas en SLA", pct(c.soporte.criticalInSlaPct)],
-                  ["Tasa reapertura", pct(c.soporte.reopenRatePct)],
-                  ["Resolución media", c.soporte.avgResolutionHours != null ? `${c.soporte.avgResolutionHours}h` : null],
-                  ["Turnaround RMA", c.soporte.avgRmaTurnaroundDays != null ? `${c.soporte.avgRmaTurnaroundDays} días` : null],
-                  ["RMA respuesta <2h", pct(c.soporte.rmaResponseUnder2hPct)],
-                ]}
-              />
-              {c.soporte.incidents.length > 0 && (
-                <NotionTable head={["Cliente / Venue", "Prioridad", "Estado", "Días", "Comentario"]} center={[3]}>
-                  {c.soporte.incidents.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-medium">{row.customer || "—"}</Td>
-                      <Td className="whitespace-nowrap">{PRIORITY_LABEL[row.priority] ?? row.priority}</Td>
-                      <Td>{row.status || "—"}</Td>
-                      <Td center>{row.daysOpen ?? "—"}</Td>
-                      <Td className="text-muted-foreground">{row.comment || "—"}</Td>
-                    </tr>
-                  ))}
-                </NotionTable>
-              )}
-              {c.soporte.rmas.length > 0 && (
-                <NotionTable head={["Proveedor", "Dispositivo", "Estado", "Días", "Notas"]} center={[3]}>
-                  {c.soporte.rmas.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-medium">{row.provider || "—"}</Td>
-                      <Td>{row.device || "—"}</Td>
-                      <Td>{row.status || "—"}</Td>
-                      <Td center>{row.daysOpen ?? "—"}</Td>
-                      <Td className="text-muted-foreground">{row.notes || "—"}</Td>
-                    </tr>
-                  ))}
-                </NotionTable>
-              )}
-              {hasDoc(c.soporte.narrative) && (
-                <div className="mt-3">
-                  <TiptapContent doc={c.soporte.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
-                </div>
-              )}
-              <DeptExtras highlights={c.soporte.highlights} blockers={c.soporte.blockers} />
-            </SubSection>
-          )}
-
-          {/* 4. Cajones inteligentes */}
-          {(c.cajones.rows.length > 0 || deptHasExtras(c.cajones)) && (
-            <SubSection title="4. Cajones inteligentes (JJ)">
-              {c.cajones.rows.length > 0 && (
-                <NotionTable head={["Cliente", "Estado", "Proveedor", "MRR", "Notas"]} center={[3]}>
-                  {c.cajones.rows.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-medium">{row.client || "—"}</Td>
-                      <Td>{row.status || "—"}</Td>
-                      <Td>{row.provider || "—"}</Td>
-                      <Td center>{eur(row.mrr) ?? "—"}</Td>
-                      <Td className="text-muted-foreground">{row.notes || "—"}</Td>
-                    </tr>
-                  ))}
-                </NotionTable>
-              )}
-              <DeptExtras highlights={c.cajones.highlights} blockers={c.cajones.blockers} />
-            </SubSection>
-          )}
+      {/* 🔬 I+D status WIP */}
+      {hasDocContent(c.idStatus.doc) && (
+        <Section emoji="🔬" title="I+D status WIP">
+          <TiptapContent doc={c.idStatus.doc} className="prose prose-sm max-w-none dark:prose-invert" />
         </Section>
       )}
 
-      {/* 🧭 Marco Informe */}
-      {(hasDoc(c.marco.highlights.doc) ||
-        c.marco.blockers.rows.length > 0 ||
-        hasDoc(c.marco.narrative)) && (
-        <Section emoji="🧭" title="Marco Informe">
-          {hasDoc(c.marco.narrative) && (
-            <TiptapContent doc={c.marco.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
-          )}
-          <DeptExtras highlights={c.marco.highlights} blockers={c.marco.blockers} />
-        </Section>
-      )}
-
-      {/* 👥 Performance */}
-      {c.performance.members.some((m) => m.kpis.length > 0 || hasDoc(m.narrative)) && (
-        <Section emoji="👥" title="Performance del equipo">
-          <div className="space-y-6">
-            {c.performance.members.map((member) => {
-              if (!member.kpis.length && !hasDoc(member.narrative)) return null;
-              return (
-                <div key={member.member}>
-                  <p className="mb-2 text-base font-bold">{member.displayName}</p>
-                  {member.kpis.length > 0 && (
-                    <NotionTable head={["KPI", "Target", "Actual", "Semáforo"]} center={[3]}>
-                      {member.kpis.map((kpi) => (
-                        <tr key={kpi.id}>
-                          <Td>{kpi.label || "—"}</Td>
-                          <Td>{kpi.target || "—"}</Td>
-                          <Td>{kpi.value || "—"}</Td>
-                          <Td center>
-                            <Dot status={kpi.status} />
-                          </Td>
-                        </tr>
-                      ))}
-                    </NotionTable>
-                  )}
-                  {hasDoc(member.narrative) && (
-                    <div className="mt-2 rounded-md bg-muted/40 px-3 py-2">
-                      <TiptapContent doc={member.narrative} className="prose prose-sm max-w-none dark:prose-invert" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-      )}
-
-      {/* 📌 Foco próxima semana */}
+      {/* 📌 Foco del mes / semana */}
       {c.nextFocus.rows.length > 0 && (
-        <Section emoji="📌" title="Foco próxima semana">
+        <Section emoji="📌" title="Foco del mes / semana">
           <NotionTable head={["Prioridad", "Responsable", "Objetivo", "Output esperado"]}>
             {c.nextFocus.rows.map((row) => (
               <tr key={row.id}>
@@ -404,21 +223,6 @@ export function ReportViewer({ report, content, snapshot }: ReportViewerProps) {
 
 // ── Helpers de formato ──────────────────────────────────────────────────────
 
-function pct(v: number | null | undefined): string | null {
-  return v == null ? null : `${v}%`;
-}
-
-function eur(v: number | null | undefined): string | null {
-  return v == null ? null : v.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
-}
-
-const PRIORITY_LABEL: Record<string, string> = {
-  critica: "🔴 Crítica",
-  alta: "🟠 Alta",
-  media: "🟡 Media",
-  baja: "🟢 Baja",
-};
-
 function hasDocContent(doc: { content?: unknown[] }): boolean {
   return Array.isArray(doc.content) && doc.content.length > 0;
 }
@@ -427,23 +231,29 @@ function deptHasExtras(d: { highlights: Highlights; blockers: Blockers }): boole
   return hasDocContent(d.highlights.doc) || d.blockers.rows.length > 0;
 }
 
-function hasOperativas(c: ReportContent): boolean {
+// ── Sección por persona ──────────────────────────────────────────────────────
+
+function MemberView({ title, data }: { title: string; data: MemberSection }) {
+  const hasKpis = data.kpisPersonales.length > 0;
+  if (!hasKpis && !deptHasExtras(data)) return null;
   return (
-    c.configuraciones.totalConfigs != null ||
-    c.configuraciones.techBreakdown.length > 0 ||
-    !!c.configuraciones.problems ||
-    deptHasExtras(c.configuraciones) ||
-    c.envios.totalOps != null ||
-    c.envios.orders.length > 0 ||
-    !!c.envios.coveragePnp ||
-    deptHasExtras(c.envios) ||
-    c.soporte.openIncidents != null ||
-    c.soporte.incidents.length > 0 ||
-    c.soporte.rmas.length > 0 ||
-    hasDocContent(c.soporte.narrative) ||
-    deptHasExtras(c.soporte) ||
-    c.cajones.rows.length > 0 ||
-    deptHasExtras(c.cajones)
+    <Section emoji="🧭" title={title}>
+      {hasKpis && (
+        <NotionTable head={["KPI", "Valor", "Target", "Semáforo"]} center={[3]}>
+          {data.kpisPersonales.map((row) => (
+            <tr key={row.id}>
+              <Td className="font-medium">{row.label || "—"}</Td>
+              <Td>{row.value || "—"}</Td>
+              <Td>{row.target || "—"}</Td>
+              <Td center>
+                <Dot status={row.status} />
+              </Td>
+            </tr>
+          ))}
+        </NotionTable>
+      )}
+      <DeptExtras highlights={data.highlights} blockers={data.blockers} />
+    </Section>
   );
 }
 
@@ -539,15 +349,6 @@ function Section({
   );
 }
 
-function SubSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="mt-5 first:mt-0">
-      <h3 className="mb-2 text-lg font-semibold">{title}</h3>
-      {children}
-    </div>
-  );
-}
-
 function Callout({ emoji, title, children }: { emoji: string; title: string; children: ReactNode }) {
   return (
     <div className="mt-3 flex gap-3 rounded-md bg-muted/50 p-4">
@@ -615,31 +416,6 @@ function Td({
     >
       {children}
     </td>
-  );
-}
-
-function MetricTable({ rows }: { rows: Array<[string, ReactNode]> }) {
-  const visible = rows.filter(([, v]) => v != null && v !== "");
-  if (!visible.length) return null;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full max-w-xl border-collapse text-[13.5px]">
-        <thead>
-          <tr>
-            <th className="w-1/2 border border-border bg-muted/50 px-3 py-2 text-left font-semibold text-muted-foreground">Métrica</th>
-            <th className="border border-border bg-muted/50 px-3 py-2 text-left font-semibold text-muted-foreground">Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map(([label, value]) => (
-            <tr key={label}>
-              <td className="border border-border px-3 py-2 text-muted-foreground">{label}</td>
-              <td className="border border-border px-3 py-2 tabular-nums">{value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   TiptapDoc,
   Highlights,
   Blockers,
+  MemberSection,
 } from "./schema";
 
 type PmNode = {
@@ -23,7 +24,9 @@ export function contentToMarkdown(
   },
   content: ReportContent,
   _snapshot: KpiSnapshot | null,
+  options: { showPerformance?: boolean } = {},
 ): string {
+  const showPerformance = options.showPerformance ?? false;
   const L: string[] = [];
 
   const statusEmoji =
@@ -49,9 +52,9 @@ export function contentToMarkdown(
   const tesis = tipTap(content.tesis.doc);
   if (tesis) L.push("## 🎯 Tesis de la semana", "", tesis, "");
 
-  // 2. Resumen ejecutivo
+  // 2. KPIs generales
   if (content.executiveSummary.rows.length > 0) {
-    L.push("## 🚦 Resumen ejecutivo", "");
+    L.push("## 🚦 KPIs generales", "");
     L.push("| KPI | Target | Actual | Semana anterior | Owner | Estado | Comentario |");
     L.push("| --- | --- | --- | --- | --- | :---: | --- |");
     for (const r of content.executiveSummary.rows) {
@@ -78,217 +81,29 @@ export function contentToMarkdown(
     L.push("");
   }
 
-  // 4. Highlights
-  const highlights = tipTap(content.highlights.doc);
-  if (highlights) L.push("## ✅ Highlights", "", highlights, "");
+  // 4-6. Secciones por persona
+  pushMember(L, "Marco", content.marco);
+  pushMember(L, "Domingo", content.domingo);
+  pushMember(L, "Guillermo", content.guillermo);
 
-  // 5. Bloqueos
-  if (content.blockers.rows.length > 0) {
-    L.push("## 🚧 Bloqueos abiertos", "");
-    L.push("| Descripción | Owner | Impacto | Estado |");
-    L.push("| --- | --- | --- | --- |");
-    for (const r of content.blockers.rows) {
-      const s =
-        r.status === "bloqueado" ? "🔴 Bloqueado" : r.status === "en_progreso" ? "🟡 En progreso" : "🟢 Abierto";
-      L.push(`| ${r.description || "—"} | ${r.owner || "—"} | ${r.impact || "—"} | ${s} |`);
-    }
-    L.push("");
-  }
-
-  // 6. Decisiones
-  if (content.decisions.rows.length > 0) {
-    const open = content.decisions.rows.filter((r) => r.status !== "cerrada");
-    const closed = content.decisions.rows.filter((r) => r.status === "cerrada");
-    L.push("## 🔴 Decisiones pendientes / cerradas", "");
-    if (open.length > 0) {
-      L.push("### Pendientes", "");
-      L.push("| Estado | Descripción | Owner | Deadline | Resolución |");
-      L.push("| --- | --- | --- | --- | --- |");
-      for (const r of open) {
-        const s = r.status === "escalada" ? "⬆️ Escalada" : "⏳ Pendiente";
-        L.push(
-          `| ${s} | ${r.description || "—"} | ${r.owner || "—"} | ${r.deadline || "—"} | ${r.resolution || "—"} |`,
-        );
+  // 7. Performance del equipo (solo jj)
+  if (showPerformance) {
+    const perfMembers = content.performance.members.filter((m) => tipTap(m.narrative));
+    if (perfMembers.length > 0) {
+      L.push("## 👥 Performance del equipo", "");
+      for (const m of perfMembers) {
+        L.push(`### ${m.displayName}`, "", tipTap(m.narrative), "");
       }
-      L.push("");
-    }
-    if (closed.length > 0) {
-      L.push("### Cerradas", "");
-      L.push("| Descripción | Owner | Resolución |");
-      L.push("| --- | --- | --- |");
-      for (const r of closed) {
-        L.push(`| ${r.description || "—"} | ${r.owner || "—"} | ${r.resolution || "—"} |`);
-      }
-      L.push("");
     }
   }
 
-  // 7. Activaciones
-  const cfg = content.configuraciones;
-  if (cfg.totalConfigs !== null || cfg.techBreakdown.length > 0 || cfg.problems || hasDeptExtras(cfg)) {
-    L.push("## 🛠 Activaciones (Guille)", "");
-    if (cfg.totalConfigs !== null) L.push(`- **Total configuraciones:** ${cfg.totalConfigs}`);
-    if (cfg.successRate1st !== null) L.push(`- **Éxito 1ª config:** ${cfg.successRate1st}%`);
-    if (cfg.successRate2nd !== null) L.push(`- **Éxito 2ª config:** ${cfg.successRate2nd}%`);
-    if (cfg.totalConfigs !== null) L.push("");
-    if (cfg.techBreakdown.length > 0) {
-      L.push("**Breakdown por técnico**", "");
-      L.push("| Técnico | Cantidad | Avg (min) | Éxito (%) |");
-      L.push("| --- | ---: | ---: | ---: |");
-      for (const r of cfg.techBreakdown) {
-        L.push(`| ${r.technician || "—"} | ${r.count ?? "—"} | ${r.avgMinutes ?? "—"} | ${r.successRate ?? "—"} |`);
-      }
-      L.push("");
-    }
-    if (cfg.problems) L.push("**Problemas / Incidencias**", "", cfg.problems, "");
-    pushDeptExtras(L, cfg.highlights, cfg.blockers);
-  }
+  // 8. I+D status WIP
+  const idStatus = tipTap(content.idStatus.doc);
+  if (idStatus) L.push("## 🔬 I+D status WIP", "", idStatus, "");
 
-  // 8. Envíos
-  const env = content.envios;
-  if (
-    env.totalOps !== null ||
-    env.orders.length > 0 ||
-    env.coveragePnp ||
-    env.officeVsProvider ||
-    hasDeptExtras(env)
-  ) {
-    L.push("## 🛠 Envíos y Logística (Domi)", "");
-    const items = [
-      env.totalOps !== null ? `**Total ops:** ${env.totalOps}` : null,
-      env.completed !== null ? `**Completadas:** ${env.completed}` : null,
-      env.shipped !== null ? `**Enviadas:** ${env.shipped}` : null,
-      env.pending !== null ? `**Pendientes:** ${env.pending}` : null,
-      env.avgDeliveryDays !== null ? `**Plazo medio:** ${env.avgDeliveryDays} días` : null,
-      env.sla7dPct !== null ? `**SLA 7d:** ${env.sla7dPct}%` : null,
-      env.coveragePnp ? `**Cobertura PnP:** ${env.coveragePnp}` : null,
-      env.officeVsProvider ? `**Oficina vs Proveedor:** ${env.officeVsProvider}` : null,
-    ].filter(Boolean);
-    if (items.length > 0) L.push(...items.map((i) => `- ${i}`), "");
-    if (env.orders.length > 0) {
-      L.push("| Venue | Estado | Notas |");
-      L.push("| --- | --- | --- |");
-      for (const r of env.orders) {
-        const s =
-          r.status === "completado"
-            ? "✅ Completado"
-            : r.status === "enviado"
-              ? "📦 Enviado"
-              : r.status === "bloqueado"
-                ? "🔴 Bloqueado"
-                : "⏳ Pendiente";
-        L.push(`| ${r.venue || "—"} | ${s} | ${r.notes || "—"} |`);
-      }
-      L.push("");
-    }
-    pushDeptExtras(L, env.highlights, env.blockers);
-  }
-
-  // 9. Soporte
-  const sop = content.soporte;
-  const sopNarrative = tipTap(sop.narrative);
-  if (
-    sop.openIncidents !== null ||
-    sop.incidents.length > 0 ||
-    sop.rmas.length > 0 ||
-    sopNarrative ||
-    hasDeptExtras(sop)
-  ) {
-    L.push("## 🛠 Soporte HW (Domi)", "");
-    const sopItems = [
-      sop.openIncidents !== null ? `**Incidencias abiertas:** ${sop.openIncidents}` : null,
-      sop.incidentsOver7d !== null ? `**Incidencias >7d:** ${sop.incidentsOver7d}` : null,
-      sop.activeRmas !== null ? `**RMAs activos:** ${sop.activeRmas}` : null,
-      sop.sla7dPct !== null ? `**SLA cumplimiento:** ${sop.sla7dPct}%` : null,
-      sop.criticalInSlaPct !== null ? `**% críticas en SLA:** ${sop.criticalInSlaPct}%` : null,
-      sop.reopenRatePct !== null ? `**Tasa reapertura:** ${sop.reopenRatePct}%` : null,
-      sop.avgResolutionHours !== null ? `**Resolución media:** ${sop.avgResolutionHours}h` : null,
-      sop.avgRmaTurnaroundDays !== null ? `**Turnaround RMA:** ${sop.avgRmaTurnaroundDays} días` : null,
-      sop.rmaResponseUnder2hPct !== null ? `**RMA resp. <2h:** ${sop.rmaResponseUnder2hPct}%` : null,
-    ].filter(Boolean);
-    if (sopItems.length > 0) L.push(...sopItems.map((i) => `- ${i}`), "");
-    if (sopNarrative) L.push(sopNarrative, "");
-    if (sop.incidents.length > 0) {
-      L.push("**Incidencias destacadas**", "");
-      L.push("| Cliente / Venue | Prioridad | Estado | Días | Comentario |");
-      L.push("| --- | --- | --- | ---: | --- |");
-      for (const r of sop.incidents) {
-        L.push(
-          `| ${r.customer || "—"} | ${r.priority} | ${r.status || "—"} | ${r.daysOpen ?? "—"} | ${r.comment || "—"} |`,
-        );
-      }
-      L.push("");
-    }
-    if (sop.rmas.length > 0) {
-      L.push("**RMAs activos**", "");
-      L.push("| Proveedor | Dispositivo | Estado | Días | Notas |");
-      L.push("| --- | --- | --- | ---: | --- |");
-      for (const r of sop.rmas) {
-        L.push(
-          `| ${r.provider || "—"} | ${r.device || "—"} | ${r.status || "—"} | ${r.daysOpen ?? "—"} | ${r.notes || "—"} |`,
-        );
-      }
-      L.push("");
-    }
-    pushDeptExtras(L, sop.highlights, sop.blockers);
-  }
-
-  // 10. Cajones inteligentes
-  const caj = content.cajones;
-  if (caj.rows.length > 0 || hasDeptExtras(caj)) {
-    L.push("## 🗄 Cajones inteligentes (JJ)", "");
-    if (caj.rows.length > 0) {
-      L.push("| Cliente | Estado | Proveedor | Notas | MRR (€) |");
-      L.push("| --- | --- | --- | --- | ---: |");
-      for (const r of caj.rows) {
-        L.push(
-          `| ${r.client || "—"} | ${r.status || "—"} | ${r.provider || "—"} | ${r.notes || "—"} | ${r.mrr != null ? r.mrr.toLocaleString("es-ES") : "—"} |`,
-        );
-      }
-      const totalMrr = caj.rows.reduce((s, r) => s + (r.mrr ?? 0), 0);
-      if (totalMrr > 0) {
-        L.push(`|  |  |  | **Total MRR** | **${totalMrr.toLocaleString("es-ES")} €** |`);
-      }
-      L.push("");
-    }
-    pushDeptExtras(L, caj.highlights, caj.blockers);
-  }
-
-  // 11. Marco Informe
-  const marco = content.marco;
-  const marcoNarrative = tipTap(marco.narrative);
-  if (marcoNarrative || hasDeptExtras(marco)) {
-    L.push("## 🧭 Marco Informe", "");
-    if (marcoNarrative) L.push(marcoNarrative, "");
-    pushDeptExtras(L, marco.highlights, marco.blockers);
-  }
-
-  // 11. Performance del equipo
-  const perfMembers = content.performance.members.filter(
-    (m) => m.kpis.length > 0 || tipTap(m.narrative),
-  );
-  if (perfMembers.length > 0) {
-    L.push("## 👥 Performance del equipo", "");
-    for (const m of perfMembers) {
-      L.push(`### ${m.displayName}`, "");
-      if (m.kpis.length > 0) {
-        L.push("| KPI | Valor | Target | Estado |");
-        L.push("| --- | ---: | ---: | :---: |");
-        for (const k of m.kpis) {
-          const s =
-            k.status === "verde" ? "🟢" : k.status === "amarillo" ? "🟡" : k.status === "rojo" ? "🔴" : "—";
-          L.push(`| ${k.label || "—"} | ${k.value || "—"} | ${k.target || "—"} | ${s} |`);
-        }
-        L.push("");
-      }
-      const narrative = tipTap(m.narrative);
-      if (narrative) L.push(narrative, "");
-    }
-  }
-
-  // 12. Foco próxima semana
+  // 9. Foco del mes / semana
   if (content.nextFocus.rows.length > 0) {
-    L.push("## 📌 Foco próxima semana", "");
+    L.push("## 📌 Foco del mes / semana", "");
     L.push("| Prioridad | Responsable | Objetivo | Output |");
     L.push("| :---: | --- | --- | --- |");
     for (const r of content.nextFocus.rows) {
@@ -299,6 +114,25 @@ export function contentToMarkdown(
   }
 
   return L.join("\n");
+}
+
+// ── Secciones por persona ────────────────────────────────────────────────────
+
+function pushMember(L: string[], title: string, data: MemberSection): void {
+  const hasKpis = data.kpisPersonales.length > 0;
+  if (!hasKpis && !hasDeptExtras(data)) return;
+  L.push(`## 🧭 ${title}`, "");
+  if (hasKpis) {
+    L.push("| KPI | Valor | Target | Estado |");
+    L.push("| --- | --- | --- | :---: |");
+    for (const k of data.kpisPersonales) {
+      const s =
+        k.status === "verde" ? "🟢" : k.status === "amarillo" ? "🟡" : k.status === "rojo" ? "🔴" : "—";
+      L.push(`| ${k.label || "—"} | ${k.value || "—"} | ${k.target || "—"} | ${s} |`);
+    }
+    L.push("");
+  }
+  pushDeptExtras(L, data.highlights, data.blockers);
 }
 
 // ── Highlights + Bloqueos por departamento ──────────────────────────────────

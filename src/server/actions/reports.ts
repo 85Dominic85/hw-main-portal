@@ -219,26 +219,7 @@ export async function refreshReportSources(
     to: new Date(`${report.periodTo}T23:59:59Z`),
   });
 
-  // Métricas cuantitativas (sobrescribe).
-  current.configuraciones.totalConfigs = auto.configuraciones.totalConfigs;
-  current.configuraciones.successRate1st = auto.configuraciones.successRate1st;
-  current.configuraciones.successRate2nd = auto.configuraciones.successRate2nd;
-  current.envios.totalOps = auto.envios.totalOps;
-  current.envios.completed = auto.envios.completed;
-  current.envios.shipped = auto.envios.shipped;
-  current.envios.pending = auto.envios.pending;
-  current.envios.avgDeliveryDays = auto.envios.avgDeliveryDays;
-  current.envios.sla7dPct = auto.envios.sla7dPct;
-  current.soporte.openIncidents = auto.soporte.openIncidents;
-  current.soporte.incidentsOver7d = auto.soporte.incidentsOver7d;
-  current.soporte.activeRmas = auto.soporte.activeRmas;
-  current.soporte.sla7dPct = auto.soporte.sla7dPct;
-  current.soporte.criticalInSlaPct = auto.soporte.criticalInSlaPct;
-  current.soporte.reopenRatePct = auto.soporte.reopenRatePct;
-  current.soporte.avgResolutionHours = auto.soporte.avgResolutionHours;
-  current.soporte.avgRmaTurnaroundDays = auto.soporte.avgRmaTurnaroundDays;
-
-  // Resumen ejecutivo: refresca por kpiKey.
+  // KPIs generales: refresca por kpiKey.
   //  - KPI auto: sobrescribe métricas (actual/semana anterior/semáforo) + metadatos
   //    del catálogo (label/unit/target/owner); conserva el comentario.
   //  - KPI manual: conserva lo escrito a mano (actual/semana anterior/semáforo/
@@ -484,62 +465,29 @@ const cloneReportSchema = z.object({
 
 const EMPTY_DOC = { type: "doc" as const, content: [] as [] };
 
+const emptyMember = (m: ReportContent["marco"]): ReportContent["marco"] => ({
+  // Conserva la estructura de KPIs personales (labels/targets) reseteando valores;
+  // vacía highlights; conserva bloqueos (como el resto de secciones cualitativas).
+  kpisPersonales: m.kpisPersonales.map((k) => ({ ...k, value: "", status: "neutral" as const })),
+  highlights: { doc: EMPTY_DOC },
+  blockers: m.blockers,
+});
+
 function buildClonedContent(src: ReportContent): ReportContent {
   return {
     ...src,
     tesis: { doc: EMPTY_DOC },
-    highlights: { doc: EMPTY_DOC },
     executiveSummary: {
       rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: "", delta: "", comment: "" })),
     },
     amberRed: src.amberRed,
-    blockers: src.blockers,
-    decisions: { rows: src.decisions.rows.filter((r) => r.status !== "cerrada") },
-    configuraciones: {
-      ...src.configuraciones,
-      totalConfigs: null,
-      successRate1st: null,
-      successRate2nd: null,
-      problems: "",
-      highlights: { doc: EMPTY_DOC },
-    },
-    envios: {
-      ...src.envios,
-      totalOps: null,
-      completed: null,
-      shipped: null,
-      pending: null,
-      avgDeliveryDays: null,
-      sla7dPct: null,
-      orders: src.envios.orders.filter(
-        (r) => r.status === "pendiente" || r.status === "bloqueado",
-      ),
-      highlights: { doc: EMPTY_DOC },
-    },
-    soporte: {
-      ...src.soporte,
-      openIncidents: null,
-      incidentsOver7d: null,
-      activeRmas: null,
-      sla7dPct: null,
-      criticalInSlaPct: null,
-      reopenRatePct: null,
-      avgResolutionHours: null,
-      avgRmaTurnaroundDays: null,
-      rmaResponseUnder2hPct: null,
-      incidents: [],
-      narrative: EMPTY_DOC,
-      highlights: { doc: EMPTY_DOC },
-    },
-    cajones: { ...src.cajones, highlights: { doc: EMPTY_DOC } },
-    marco: { ...src.marco, highlights: { doc: EMPTY_DOC }, narrative: EMPTY_DOC },
+    marco: emptyMember(src.marco),
+    domingo: emptyMember(src.domingo),
+    guillermo: emptyMember(src.guillermo),
     performance: {
-      members: src.performance.members.map((m) => ({
-        ...m,
-        kpis: m.kpis.map((k) => ({ ...k, value: "", status: "neutral" as const })),
-        narrative: EMPTY_DOC,
-      })),
+      members: src.performance.members.map((m) => ({ ...m, narrative: EMPTY_DOC })),
     },
+    idStatus: { doc: EMPTY_DOC },
     nextFocus: src.nextFocus,
   };
 }

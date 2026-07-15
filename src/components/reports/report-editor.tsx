@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw, Eye, EyeOff, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,17 +11,13 @@ import { AutosaveIndicator, type AutosaveState } from "./autosave-indicator";
 import { TiptapEditor } from "./tiptap-editor";
 import { ExecutiveSummaryEditor } from "./sections/executive-summary-editor";
 import { AmberRedEditor } from "./sections/amber-red-editor";
-import { BlockersEditor } from "./sections/blockers-editor";
-import { DecisionsEditor } from "./sections/decisions-editor";
-import { ConfiguracionesEditor } from "./sections/configuraciones-editor";
-import { EnviosEditor } from "./sections/envios-editor";
-import { SoporteEditor } from "./sections/soporte-editor";
-import { CajonesEditor } from "./sections/cajones-editor";
-import { MarcoEditor } from "./sections/marco-editor";
+import { MemberEditor } from "./sections/member-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
+import { IdStatusEditor } from "./sections/id-status-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
 import { DeleteDraftButton } from "./delete-draft-button";
 import { ReportViewer } from "./report-viewer";
+import { canSeePerformance } from "@/lib/reports/report-access";
 import {
   saveSection,
   publishReport,
@@ -43,19 +39,15 @@ interface ReportEditorProps {
     periodTo: string | null;
   };
   initialContent: ReportContent;
-  currentUserId: string;
+  currentUserEmail: string;
 }
 
 type SectionKey = keyof ReportContent;
 
-const DEFAULT_OPEN = new Set([
-  "tesis",
-  "executiveSummary",
-  "highlights",
-  "nextFocus",
-]);
+const DEFAULT_OPEN = new Set(["tesis", "executiveSummary"]);
 
-export function ReportEditor({ report, initialContent }: ReportEditorProps) {
+export function ReportEditor({ report, initialContent, currentUserEmail }: ReportEditorProps) {
+  const canPerf = canSeePerformance(currentUserEmail);
   const router = useRouter();
   const [content, setContent] = useState<ReportContent>(initialContent);
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
@@ -272,8 +264,8 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         />
       </EditorSection>
 
-      {/* 🚦 Resumen ejecutivo */}
-      <EditorSection title="🚦 Resumen ejecutivo" sectionKey="executiveSummary" open={isOpen("executiveSummary")} onToggle={() => toggleSection("executiveSummary")}>
+      {/* 🚦 KPIs generales */}
+      <EditorSection title="🚦 KPIs generales" sectionKey="executiveSummary" open={isOpen("executiveSummary")} onToggle={() => toggleSection("executiveSummary")}>
         <ExecutiveSummaryEditor
           value={content.executiveSummary}
           onChange={(v) => updateSection("executiveSummary", v)}
@@ -288,81 +280,54 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
         />
       </EditorSection>
 
-      {/* ✅ Highlights */}
-      <EditorSection title="✅ Highlights" sectionKey="highlights" open={isOpen("highlights")} onToggle={() => toggleSection("highlights")}>
-        <TiptapEditor
-          value={content.highlights.doc}
-          onChange={(doc) => updateSection("highlights", { doc })}
-          placeholder="Logros y hitos de la semana…"
-        />
-      </EditorSection>
-
-      {/* 🚧 Bloqueos */}
-      <EditorSection title="🚧 Bloqueos" sectionKey="blockers" open={isOpen("blockers")} onToggle={() => toggleSection("blockers")}>
-        <BlockersEditor
-          value={content.blockers}
-          onChange={(v) => updateSection("blockers", v)}
-        />
-      </EditorSection>
-
-      {/* 🔴 Decisiones */}
-      <EditorSection title="🔴 Decisiones" sectionKey="decisions" open={isOpen("decisions")} onToggle={() => toggleSection("decisions")}>
-        <DecisionsEditor
-          value={content.decisions}
-          onChange={(v) => updateSection("decisions", v)}
-        />
-      </EditorSection>
-
-      {/* 🛠 Activaciones */}
-      <EditorSection title="🛠 Activaciones (Guille)" sectionKey="configuraciones" open={isOpen("configuraciones")} onToggle={() => toggleSection("configuraciones")}>
-        <ConfiguracionesEditor
-          value={content.configuraciones}
-          onChange={(v) => updateSection("configuraciones", v)}
-        />
-      </EditorSection>
-
-      {/* 🛠 Envíos */}
-      <EditorSection title="🛠 Envíos y Logística (Domi)" sectionKey="envios" open={isOpen("envios")} onToggle={() => toggleSection("envios")}>
-        <EnviosEditor
-          value={content.envios}
-          onChange={(v) => updateSection("envios", v)}
-        />
-      </EditorSection>
-
-      {/* 🛠 Soporte */}
-      <EditorSection title="🛠 Soporte HW (Domi)" sectionKey="soporte" open={isOpen("soporte")} onToggle={() => toggleSection("soporte")}>
-        <SoporteEditor
-          value={content.soporte}
-          onChange={(v) => updateSection("soporte", v)}
-        />
-      </EditorSection>
-
-      {/* 🛠 Cajones */}
-      <EditorSection title="🛠 Cajones inteligentes (JJ)" sectionKey="cajones" open={isOpen("cajones")} onToggle={() => toggleSection("cajones")}>
-        <CajonesEditor
-          value={content.cajones}
-          onChange={(v) => updateSection("cajones", v)}
-        />
-      </EditorSection>
-
-      {/* 🧭 Marco Informe */}
-      <EditorSection title="🧭 Marco Informe" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
-        <MarcoEditor
+      {/* 🧭 Marco */}
+      <EditorSection title="🧭 Marco" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
+        <MemberEditor
           value={content.marco}
           onChange={(v) => updateSection("marco", v)}
         />
       </EditorSection>
 
-      {/* 👥 Performance */}
-      <EditorSection title="👥 Performance del equipo" sectionKey="performance" open={isOpen("performance")} onToggle={() => toggleSection("performance")}>
+      {/* 🧭 Domingo */}
+      <EditorSection title="🧭 Domingo" sectionKey="domingo" open={isOpen("domingo")} onToggle={() => toggleSection("domingo")}>
+        <MemberEditor
+          value={content.domingo}
+          onChange={(v) => updateSection("domingo", v)}
+        />
+      </EditorSection>
+
+      {/* 🧭 Guillermo */}
+      <EditorSection title="🧭 Guillermo" sectionKey="guillermo" open={isOpen("guillermo")} onToggle={() => toggleSection("guillermo")}>
+        <MemberEditor
+          value={content.guillermo}
+          onChange={(v) => updateSection("guillermo", v)}
+        />
+      </EditorSection>
+
+      {/* 👥 Performance — solo jj.gallego */}
+      <EditorSection
+        title="👥 Performance del equipo"
+        sectionKey="performance"
+        open={canPerf && isOpen("performance")}
+        onToggle={() => toggleSection("performance")}
+        locked={!canPerf}
+      >
         <PerformanceEditor
           value={content.performance}
           onChange={(v) => updateSection("performance", v)}
         />
       </EditorSection>
 
-      {/* 📌 Foco próxima semana */}
-      <EditorSection title="📌 Foco próxima semana" sectionKey="nextFocus" open={isOpen("nextFocus")} onToggle={() => toggleSection("nextFocus")}>
+      {/* 🔬 I+D status WIP */}
+      <EditorSection title="🔬 I+D status WIP" sectionKey="idStatus" open={isOpen("idStatus")} onToggle={() => toggleSection("idStatus")}>
+        <IdStatusEditor
+          value={content.idStatus}
+          onChange={(v) => updateSection("idStatus", v)}
+        />
+      </EditorSection>
+
+      {/* 📌 Foco del mes / semana */}
+      <EditorSection title="📌 Foco del mes / semana" sectionKey="nextFocus" open={isOpen("nextFocus")} onToggle={() => toggleSection("nextFocus")}>
         <NextFocusEditor
           value={content.nextFocus}
           onChange={(v) => updateSection("nextFocus", v)}
@@ -391,6 +356,7 @@ export function ReportEditor({ report, initialContent }: ReportEditorProps) {
                 }}
                 content={content}
                 snapshot={null}
+                currentUserEmail={currentUserEmail}
               />
             </div>
           </div>
@@ -405,13 +371,30 @@ function EditorSection({
   open,
   onToggle,
   children,
+  locked,
 }: {
   title: string;
   sectionKey: string;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  locked?: boolean;
 }) {
+  if (locked) {
+    return (
+      <Card className="opacity-70">
+        <CardHeader
+          className="cursor-not-allowed select-none py-3"
+          title="Solo visible para JJ (jj.gallego@qamarero.com)"
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium text-muted-foreground">{title}</CardTitle>
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
   return (
     <Card>
       <CardHeader className="cursor-pointer select-none py-3" onClick={onToggle}>

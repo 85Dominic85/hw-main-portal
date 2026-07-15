@@ -6,6 +6,7 @@ import { AUTH_BYPASS_ENABLED } from "@/lib/auth/bypass";
 import { db, schema } from "@/lib/db";
 import { kpiSnapshotSchema } from "@/lib/reports/schema";
 import { parseReportContent } from "@/lib/reports/defaults";
+import { canSeePerformance } from "@/lib/reports/report-access";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 import { ReportPdfDocument } from "@/components/reports/report-pdf-document";
 
@@ -56,6 +57,7 @@ export async function GET(
     },
     content,
     snapshot,
+    showPerformance: canSeePerformance(user.email),
   };
 
   // Import dinámico para que @react-pdf/renderer no crashee el Lambda en cold-start.

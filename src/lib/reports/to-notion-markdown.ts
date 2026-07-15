@@ -15,8 +15,9 @@ export function contentToNotionMarkdown(
   },
   content: ReportContent,
   snapshot: KpiSnapshot | null,
+  options: { showPerformance?: boolean } = {},
 ): string {
-  const md = contentToMarkdown(meta, content, snapshot);
+  const md = contentToMarkdown(meta, content, snapshot, options);
 
   // Insertar divisor antes de cada sección de nivel 2 (##)
   // Notion renderiza "---" como un bloque Divisor visual

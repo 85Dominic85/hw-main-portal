@@ -7,6 +7,7 @@ import { db, schema } from "@/lib/db";
 import { kpiSnapshotSchema } from "@/lib/reports/schema";
 import { parseReportContent } from "@/lib/reports/defaults";
 import { contentToMarkdown } from "@/lib/reports/to-markdown";
+import { canSeePerformance } from "@/lib/reports/report-access";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ export async function GET(
     },
     content,
     snapshot,
+    { showPerformance: canSeePerformance(user.email) },
   );
 
   const filename = `${report.periodKey}-informe.md`;

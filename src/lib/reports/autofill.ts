@@ -76,7 +76,7 @@ const AUTO_EXTRACTORS: Record<string, (s: PeriodSources) => number | null> = {
 /** Orden de las filas del resumen ejecutivo (scorecard del departamento). */
 const EXEC_ORDER = [
   "exec.margin",
-  "hwtool.configs_confirmed",
+  "hwtool.total_sessions",
   "hwtool.success_first_try",
   "exec.pnp_coverage",
   "mainops.total_shipments",
@@ -85,7 +85,6 @@ const EXEC_ORDER = [
   "exec.rma_response_2h",
   "exec.delivery_rate",
   "exec.cajones_mrr",
-  "hwtool.total_sessions",
 ];
 
 /** Ventana inmediatamente anterior de igual longitud (semana/mes previo). */
@@ -99,15 +98,14 @@ function previousRange(range: Range): Range {
 
 /**
  * Construye un `ReportContent` pre-rellenado para el periodo dado:
- *  - Bloques de configuraciones/envíos/soporte desde el periodo actual.
- *  - Filas del resumen ejecutivo desde el catálogo `report_kpi_definitions`,
- *    con Actual (periodo actual), "Semana anterior" (periodo previo real),
- *    target (catálogo), owner (catálogo) y semáforo.
+ *  - Filas del resumen ejecutivo (KPIs generales) desde el catálogo
+ *    `report_kpi_definitions`, con Actual (periodo actual), "Semana anterior"
+ *    (periodo previo real), target (catálogo), owner (catálogo) y semáforo.
  *
  * Best-effort: si un conector falla, sus campos quedan vacíos (editables a mano).
  * Los KPIs sin extractor (Margen, Cobertura PnP, Resp. RMA <2h, Tasa entrega,
- * Cajones MRR) nacen como fila vacía editable. La narrativa y tablas cualitativas
- * (tesis, bloqueos, decisiones, cajones, foco) siempre quedan vacías.
+ * Cajones MRR) nacen como fila vacía editable. El resto de secciones (tesis,
+ * secciones por persona, performance, I+D, foco) siempre quedan vacías.
  */
 export async function buildAutofilledContent(range: Range): Promise<ReportContent> {
   const content = buildEmptyContent();
@@ -137,45 +135,7 @@ export async function buildAutofilledContent(range: Range): Promise<ReportConten
     hsm: hsmPrev.ok ? hsmPrev.data.current : null,
   };
 
-  // ── Bloques de sección (periodo actual) ────────────────────────────────────
-  if (moCur.ok) {
-    const m = moCur.data;
-    const completed =
-      m.ops?.totalCompleted ?? Math.round(m.kpis.totalOrders * m.kpis.completedRate);
-    const shipped = m.ops?.totalShipped ?? null;
-    const pending = m.breakdowns.byStatus.find((s) => s.status === "pendiente")?.count ?? null;
-    content.envios.totalOps = m.kpis.totalOrders;
-    content.envios.completed = completed;
-    content.envios.shipped = shipped;
-    content.envios.pending = pending;
-    content.envios.avgDeliveryDays = round1(m.sla.avgDeliveryDays);
-    content.envios.sla7dPct = round1(m.sla.onTimePct * 100);
-  }
-
-  if (htCur.ok) {
-    const h = htCur.data;
-    content.configuraciones.totalConfigs = h.principal.configuracion;
-    content.configuraciones.successRate1st = round1(h.successRateFirstTry);
-    content.configuraciones.successRate2nd = round1(h.secondConfigRate);
-  }
-
-  if (hsmCur.ok) {
-    const s = hsmCur.data.current;
-    content.soporte.openIncidents = s.openIncidents;
-    content.soporte.incidentsOver7d =
-      s.agingDistribution.find((a) => a.bucket === "gt_7d")?.count ?? 0;
-    content.soporte.activeRmas = s.activeRmas;
-    content.soporte.sla7dPct = round1(s.slaCompliancePct);
-    content.soporte.criticalInSlaPct =
-      s.criticalInSlaPct != null ? round1(s.criticalInSlaPct) : null;
-    content.soporte.reopenRatePct = round1(s.reopenRatePct);
-    content.soporte.avgResolutionHours =
-      s.avgResolutionHours != null ? round1(s.avgResolutionHours) : null;
-    content.soporte.avgRmaTurnaroundDays =
-      s.avgRmaTurnaroundDays != null ? round1(s.avgRmaTurnaroundDays) : null;
-  }
-
-  // ── Resumen ejecutivo desde el catálogo ─────────────────────────────────────
+  // ── Resumen ejecutivo (KPIs generales) desde el catálogo ────────────────────
   const orderIndex = (k: string) => {
     const i = EXEC_ORDER.indexOf(k);
     return i === -1 ? EXEC_ORDER.length : i;

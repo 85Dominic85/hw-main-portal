@@ -7,6 +7,7 @@ import { db, schema } from "@/lib/db";
 import { kpiSnapshotSchema } from "@/lib/reports/schema";
 import { parseReportContent } from "@/lib/reports/defaults";
 import { contentToNotionMarkdown } from "@/lib/reports/to-notion-markdown";
+import { canSeePerformance } from "@/lib/reports/report-access";
 import { formatWeekLabel, parseWeekKey } from "@/lib/reports/iso-week";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,7 @@ export async function GET(
     },
     content,
     snapshot,
+    { showPerformance: canSeePerformance(user.email) },
   );
 
   // Audit log — best-effort, nunca debe romper la respuesta.

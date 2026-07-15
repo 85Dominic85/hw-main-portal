@@ -59,7 +59,7 @@ export default async function ReportEditPage({ params }: PageProps) {
           periodTo: report.periodTo,
         }}
         initialContent={content}
-        currentUserId={user.id}
+        currentUserEmail={user.email}
       />
     </div>
   );

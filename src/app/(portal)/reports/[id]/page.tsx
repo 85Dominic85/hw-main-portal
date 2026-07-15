@@ -116,6 +116,7 @@ export default async function ReportViewPage({ params }: PageProps) {
         }}
         content={content}
         snapshot={snapshot?.success ? snapshot.data : null}
+        currentUserEmail={user.email}
       />
     </div>
   );
