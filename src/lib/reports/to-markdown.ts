@@ -4,8 +4,13 @@ import type {
   TiptapDoc,
   Highlights,
   Blockers,
-  MemberSection,
+  MemberCommon,
+  PersonalKpiRow,
+  RndTools,
+  Rma,
+  Cajones,
 } from "./schema";
+import { RMA_ESTADO_LABEL } from "./labels";
 
 type PmNode = {
   type: string;
@@ -82,9 +87,9 @@ export function contentToMarkdown(
   }
 
   // 4-6. Secciones por persona
-  pushMember(L, "Guillermo", content.guillermo);
-  pushMember(L, "Domingo", content.domingo);
-  pushMember(L, "Marco", content.marco);
+  pushGuillermo(L, content.guillermo);
+  pushDomingo(L, content.domingo);
+  pushMarco(L, content.marco);
 
   // 7. Performance del equipo (solo jj)
   if (showPerformance) {
@@ -118,21 +123,121 @@ export function contentToMarkdown(
 
 // ── Secciones por persona ────────────────────────────────────────────────────
 
-function pushMember(L: string[], title: string, data: MemberSection): void {
-  const hasKpis = data.kpisPersonales.length > 0;
-  if (!hasKpis && !hasDeptExtras(data)) return;
-  L.push(`## 🧭 ${title}`, "");
-  if (hasKpis) {
-    L.push("| KPI | Valor | Target | Estado |");
-    L.push("| --- | --- | --- | :---: |");
-    for (const k of data.kpisPersonales) {
-      const s =
-        k.status === "verde" ? "🟢" : k.status === "amarillo" ? "🟡" : k.status === "rojo" ? "🔴" : "—";
-      L.push(`| ${k.label || "—"} | ${k.value || "—"} | ${k.target || "—"} | ${s} |`);
-    }
-    L.push("");
+const strHas = (...v: string[]) => v.some((s) => s.trim().length > 0);
+const rndHasContent = (t: RndTools) => t.items.some((i) => strHas(i.tool, i.detail));
+
+function commonHasContent(m: MemberCommon): boolean {
+  return m.kpisPersonales.length > 0 || rndHasContent(m.toolsRnd) || hasDeptExtras(m);
+}
+
+function pushMemberKpis(L: string[], rows: PersonalKpiRow[]): void {
+  if (rows.length === 0) return;
+  L.push("| KPI | Valor | Target | Estado |");
+  L.push("| --- | --- | --- | :---: |");
+  for (const k of rows) {
+    const s =
+      k.status === "verde" ? "🟢" : k.status === "amarillo" ? "🟡" : k.status === "rojo" ? "🔴" : "—";
+    L.push(`| ${k.label || "—"} | ${k.value || "—"} | ${k.target || "—"} | ${s} |`);
   }
-  pushDeptExtras(L, data.highlights, data.blockers);
+  L.push("");
+}
+
+function pushField(L: string[], label: string, value: string): void {
+  if (!value.trim()) return;
+  L.push(`**${label}**`, "", value.trim(), "");
+}
+
+function pushRndTools(L: string[], value: RndTools): void {
+  const items = value.items.filter((i) => strHas(i.tool, i.detail));
+  if (items.length === 0) return;
+  L.push("### Herramientas I+D", "");
+  for (const it of items) {
+    L.push(`- **${it.tool || "—"}**${it.detail.trim() ? ` — ${it.detail.trim()}` : ""}`);
+  }
+  L.push("");
+}
+
+function pushRma(L: string[], value: Rma): void {
+  if (value.casos.length === 0) return;
+  L.push("### RMA y Proveedores", "");
+  L.push("| Caso | Estado | SLA respuesta |");
+  L.push("| --- | --- | --- |");
+  for (const r of value.casos) {
+    L.push(`| ${r.caso || "—"} | ${RMA_ESTADO_LABEL[r.estado] ?? r.estado} | ${r.sla || "—"} |`);
+  }
+  L.push("");
+}
+
+function pushCajones(L: string[], value: Cajones): void {
+  const tiles: Array<[string, string]> = [
+    ["Clientes nuevos", value.clientesNuevos],
+    ["Activados", value.activados],
+    ["Pendientes", value.pendientes],
+    ["MRR nuevo actual", value.mrrNuevo],
+  ];
+  if (!tiles.some(([, v]) => v.trim())) return;
+  L.push("### Cajones", "");
+  L.push("| Clientes nuevos | Activados | Pendientes | MRR nuevo actual |");
+  L.push("| --- | --- | --- | --- |");
+  L.push(`| ${tiles.map(([, v]) => v.trim() || "—").join(" | ")} |`);
+  L.push("");
+}
+
+function pushGuillermo(L: string[], g: ReportContent["guillermo"]): void {
+  const has =
+    commonHasContent(g) ||
+    strHas(g.contabilidad.vencimientos, g.contabilidad.facturas, g.contabilidad.reinversion) ||
+    strHas(g.amExperience.incidencias, g.amExperience.mejoras);
+  if (!has) return;
+  L.push("## 🧭 Guillermo", "");
+  pushMemberKpis(L, g.kpisPersonales);
+  pushRndTools(L, g.toolsRnd);
+  if (strHas(g.contabilidad.vencimientos, g.contabilidad.facturas, g.contabilidad.reinversion)) {
+    L.push("### Contabilidad", "");
+    pushField(L, "Vencimientos", g.contabilidad.vencimientos);
+    pushField(L, "Facturas", g.contabilidad.facturas);
+    pushField(L, "Reinversión", g.contabilidad.reinversion);
+  }
+  if (strHas(g.amExperience.incidencias, g.amExperience.mejoras)) {
+    L.push("### AM Experience", "");
+    pushField(L, "Incidencias", g.amExperience.incidencias);
+    pushField(L, "Mejoras", g.amExperience.mejoras);
+  }
+  pushDeptExtras(L, g.highlights, g.blockers);
+}
+
+function pushDomingo(L: string[], d: ReportContent["domingo"]): void {
+  const has =
+    commonHasContent(d) ||
+    d.rma.casos.length > 0 ||
+    strHas(d.kds.nuevosClientes, d.kds.cambiosUso, d.kds.pendientes);
+  if (!has) return;
+  L.push("## 🧭 Domingo", "");
+  pushMemberKpis(L, d.kpisPersonales);
+  pushRndTools(L, d.toolsRnd);
+  pushRma(L, d.rma);
+  if (strHas(d.kds.nuevosClientes, d.kds.cambiosUso, d.kds.pendientes)) {
+    L.push("### KDS", "");
+    pushField(L, "Nuevos clientes", d.kds.nuevosClientes);
+    pushField(L, "Cambios en el uso general", d.kds.cambiosUso);
+    pushField(L, "Pendientes (esta semana → siguiente)", d.kds.pendientes);
+  }
+  pushDeptExtras(L, d.highlights, d.blockers);
+}
+
+function pushMarco(L: string[], m: ReportContent["marco"]): void {
+  const has =
+    commonHasContent(m) ||
+    strHas(m.cajones.clientesNuevos, m.cajones.activados, m.cajones.pendientes, m.cajones.mrrNuevo) ||
+    (m.qExperience.doc.content?.length ?? 0) > 0;
+  if (!has) return;
+  L.push("## 🧭 Marco", "");
+  pushMemberKpis(L, m.kpisPersonales);
+  pushRndTools(L, m.toolsRnd);
+  pushCajones(L, m.cajones);
+  const q = tipTap(m.qExperience.doc);
+  if (q) L.push("### Q Experience", "", q, "");
+  pushDeptExtras(L, m.highlights, m.blockers);
 }
 
 // ── Highlights + Bloqueos por departamento ──────────────────────────────────

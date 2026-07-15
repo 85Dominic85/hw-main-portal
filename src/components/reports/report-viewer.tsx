@@ -6,9 +6,18 @@ import type {
   KpiSnapshot,
   Highlights,
   Blockers,
-  MemberSection,
+  MemberCommon,
+  PersonalKpiRow,
+  RndTools,
+  Contabilidad,
+  AmExperience,
+  Rma,
+  Kds,
+  Cajones,
+  QExperience,
 } from "@/lib/reports/schema";
 import { canSeePerformance } from "@/lib/reports/report-access";
+import { RMA_ESTADO_LABEL, BLOCKER_STATUS_LABEL } from "@/lib/reports/labels";
 import { cn } from "@/lib/utils/cn";
 
 // Colores del semáforo (fijos, fieles al informe Notion; válidos en claro y oscuro).
@@ -133,10 +142,34 @@ export function ReportViewer({ report, content, snapshot, currentUserEmail }: Re
         </Section>
       )}
 
-      {/* 🧭 Secciones por persona */}
-      <MemberView title="Guillermo" data={c.guillermo} />
-      <MemberView title="Domingo" data={c.domingo} />
-      <MemberView title="Marco" data={c.marco} />
+      {/* 🧭 Secciones por persona (orden: KPIs → P1/P2/P3 → Highlights → Bloqueos) */}
+      {guillermoHasContent(c.guillermo) && (
+        <Section emoji="🧭" title="Guillermo">
+          <MemberKpisView rows={c.guillermo.kpisPersonales} />
+          <RndToolsView value={c.guillermo.toolsRnd} />
+          <ContabilidadView value={c.guillermo.contabilidad} />
+          <AmExperienceView value={c.guillermo.amExperience} />
+          <DeptExtras highlights={c.guillermo.highlights} blockers={c.guillermo.blockers} />
+        </Section>
+      )}
+      {domingoHasContent(c.domingo) && (
+        <Section emoji="🧭" title="Domingo">
+          <MemberKpisView rows={c.domingo.kpisPersonales} />
+          <RndToolsView value={c.domingo.toolsRnd} />
+          <RmaView value={c.domingo.rma} />
+          <KdsView value={c.domingo.kds} />
+          <DeptExtras highlights={c.domingo.highlights} blockers={c.domingo.blockers} />
+        </Section>
+      )}
+      {marcoHasContent(c.marco) && (
+        <Section emoji="🧭" title="Marco">
+          <MemberKpisView rows={c.marco.kpisPersonales} />
+          <RndToolsView value={c.marco.toolsRnd} />
+          <CajonesView value={c.marco.cajones} />
+          <QExperienceView value={c.marco.qExperience} />
+          <DeptExtras highlights={c.marco.highlights} blockers={c.marco.blockers} />
+        </Section>
+      )}
 
       {/* 👥 Performance — solo jj.gallego */}
       {canPerf
@@ -231,29 +264,192 @@ function deptHasExtras(d: { highlights: Highlights; blockers: Blockers }): boole
   return hasDocContent(d.highlights.doc) || d.blockers.rows.length > 0;
 }
 
-// ── Sección por persona ──────────────────────────────────────────────────────
+// ── Predicados de contenido por miembro ──────────────────────────────────────
 
-function MemberView({ title, data }: { title: string; data: MemberSection }) {
-  const hasKpis = data.kpisPersonales.length > 0;
-  if (!hasKpis && !deptHasExtras(data)) return null;
+const strHas = (...v: string[]) => v.some((s) => s.trim().length > 0);
+const rndHasContent = (t: RndTools) => t.items.some((i) => strHas(i.tool, i.detail));
+
+function commonHasContent(m: MemberCommon): boolean {
+  return m.kpisPersonales.length > 0 || rndHasContent(m.toolsRnd) || deptHasExtras(m);
+}
+function guillermoHasContent(g: ReportContent["guillermo"]): boolean {
   return (
-    <Section emoji="🧭" title={title}>
-      {hasKpis && (
-        <NotionTable head={["KPI", "Valor", "Target", "Semáforo"]} center={[3]}>
-          {data.kpisPersonales.map((row) => (
-            <tr key={row.id}>
-              <Td className="font-medium">{row.label || "—"}</Td>
-              <Td>{row.value || "—"}</Td>
-              <Td>{row.target || "—"}</Td>
-              <Td center>
-                <Dot status={row.status} />
+    commonHasContent(g) ||
+    strHas(g.contabilidad.vencimientos, g.contabilidad.facturas, g.contabilidad.reinversion) ||
+    strHas(g.amExperience.incidencias, g.amExperience.mejoras)
+  );
+}
+function domingoHasContent(d: ReportContent["domingo"]): boolean {
+  return (
+    commonHasContent(d) ||
+    d.rma.casos.length > 0 ||
+    strHas(d.kds.nuevosClientes, d.kds.cambiosUso, d.kds.pendientes)
+  );
+}
+function marcoHasContent(m: ReportContent["marco"]): boolean {
+  return (
+    commonHasContent(m) ||
+    strHas(m.cajones.clientesNuevos, m.cajones.activados, m.cajones.pendientes, m.cajones.mrrNuevo) ||
+    hasDocContent(m.qExperience.doc)
+  );
+}
+
+// ── Sub-vistas por bloque ────────────────────────────────────────────────────
+
+function SubHeading({ emoji, title }: { emoji: string; title: string }) {
+  return (
+    <h3 className="mt-5 flex items-center gap-2 text-[17px] font-semibold tracking-tight">
+      <span>{emoji}</span>
+      {title}
+    </h3>
+  );
+}
+
+function FieldBlock({ label, value }: { label: string; value: string }) {
+  if (!value.trim()) return null;
+  return (
+    <div>
+      <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="whitespace-pre-line text-[14.5px] leading-relaxed">{value}</p>
+    </div>
+  );
+}
+
+function MemberKpisView({ rows }: { rows: PersonalKpiRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <NotionTable head={["KPI", "Valor", "Target", "Semáforo"]} center={[3]}>
+      {rows.map((row) => (
+        <tr key={row.id}>
+          <Td className="font-medium">{row.label || "—"}</Td>
+          <Td>{row.value || "—"}</Td>
+          <Td>{row.target || "—"}</Td>
+          <Td center>
+            <Dot status={row.status} />
+          </Td>
+        </tr>
+      ))}
+    </NotionTable>
+  );
+}
+
+function RndToolsView({ value }: { value: RndTools }) {
+  const items = value.items.filter((i) => strHas(i.tool, i.detail));
+  if (items.length === 0) return null;
+  return (
+    <>
+      <SubHeading emoji="🔬" title="Herramientas I+D" />
+      <div className="mt-2 space-y-3">
+        {items.map((it) => (
+          <div key={it.id} className="rounded-md bg-muted/40 px-3 py-2">
+            <p className="text-sm font-bold">{it.tool || "—"}</p>
+            {it.detail.trim() && (
+              <p className="mt-0.5 whitespace-pre-line text-[14.5px] leading-relaxed">{it.detail}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function ContabilidadView({ value }: { value: Contabilidad }) {
+  if (!strHas(value.vencimientos, value.facturas, value.reinversion)) return null;
+  return (
+    <>
+      <SubHeading emoji="💶" title="Contabilidad" />
+      <div className="mt-2 space-y-3">
+        <FieldBlock label="Vencimientos" value={value.vencimientos} />
+        <FieldBlock label="Facturas" value={value.facturas} />
+        <FieldBlock label="Reinversión" value={value.reinversion} />
+      </div>
+    </>
+  );
+}
+
+function AmExperienceView({ value }: { value: AmExperience }) {
+  if (!strHas(value.incidencias, value.mejoras)) return null;
+  return (
+    <>
+      <SubHeading emoji="🎧" title="AM Experience" />
+      <div className="mt-2 space-y-3">
+        <FieldBlock label="Incidencias" value={value.incidencias} />
+        <FieldBlock label="Mejoras" value={value.mejoras} />
+      </div>
+    </>
+  );
+}
+
+function RmaView({ value }: { value: Rma }) {
+  if (value.casos.length === 0) return null;
+  return (
+    <>
+      <SubHeading emoji="🔧" title="RMA y Proveedores" />
+      <div className="mt-2">
+        <NotionTable head={["Caso", "Estado", "SLA respuesta"]}>
+          {value.casos.map((r) => (
+            <tr key={r.id}>
+              <Td>{r.caso || "—"}</Td>
+              <Td>
+                <StatusChip status={r.estado} label={RMA_ESTADO_LABEL[r.estado]} />
               </Td>
+              <Td className="whitespace-nowrap">{r.sla || "—"}</Td>
             </tr>
           ))}
         </NotionTable>
-      )}
-      <DeptExtras highlights={data.highlights} blockers={data.blockers} />
-    </Section>
+      </div>
+    </>
+  );
+}
+
+function KdsView({ value }: { value: Kds }) {
+  if (!strHas(value.nuevosClientes, value.cambiosUso, value.pendientes)) return null;
+  return (
+    <>
+      <SubHeading emoji="🖥️" title="KDS" />
+      <div className="mt-2 space-y-3">
+        <FieldBlock label="Nuevos clientes" value={value.nuevosClientes} />
+        <FieldBlock label="Cambios en el uso general" value={value.cambiosUso} />
+        <FieldBlock label="Pendientes (esta semana → siguiente)" value={value.pendientes} />
+      </div>
+    </>
+  );
+}
+
+function CajonesView({ value }: { value: Cajones }) {
+  const tiles = [
+    { label: "Clientes nuevos", value: value.clientesNuevos },
+    { label: "Activados", value: value.activados },
+    { label: "Pendientes", value: value.pendientes },
+    { label: "MRR nuevo actual", value: value.mrrNuevo },
+  ];
+  if (!tiles.some((t) => t.value.trim())) return null;
+  return (
+    <>
+      <SubHeading emoji="📦" title="Cajones" />
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">{t.label}</p>
+            <p className="text-lg font-bold">{t.value.trim() || "—"}</p>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function QExperienceView({ value }: { value: QExperience }) {
+  if (!hasDocContent(value.doc)) return null;
+  return (
+    <>
+      <SubHeading emoji="⭐" title="Q Experience" />
+      <div className="mt-2">
+        <TiptapContent doc={value.doc} className="prose prose-sm max-w-none dark:prose-invert" />
+      </div>
+    </>
   );
 }
 
@@ -282,7 +478,7 @@ function DeptExtras({ highlights, blockers }: { highlights: Highlights; blockers
                 <Td>{row.description || "—"}</Td>
                 <Td className="font-medium">{row.owner || "—"}</Td>
                 <Td className="text-muted-foreground">{row.impact || "—"}</Td>
-                <Td><StatusChip status={row.status} /></Td>
+                <Td><StatusChip status={row.status} label={BLOCKER_STATUS_LABEL[row.status]} /></Td>
               </tr>
             ))}
           </NotionTable>
@@ -419,10 +615,11 @@ function Td({
   );
 }
 
-function StatusChip({ status }: { status: string }) {
+function StatusChip({ status, label }: { status: string; label?: string }) {
   const map: Record<string, string> = {
     abierto: "bg-yellow-100 text-yellow-800",
     en_progreso: "bg-blue-100 text-blue-800",
+    esperando_proveedor: "bg-orange-100 text-orange-800",
     bloqueado: "bg-red-100 text-red-800",
     pendiente: "bg-yellow-100 text-yellow-800",
     cerrada: "bg-green-100 text-green-800",
@@ -437,7 +634,7 @@ function StatusChip({ status }: { status: string }) {
         map[status] ?? "bg-muted text-muted-foreground",
       )}
     >
-      {status.replace(/_/g, " ")}
+      {label ?? status.replace(/_/g, " ")}
     </span>
   );
 }

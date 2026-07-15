@@ -2,7 +2,11 @@ import { z } from "zod";
 import { tesisSchema } from "./sections/tesis";
 import { executiveSummarySchema } from "./sections/executive-summary";
 import { amberRedSchema } from "./sections/amber-red";
-import { memberSectionSchema } from "./sections/member";
+import {
+  guillermoSectionSchema,
+  domingoSectionSchema,
+  marcoSectionSchema,
+} from "./sections/member";
 import { performanceSchema } from "./sections/performance";
 import { idStatusSchema } from "./sections/id-status";
 import { nextFocusSchema } from "./sections/next-focus";
@@ -16,10 +20,10 @@ export const reportContentSchemaV1 = z.object({
   tesis: tesisSchema.default({}),
   executiveSummary: executiveSummarySchema.default({}),
   amberRed: amberRedSchema.default({}),
-  // Secciones por persona (esqueleto v3: KPIs personales + Highlights + Bloqueos)
-  marco: memberSectionSchema.default({}),
-  domingo: memberSectionSchema.default({}),
-  guillermo: memberSectionSchema.default({}),
+  // Secciones por persona (KPIs personales + P1/P2/P3 + Highlights + Bloqueos)
+  marco: marcoSectionSchema.default({}),
+  domingo: domingoSectionSchema.default({}),
+  guillermo: guillermoSectionSchema.default({}),
   // Performance del equipo (solo jj.gallego)
   performance: performanceSchema.default({}),
   // I+D status WIP
@@ -37,7 +41,24 @@ export type { ExecutiveSummary, ExecutiveSummaryRow } from "./sections/executive
 export type { AmberRed, AmberRedRow } from "./sections/amber-red";
 export type { Highlights } from "./sections/highlights";
 export type { Blockers, BlockerRow } from "./sections/blockers";
-export type { MemberSection, PersonalKpiRow } from "./sections/member";
+export type {
+  GuillermoSection,
+  DomingoSection,
+  MarcoSection,
+  MemberCommon,
+  PersonalKpiRow,
+} from "./sections/member";
+export type { RndTools, RndTool } from "./sections/rnd-tools";
+export type {
+  Contabilidad,
+  AmExperience,
+  Rma,
+  RmaCase,
+  RmaCaseStatus,
+  Kds,
+  Cajones,
+  QExperience,
+} from "./sections/member-blocks";
 export type { Performance, MemberBlock } from "./sections/performance";
 export type { IdStatus } from "./sections/id-status";
 export type { NextFocus, NextFocusRow } from "./sections/next-focus";

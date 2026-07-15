@@ -12,7 +12,7 @@ import { parseReportContent } from "@/lib/reports/defaults";
 import { buildAutofilledContent, buildSkeletonContent } from "@/lib/reports/autofill";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
-import { reportContentSchemaV1, type ReportContent } from "@/lib/reports/schema";
+import { reportContentSchemaV1, type ReportContent, type MemberCommon } from "@/lib/reports/schema";
 
 const { reports, reportAuthors, portalUsers } = schema;
 
@@ -459,10 +459,13 @@ const cloneReportSchema = z.object({
 
 const EMPTY_DOC = { type: "doc" as const, content: [] as [] };
 
-const emptyMember = (m: ReportContent["marco"]): ReportContent["marco"] => ({
-  // Conserva la estructura de KPIs personales (labels/targets) reseteando valores;
-  // vacía highlights; conserva bloqueos (como el resto de secciones cualitativas).
+// Resetea los campos comunes de un miembro al clonar a otra semana:
+//  - KPIs personales: conserva labels/targets, resetea valor + semáforo.
+//  - Herramientas I+D: conserva los nombres de herramienta, vacía el detalle.
+//  - Highlights: vacío. Bloqueos: se conservan (como tracking en curso).
+const emptyCommon = (m: MemberCommon): MemberCommon => ({
   kpisPersonales: m.kpisPersonales.map((k) => ({ ...k, value: "", status: "neutral" as const })),
+  toolsRnd: { items: m.toolsRnd.items.map((t) => ({ ...t, detail: "" })) },
   highlights: { doc: EMPTY_DOC },
   blockers: m.blockers,
 });
@@ -472,12 +475,32 @@ function buildClonedContent(src: ReportContent): ReportContent {
     ...src,
     tesis: { doc: EMPTY_DOC },
     executiveSummary: {
-      rows: src.executiveSummary.rows.map((r) => ({ ...r, actual: "", delta: "", comment: "" })),
+      // Resetea valor + semáforo (coherente con emptyCommon): una fila clonada
+      // no debe heredar el color del periodo origen sobre un valor vacío.
+      rows: src.executiveSummary.rows.map((r) => ({
+        ...r,
+        actual: "",
+        delta: "",
+        comment: "",
+        status: "neutral" as const,
+      })),
     },
     amberRed: src.amberRed,
-    marco: emptyMember(src.marco),
-    domingo: emptyMember(src.domingo),
-    guillermo: emptyMember(src.guillermo),
+    guillermo: {
+      ...emptyCommon(src.guillermo),
+      contabilidad: { vencimientos: "", facturas: "", reinversion: "" },
+      amExperience: { incidencias: "", mejoras: "" },
+    },
+    domingo: {
+      ...emptyCommon(src.domingo),
+      rma: src.domingo.rma, // casos en curso se conservan (como los bloqueos)
+      kds: { nuevosClientes: "", cambiosUso: "", pendientes: "" },
+    },
+    marco: {
+      ...emptyCommon(src.marco),
+      cajones: { clientesNuevos: "", activados: "", pendientes: "", mrrNuevo: "" },
+      qExperience: { doc: EMPTY_DOC },
+    },
     performance: {
       members: src.performance.members.map((m) => ({ ...m, narrative: EMPTY_DOC })),
     },

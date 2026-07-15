@@ -11,7 +11,9 @@ import { AutosaveIndicator, type AutosaveState } from "./autosave-indicator";
 import { TiptapEditor } from "./tiptap-editor";
 import { ExecutiveSummaryEditor } from "./sections/executive-summary-editor";
 import { AmberRedEditor } from "./sections/amber-red-editor";
-import { MemberEditor } from "./sections/member-editor";
+import { GuillermoEditor } from "./sections/guillermo-editor";
+import { DomingoEditor } from "./sections/domingo-editor";
+import { MarcoEditor } from "./sections/marco-editor";
 import { PerformanceEditor } from "./sections/performance-editor";
 import { IdStatusEditor } from "./sections/id-status-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
@@ -301,7 +303,7 @@ export function ReportEditor({
 
       {/* 🧭 Guillermo */}
       <EditorSection title="🧭 Guillermo" sectionKey="guillermo" open={isOpen("guillermo")} onToggle={() => toggleSection("guillermo")}>
-        <MemberEditor
+        <GuillermoEditor
           value={content.guillermo}
           onChange={(v) => updateSection("guillermo", v)}
         />
@@ -309,7 +311,7 @@ export function ReportEditor({
 
       {/* 🧭 Domingo */}
       <EditorSection title="🧭 Domingo" sectionKey="domingo" open={isOpen("domingo")} onToggle={() => toggleSection("domingo")}>
-        <MemberEditor
+        <DomingoEditor
           value={content.domingo}
           onChange={(v) => updateSection("domingo", v)}
         />
@@ -317,7 +319,7 @@ export function ReportEditor({
 
       {/* 🧭 Marco */}
       <EditorSection title="🧭 Marco" sectionKey="marco" open={isOpen("marco")} onToggle={() => toggleSection("marco")}>
-        <MemberEditor
+        <MarcoEditor
           value={content.marco}
           onChange={(v) => updateSection("marco", v)}
         />
