@@ -12,9 +12,84 @@ import { parseReportContent } from "@/lib/reports/defaults";
 import { buildAutofilledContent, buildSkeletonContent } from "@/lib/reports/autofill";
 import { buildKpiSnapshot } from "@/lib/reports/build-snapshot";
 import { formatWeekKey, isoWeekToRange } from "@/lib/reports/iso-week";
-import { reportContentSchemaV1, type ReportContent, type MemberCommon } from "@/lib/reports/schema";
+import {
+  reportContentSchemaV1,
+  type ReportContent,
+  type MemberCommon,
+  type ExecutiveSummary,
+} from "@/lib/reports/schema";
+import type { ExecRowDiff, RefreshPreview } from "@/lib/reports/refresh-preview";
 
 const { reports, reportAuthors, portalUsers } = schema;
+
+type ExecRow = ExecutiveSummary["rows"][number];
+
+/**
+ * Fusiona las filas del scorecard actual con las recalculadas desde el catálogo
+ * + conectores (`auto`), aplicando la política de refresh:
+ *  - KPI AUTO: sobrescribe métricas (actual/semana anterior/semáforo) + metadatos
+ *    del catálogo (label/unit/target/owner); conserva el comentario.
+ *  - KPI MANUAL: conserva lo escrito a mano y solo refresca metadatos del catálogo.
+ *  - Filas con kpiKey fuera del catálogo: intactas (se preservan al final).
+ * Es pura (no toca BD); la usan tanto el refresh real como su preview.
+ */
+function mergeExecRows(currentRows: ExecRow[], autoRows: ExecRow[]): ExecRow[] {
+  const byKey = new Map(currentRows.map((r) => [r.kpiKey, r]));
+  const autoKeys = new Set(autoRows.map((a) => a.kpiKey));
+  const updated = autoRows.map((a) => {
+    const existing = byKey.get(a.kpiKey);
+    if (!existing) return a;
+    if (a.source === "auto") {
+      return {
+        ...existing,
+        label: a.label,
+        unit: a.unit,
+        owner: a.owner,
+        target: a.target,
+        actual: a.actual,
+        delta: a.delta,
+        status: a.status,
+        source: "auto" as const,
+      };
+    }
+    return {
+      ...existing,
+      label: a.label,
+      unit: a.unit,
+      owner: a.owner,
+      target: a.target,
+      source: "manual" as const,
+    };
+  });
+  const manualRows = currentRows.filter((r) => !autoKeys.has(r.kpiKey));
+  return [...updated, ...manualRows];
+}
+
+/** Diff por KPI entre el borrador actual y la fusión propuesta (para el modal). */
+function execDiff(before: ExecRow[], after: ExecRow[]): ExecRowDiff[] {
+  const beforeByKey = new Map(before.map((r) => [r.kpiKey, r]));
+  return after.map((a) => {
+    const b = beforeByKey.get(a.kpiKey);
+    const beforeVals = {
+      actual: b?.actual ?? "",
+      prev: b?.delta ?? "",
+      status: b?.status ?? "neutral",
+    };
+    const afterVals = { actual: a.actual, prev: a.delta, status: a.status };
+    const changed =
+      beforeVals.actual !== afterVals.actual ||
+      beforeVals.prev !== afterVals.prev ||
+      beforeVals.status !== afterVals.status;
+    return {
+      kpiKey: a.kpiKey,
+      label: a.label,
+      source: a.source,
+      before: beforeVals,
+      after: afterVals,
+      changed,
+    };
+  });
+}
 
 // ── Input schemas ─────────────────────────────────────────────────────────────
 
@@ -213,41 +288,10 @@ export async function refreshReportSources(
     to: new Date(`${report.periodTo}T23:59:59Z`),
   });
 
-  // KPIs generales: refresca por kpiKey.
-  //  - KPI auto: sobrescribe métricas (actual/semana anterior/semáforo) + metadatos
-  //    del catálogo (label/unit/target/owner); conserva el comentario.
-  //  - KPI manual: conserva lo escrito a mano (actual/semana anterior/semáforo/
-  //    comentario) y solo refresca metadatos del catálogo (label/unit/target/owner).
-  //  - Filas con kpiKey fuera del catálogo: intactas (manualRows).
-  const byKey = new Map(current.executiveSummary.rows.map((r) => [r.kpiKey, r]));
-  const autoKeys = new Set(auto.executiveSummary.rows.map((a) => a.kpiKey));
-  const updated = auto.executiveSummary.rows.map((a) => {
-    const existing = byKey.get(a.kpiKey);
-    if (!existing) return a;
-    if (a.source === "auto") {
-      return {
-        ...existing,
-        label: a.label,
-        unit: a.unit,
-        owner: a.owner,
-        target: a.target,
-        actual: a.actual,
-        delta: a.delta,
-        status: a.status,
-        source: "auto" as const,
-      };
-    }
-    return {
-      ...existing,
-      label: a.label,
-      unit: a.unit,
-      owner: a.owner,
-      target: a.target,
-      source: "manual" as const,
-    };
-  });
-  const manualRows = current.executiveSummary.rows.filter((r) => !autoKeys.has(r.kpiKey));
-  current.executiveSummary.rows = [...updated, ...manualRows];
+  current.executiveSummary.rows = mergeExecRows(
+    current.executiveSummary.rows,
+    auto.executiveSummary.rows,
+  );
 
   await db
     .update(reports)
@@ -256,6 +300,65 @@ export async function refreshReportSources(
 
   revalidateReport(reportId);
   return { ok: true, data: { content: current } };
+}
+
+/**
+ * Previsualiza el refresh SIN guardar: calcula lo que traerían los conectores y
+ * devuelve el diff por KPI (borrador actual vs fuentes) + la sección ejecutiva
+ * ya fusionada. El editor muestra el diff en un modal y, si el usuario confirma,
+ * persiste `proposed` con `saveSection` (lo que ves es lo que se guarda). Así
+ * pulsar "Rellenar desde fuentes" ya no pisa ediciones sin avisar.
+ */
+export async function previewReportRefresh(
+  input: unknown,
+): Promise<Result<RefreshPreview>> {
+  await requireAdmin();
+
+  const parsed = reportIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.message };
+
+  const { reportId } = parsed.data;
+
+  const [report] = await db
+    .select({
+      status: reports.status,
+      content: reports.content,
+      periodFrom: reports.periodFrom,
+      periodTo: reports.periodTo,
+    })
+    .from(reports)
+    .where(eq(reports.id, reportId))
+    .limit(1);
+
+  if (!report) return { ok: false, error: "Informe no encontrado." };
+  if (report.status !== "draft") {
+    return { ok: false, error: "Solo se pueden rellenar borradores." };
+  }
+  if (!report.periodFrom || !report.periodTo) {
+    return { ok: false, error: "El informe no tiene periodo definido." };
+  }
+
+  const current = parseReportContent(report.content);
+  const auto = await buildAutofilledContent({
+    from: new Date(`${report.periodFrom}T00:00:00Z`),
+    to: new Date(`${report.periodTo}T23:59:59Z`),
+  });
+
+  const mergedRows = mergeExecRows(
+    current.executiveSummary.rows,
+    auto.executiveSummary.rows,
+  );
+  const diff = execDiff(current.executiveSummary.rows, mergedRows);
+  const changedCount = diff.filter((d) => d.changed).length;
+
+  return {
+    ok: true,
+    data: {
+      diff,
+      proposed: { rows: mergedRows },
+      changedCount,
+    },
+  };
 }
 
 export async function saveSection(

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Globe, ChevronDown, ChevronUp, Loader2, RefreshCw, Eye, EyeOff, Lock } from "lucide-react";
+import { Globe, ChevronDown, ChevronUp, Loader2, Eye, EyeOff, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { PerformanceEditor } from "./sections/performance-editor";
 import { IdStatusEditor } from "./sections/id-status-editor";
 import { NextFocusEditor } from "./sections/next-focus-editor";
 import { DeleteDraftButton } from "./delete-draft-button";
+import { RefreshSourcesDialog } from "./refresh-sources-dialog";
 import { ReportViewer } from "./report-viewer";
 import { canSeePerformance } from "@/lib/reports/report-access";
 import {
@@ -67,7 +68,7 @@ export function ReportEditor({
     report.globalStatus,
   );
   const [isPublishing, startPublishing] = useTransition();
-  const [isRefreshing, startRefreshing] = useTransition();
+  const [, startRefreshing] = useTransition();
   const [showPreview, setShowPreview] = useState(true);
   const [openSections, setOpenSections] = useState<Set<string>>(DEFAULT_OPEN);
 
@@ -154,6 +155,8 @@ export function ReportEditor({
     else toast.error(result.error);
   }
 
+  // Auto-relleno al crear el borrador (sin confirmación: el borrador nace vacío,
+  // no hay ediciones que pisar). El botón manual usa el diálogo con diff.
   function handleRefresh() {
     startRefreshing(async () => {
       const res = await refreshReportSources({ reportId: report.id });
@@ -164,8 +167,16 @@ export function ReportEditor({
       setContent(res.data.content);
       setLastSavedAt(new Date());
       setAutosaveState("saved");
-      toast.success("Datos actualizados desde los conectores (MainOps · HW Tool · HSM).");
     });
+  }
+
+  // Aplicado desde el diálogo de "Rellenar desde fuentes" (ya persistido por
+  // saveSection); solo refleja la nueva sección ejecutiva en el estado local.
+  function handleExecRefreshApplied(execSummary: ReportContent["executiveSummary"]) {
+    setContent((prev) => ({ ...prev, executiveSummary: execSummary }));
+    setLastSavedAt(new Date());
+    setAutosaveState("saved");
+    setTimeout(() => setAutosaveState("idle"), 4000);
   }
 
   // Relleno automático tras crear el borrador: el insert nace con solo el
@@ -222,16 +233,7 @@ export function ReportEditor({
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={isRefreshing ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-            {isRefreshing ? "Rellenando…" : "Rellenar desde fuentes"}
-          </Button>
+          <RefreshSourcesDialog reportId={report.id} onApplied={handleExecRefreshApplied} />
           <DeleteDraftButton reportId={report.id} redirectTo="/reports" label="Eliminar" />
           <Button onClick={handlePublish} disabled={isPublishing}>
             {isPublishing ? (
