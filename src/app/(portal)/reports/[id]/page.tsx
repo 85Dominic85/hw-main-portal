@@ -10,6 +10,7 @@ import { getReportById } from "@/server/queries/reports";
 import { ReportViewer } from "@/components/reports/report-viewer";
 import { CopyNotionButton } from "@/components/reports/copy-notion-button";
 import { CloneReportButton } from "@/components/reports/clone-report-button";
+import { UnpublishButton } from "@/components/reports/unpublish-button";
 import { kpiSnapshotSchema } from "@/lib/reports/schema";
 import { parseReportContent } from "@/lib/reports/defaults";
 import { formatWeekLabel, parseWeekKey, nextIsoWeek } from "@/lib/reports/iso-week";
@@ -76,6 +77,7 @@ export default async function ReportViewPage({ params }: PageProps) {
           )}
           {report.status === "published" && (
             <>
+              {isAdmin && <UnpublishButton reportId={id} />}
               {nextWeek && nextWeekLabel && (
                 <CloneReportButton
                   reportId={id}
