@@ -68,7 +68,20 @@ const AUTO_EXTRACTORS: Record<string, (s: PeriodSources) => number | null> = {
   "hwtool.success_first_try": (s) =>
     s.hwtool ? round1(s.hwtool.successRateFirstTry) : null,
   "hwtool.total_sessions": (s) => s.hwtool?.principal.totalSessions ?? null,
-  "mainops.total_shipments": (s) => s.mainops?.kpis.totalOrders ?? null,
+  // Envíos FÍSICOS (excluye SaaS). El bloque `ops` de MainOps cuenta los pedidos
+  // realmente enviados y ya deja fuera SaaS/admin del cómputo físico
+  // (`excludedAdmin`). Antes usábamos `kpis.totalOrders`, que incluía SaaS,
+  // bloqueados y pedidos no físicos → inflaba el número.
+  "mainops.total_shipments": (s) => {
+    const m = s.mainops;
+    if (!m) return null;
+    if (m.ops) return m.ops.totalShipped;
+    // Fallback si la API no devuelve `ops`: pedidos excluyendo el SaaS puro
+    // (mantiene saas_hardware, que lleva hardware físico).
+    return m.breakdowns.byPurchaseType
+      .filter((b) => b.purchaseType !== "transferencias_saas")
+      .reduce((sum, b) => sum + b.count, 0);
+  },
   "mainops.sla_7d": (s) => (s.mainops ? round1(s.mainops.sla.onTimePct * 100) : null),
   "hsm.incidents_over_7d": (s) =>
     s.hsm ? s.hsm.agingDistribution.find((a) => a.bucket === "gt_7d")?.count ?? 0 : null,
