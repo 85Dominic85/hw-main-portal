@@ -35,8 +35,8 @@ export function SourceCard({
   const state = !configured ? "pending" : ok ? "ok" : "error";
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="gap-2 pb-3">
+    <Card className="flex h-[34rem] flex-col">
+      <CardHeader className="shrink-0 gap-2 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -73,11 +73,11 @@ export function SourceCard({
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 pt-0">
         {state !== "ok" ? (
           <p
             className={cn(
-              "rounded-md border px-3 py-2 text-xs",
+              "shrink-0 rounded-md border px-3 py-2 text-xs",
               state === "error"
                 ? "border-status-danger/30 bg-status-danger/5 text-status-danger"
                 : "border-border bg-muted/30 text-muted-foreground",
@@ -86,10 +86,10 @@ export function SourceCard({
             {error ?? "Sin datos para este periodo."}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border">
+          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr className="sticky top-0 z-10 border-b border-border bg-muted text-left text-xs text-muted-foreground">
                   <th className="px-3 py-2 font-medium">Dato</th>
                   <th className="px-3 py-2 text-right font-medium">Valor</th>
                   <th className="px-3 py-2 font-medium">Alimenta KPI</th>
@@ -120,7 +120,7 @@ export function SourceCard({
           </div>
         )}
 
-        <div className="mt-auto flex justify-end pt-1">
+        <div className="mt-auto flex shrink-0 justify-end pt-1">
           <RawJsonDialog title={name} data={raw} />
         </div>
       </CardContent>
