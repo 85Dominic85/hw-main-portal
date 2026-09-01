@@ -87,7 +87,12 @@ export function SourceCard({
           </p>
         ) : (
           <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
+              <colgroup>
+                <col className="w-[46%]" />
+                <col className="w-[24%]" />
+                <col className="w-[30%]" />
+              </colgroup>
               <thead>
                 <tr className="sticky top-0 z-10 border-b border-border bg-muted text-left text-xs text-muted-foreground">
                   <th className="px-3 py-2 font-medium">Dato</th>
@@ -101,12 +106,12 @@ export function SourceCard({
                     key={`${r.label}-${i}`}
                     className={cn("border-b border-border/50 last:border-0", i % 2 === 1 && "bg-muted/20")}
                   >
-                    <td className="px-3 py-1.5">{r.label}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
+                    <td className="px-3 py-1.5 align-top break-words">{r.label}</td>
+                    <td className="whitespace-nowrap px-3 py-1.5 text-right align-top tabular-nums">
                       {r.value}
                       {r.unit ? <span className="ml-1 text-xs text-muted-foreground">{r.unit}</span> : null}
                     </td>
-                    <td className="px-3 py-1.5">
+                    <td className="px-3 py-1.5 align-top break-words">
                       {r.feeds ? (
                         <span className="text-xs text-foreground/80">→ {r.feeds}</span>
                       ) : (

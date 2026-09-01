@@ -26,7 +26,7 @@ export default async function FuentesPage({ searchParams }: PageProps) {
   const range = homePeriodToRange(period, params.from, params.to);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1500px] space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Fuentes de datos</h1>
