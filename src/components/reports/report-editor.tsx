@@ -51,6 +51,9 @@ type SectionKey = keyof ReportContent;
 
 const DEFAULT_OPEN = new Set(["tesis", "executiveSummary"]);
 
+/** Límites del ancho de la columna izquierda (% del contenedor). */
+const clampSplit = (pct: number) => Math.min(80, Math.max(25, pct));
+
 export function ReportEditor({
   report,
   initialContent,
@@ -71,6 +74,12 @@ export function ReportEditor({
   const [, startRefreshing] = useTransition();
   const [showPreview, setShowPreview] = useState(true);
   const [openSections, setOpenSections] = useState<Set<string>>(DEFAULT_OPEN);
+
+  // Split arrastrable entre datos (izq) y vista previa (der). Porcentaje de ancho
+  // de la columna izquierda; se persiste en localStorage.
+  const [splitPct, setSplitPct] = useState(60);
+  const splitPctRef = useRef(60);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
 
   const debounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const retryCountRef = useRef<Map<string, number>>(new Map());
@@ -191,6 +200,86 @@ export function ReportEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cargar el ratio guardado (una vez, en cliente).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("report-editor-split");
+      const n = raw != null ? Number(raw) : NaN;
+      if (Number.isFinite(n) && n >= 25 && n <= 80) {
+        splitPctRef.current = n;
+        setSplitPct(n);
+      }
+    } catch {
+      /* localStorage no disponible */
+    }
+  }, []);
+
+  const saveSplit = useCallback(() => {
+    try {
+      localStorage.setItem("report-editor-split", String(Math.round(splitPctRef.current)));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Arrastre: aplica el ancho vía CSS var directamente al contenedor (sin
+  // re-render por frame), y confirma al estado al soltar.
+  const onDividerPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const move = (ev: PointerEvent) => {
+        const el = splitContainerRef.current;
+        if (!el || el.clientWidth === 0) return;
+        const rect = el.getBoundingClientRect();
+        const pct = clampSplit(((ev.clientX - rect.left) / rect.width) * 100);
+        splitPctRef.current = pct;
+        el.style.setProperty("--split", `${pct}%`);
+      };
+      const up = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+        setSplitPct(splitPctRef.current);
+        saveSplit();
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+    },
+    [saveSplit],
+  );
+
+  const nudgeSplit = useCallback(
+    (delta: number) => {
+      const next = clampSplit(splitPctRef.current + delta);
+      splitPctRef.current = next;
+      setSplitPct(next);
+      saveSplit();
+    },
+    [saveSplit],
+  );
+
+  const onDividerKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        nudgeSplit(-2);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nudgeSplit(2);
+      }
+    },
+    [nudgeSplit],
+  );
+
+  const resetSplit = useCallback(() => {
+    splitPctRef.current = 60;
+    setSplitPct(60);
+    saveSplit();
+  }, [saveSplit]);
+
   const isOpen = (key: string) => openSections.has(key);
 
   return (
@@ -251,9 +340,13 @@ export function ReportEditor({
         </div>
       </div>
 
-      <div className={showPreview ? "grid items-start gap-6 lg:grid-cols-[3fr_2fr]" : undefined}>
+      <div
+        ref={splitContainerRef}
+        className={showPreview ? "lg:flex lg:items-start" : undefined}
+        style={showPreview ? ({ "--split": `${splitPct}%` } as React.CSSProperties) : undefined}
+      >
         {/* Columna izquierda — editor */}
-        <div className="min-w-0 space-y-4">
+        <div className={showPreview ? "min-w-0 space-y-4 lg:w-[var(--split)]" : "min-w-0 space-y-4"}>
       {/* Cabecera del informe — título + autor (estilo Notion) */}
       <div className="space-y-3 rounded-lg border border-border bg-card px-4 py-3">
         <input
@@ -359,9 +452,29 @@ export function ReportEditor({
 
         </div>
 
+        {/* Divisor arrastrable (solo lg) */}
+        {showPreview && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Ajustar ancho entre datos y vista previa"
+            aria-valuenow={Math.round(splitPct)}
+            aria-valuemin={25}
+            aria-valuemax={80}
+            tabIndex={0}
+            onPointerDown={onDividerPointerDown}
+            onDoubleClick={resetSplit}
+            onKeyDown={onDividerKeyDown}
+            title="Arrastra para ajustar · doble clic para 60/40 · ← →"
+            className="group hidden shrink-0 cursor-col-resize touch-none select-none self-stretch px-1.5 focus:outline-none lg:flex lg:justify-center"
+          >
+            <div className="sticky top-[calc(50vh-2rem)] h-16 w-1 rounded-full bg-border transition-colors group-hover:bg-foreground/40 group-focus-visible:bg-foreground/50" />
+          </div>
+        )}
+
         {/* Columna derecha — vista previa en vivo (formato publicado) */}
         {showPreview && (
-          <div className="hidden lg:block">
+          <div className="hidden min-w-0 flex-1 lg:block">
             <div className="sticky top-4 max-h-[calc(100vh-2rem)] space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3">
               <p className="px-1 text-xs font-medium text-muted-foreground">
                 Vista previa · formato publicado
