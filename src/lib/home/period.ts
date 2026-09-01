@@ -13,9 +13,10 @@
 
 // `month` se mantiene en el type por compat retro de URLs viejas (`?period=month`).
 // Si llega, `homePeriodToRange` lo trata como el default actual ("30d").
-export type HomePeriod = "month" | "7d" | "15d" | "30d" | "custom";
+export type HomePeriod = "today" | "month" | "7d" | "15d" | "30d" | "custom";
 
 export const HOME_VALID_PERIODS: readonly HomePeriod[] = [
+  "today",
   "30d",
   "15d",
   "7d",
@@ -100,6 +101,10 @@ export function homePeriodToRange(
   };
 
   switch (period) {
+    case "today": {
+      // Desde el inicio del día (UTC) hasta ahora.
+      return { from: today, to: now, label: "Hoy", effective: "today" };
+    }
     case "7d": {
       const r = rolling(7);
       return { ...r, label: "Últimos 7 días", effective: "7d" };

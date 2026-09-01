@@ -11,10 +11,10 @@ import {
 } from "@/lib/home/period";
 
 const PRESETS: { id: HomePeriod; label: string; description: string }[] = [
+  { id: "today", label: "Hoy", description: "Solo el día de hoy" },
   { id: "7d", label: "7d", description: "Últimos 7 días" },
   { id: "15d", label: "15d", description: "Últimos 15 días" },
   { id: "30d", label: "30d", description: "Últimos 30 días" },
-  { id: "month", label: "Mes", description: "Mes en curso" },
 ];
 
 /**
