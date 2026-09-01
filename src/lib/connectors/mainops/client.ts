@@ -4,6 +4,7 @@ import { mainOpsApiResponseSchema, type MainOpsApiResponse } from "./schema";
 import { mapMainOpsResponse } from "./mapper";
 import type { MainOpsMetrics, MainOpsPeriodFilter } from "./types";
 import type { Result } from "@/lib/connectors/types";
+import { logConnectorFetch } from "@/lib/connectors/fetch-log";
 
 /**
  * Cliente HTTP del connector MainOps.
@@ -80,43 +81,65 @@ export async function fetchMainOpsRawMetrics(
 
   const url = `${config.baseUrl}/api/external/metrics${params.toString() ? `?${params}` : ""}`;
 
-  try {
-    const res = await fetchWithTimeout(url, config.apiKey, config.timeoutMs);
+  const started = Date.now();
+  let statusCode: number | undefined;
+  let bytes: number | null = null;
 
-    if (!res.ok) {
-      let detail = "";
-      try {
-        const errBody = await res.json();
-        detail = errBody?.detail ?? errBody?.error ?? "";
-      } catch {
-        /* body no JSON */
+  const result: Result<MainOpsApiResponse> = await (async () => {
+    try {
+      const res = await fetchWithTimeout(url, config.apiKey, config.timeoutMs);
+      statusCode = res.status;
+
+      if (!res.ok) {
+        let detail = "";
+        try {
+          const errBody = await res.json();
+          detail = errBody?.detail ?? errBody?.error ?? "";
+        } catch {
+          /* body no JSON */
+        }
+        return {
+          ok: false,
+          error: `HTTP ${res.status}${detail ? ` — ${detail}` : ""}`,
+        };
+      }
+
+      const text = await res.text();
+      bytes = text.length;
+      const json = JSON.parse(text);
+      const parsed = mainOpsApiResponseSchema.safeParse(json);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .slice(0, 3)
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; ");
+        return { ok: false, error: `Shape inesperado — ${issues}` };
+      }
+
+      return { ok: true, data: parsed.data };
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return { ok: false, error: "Timeout: la API de MainOps tardó >15s" };
       }
       return {
         ok: false,
-        error: `HTTP ${res.status}${detail ? ` — ${detail}` : ""}`,
+        error: err instanceof Error ? err.message : "Error desconocido",
       };
     }
+  })();
 
-    const json = await res.json();
-    const parsed = mainOpsApiResponseSchema.safeParse(json);
-    if (!parsed.success) {
-      const issues = parsed.error.issues
-        .slice(0, 3)
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ");
-      return { ok: false, error: `Shape inesperado — ${issues}` };
-    }
+  await logConnectorFetch({
+    connector: "mainops",
+    url,
+    params: Object.fromEntries(params),
+    ok: result.ok,
+    statusCode,
+    latencyMs: Date.now() - started,
+    bytes,
+    error: result.ok ? null : result.error,
+  });
 
-    return { ok: true, data: parsed.data };
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      return { ok: false, error: "Timeout: la API de MainOps tardó >15s" };
-    }
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Error desconocido",
-    };
-  }
+  return result;
 }
 
 /**

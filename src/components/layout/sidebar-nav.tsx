@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, Settings2, LifeBuoy, ShieldCheck, FileText } from "lucide-react";
+import { Home, Package, Settings2, LifeBuoy, ShieldCheck, FileText, Database } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { PortalLogo } from "@/components/brand/portal-logo";
@@ -27,6 +27,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true, requiresDashboardAccess: true },
   { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true, requiresDashboardAccess: true },
   { href: "/reports", label: "Informes", icon: FileText, enabled: true, requiresAuth: true },
+  { href: "/fuentes", label: "Fuentes", icon: Database, enabled: true, requiresRole: "admin" },
   { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
 ] as const;
 
