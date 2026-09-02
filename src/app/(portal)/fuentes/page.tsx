@@ -157,10 +157,10 @@ async function HistoryPanel() {
 
   return (
     <Card>
-      <CardContent className="overflow-x-auto p-0">
+      <CardContent className="max-h-[28rem] overflow-auto p-0">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+            <tr className="sticky top-0 z-10 border-b border-border bg-muted text-left text-xs text-muted-foreground">
               <th className="px-3 py-2 font-medium">Hora</th>
               <th className="px-3 py-2 font-medium">Conector</th>
               <th className="px-3 py-2 font-medium">Estado</th>
