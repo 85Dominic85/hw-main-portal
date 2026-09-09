@@ -31,12 +31,23 @@ export default async function BitacoraPage({ searchParams }: PageProps) {
   const parsed = logEntryFiltersSchema.safeParse(raw);
   const filters = parsed.success ? parsed.data : {};
 
-  const [entries, clients, authors, tags] = await Promise.all([
-    listEntries(filters),
-    listDistinctClients(),
-    listDistinctAuthors(),
-    listTagCounts(),
-  ]);
+  // ── OJO: estas cuatro queries van EN SERIE a propósito ──────────────────
+  // El cliente Drizzle del portal usa `max: 1` (una sola conexión) contra el
+  // pooler Supavisor en transaction mode con `prepare: false`. Lanzarlas con
+  // `Promise.all` las envía pipelined por esa única conexión, y en ese modo el
+  // pooler no las resuelve: las promesas se quedan colgadas, la función de
+  // Vercel agota su tiempo y sale un 504 sin que aparezca NINGUNA query activa
+  // en `pg_stat_activity` (no llegan a Postgres).
+  //
+  // Ningún otro sitio del proyecto paraleliza queries de BD: los `Promise.all`
+  // de `/fuentes`, `build-snapshot` y `autofill` son llamadas HTTP a los
+  // conectores (autofill mete una sola query de BD entre ellas). No convertir
+  // esto en `Promise.all` "para optimizar": son cuatro consultas triviales
+  // sobre una tabla pequeña y en serie cuestan milisegundos.
+  const entries = await listEntries(filters);
+  const clients = await listDistinctClients();
+  const authors = await listDistinctAuthors();
+  const tags = await listTagCounts();
 
   const today = toDateKey(new Date());
   const week = currentWorkWeek();

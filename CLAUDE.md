@@ -300,5 +300,15 @@ Supabase Auth con magic link.
 **`unaccent()` falla en queries**
 - El pooler no lo soporta. Usar `ILIKE` con `pg_trgm`.
 
+**Una página da 504 `FUNCTION_INVOCATION_TIMEOUT` y `pg_stat_activity` no muestra ninguna query activa**
+- Son **queries de BD lanzadas en paralelo**. El cliente Drizzle usa `max: 1`
+  contra el pooler Supavisor en transaction mode con `prepare: false`: un
+  `Promise.all` de varias consultas las envía pipelined por esa única conexión
+  y el pooler no las resuelve. Las promesas se quedan colgadas y no llegan a
+  Postgres, de ahí que no se vea nada en `pg_stat_activity`.
+- **Regla**: las queries de BD van **en serie**. `Promise.all` solo para
+  llamadas HTTP a los conectores (como en `/fuentes` o `build-snapshot`), o
+  con **una sola** query de BD entre ellas (como en `autofill`).
+
 **DDL falla con `portal_app`**
 - El role runtime no tiene DDL. Aplica migraciones como `postgres` en SQL Editor.
