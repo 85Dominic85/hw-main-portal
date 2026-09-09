@@ -555,16 +555,242 @@ curl -H "X-API-Key: <MAINOPS_API_KEY>" "https://hw-sell-gear-platform-tsm1.verce
 
 ---
 
-## Próxima sesión — agenda para el lunes (cierre del 2026-06-26)
+## Feature: Bitácora del departamento (v0.7 — 2026-09-09)
 
-Sesión cerrada el viernes 2026-06-26. Todo pusheado a `main`. Retomar con:
+Sustituye el **Google Doc infinito** donde el dpto registraba a diario llamadas,
+incidencias, configuraciones y visitas. El portal ya recogía todo el lado
+cuantitativo (conectores → KPIs → informes) pero el cualitativo vivía fuera, en
+un documento que no se podía filtrar, agregar ni exportar.
 
-1. **Validar en producción el resumen ejecutivo rediseñado** — crear un borrador nuevo (semana en curso) en `https://hw-main-portal.vercel.app/reports/new` y confirmar las 11 filas con Actual + Semana anterior + Owner. Requiere login (cuentas en `portal_accounts`). Si algo no cuadra, ajustar `EXEC_ORDER`/`AUTO_EXTRACTORS`/targets en `src/lib/reports/autofill.ts` y el catálogo `sql/0006`.
-2. **Respuesta de Guille** sobre el desfase 27-vs-28 (Bug #10). Si da acceso RO a `hw_staging`, localizar la fila exacta; si alinea su edge function, re-verificar con la sonda.
-3. **Más mejoras de informes** según lo que vea el user al revisar en prod (la sesión iba de pulir el editor/scorecard).
-4. **Recordatorio de flujo**: commit + push tras cada cambio (el user valida en prod, no en local).
+### La decisión de diseño central: se rellena una D, sale una C
 
-> Notas de continuidad para otro terminal: hacer `git pull` (los 2 commits de hoy ya están en `origin/main`). Pedir al user el `.env.local` (no se commitea) — incluye `PORTAL_DATABASE_URL`, `HWTOOL_ANALYTICS_API_URL/KEY`, `MAINOPS_BASE_URL/API_KEY`, etc. El catálogo `sql/0006` y los seeds ya están aplicados en la BD (no re-aplicar salvo que se quiera; son idempotentes).
+Antes de construir se maquetaron **4 formatos** del recopilatorio semanal con los
+mismos datos de ejemplo (A cronológico · B por temas · C scorecard · D por
+personas). El user eligió una combinación:
+
+- **Se rellena en vista D** — cada uno lo suyo, día a día. Es como trabajan.
+- **Sale C calculado** — el scorecard se computa de las propias entradas al
+  cerrar la semana. Nadie escribe un informe.
+- **A queda como anexo** cronológico debajo, y B/D como conmutadores de vista.
+
+Las cuatro vistas se sirven del **mismo objeto** `summarizeWeek()`, así que
+cambiar de vista es maquetación, no cálculo nuevo.
+
+### Las dos marcas opcionales (y por qué existen)
+
+Texto libre + etiquetas opcionales, según decisión del user. Pero hay tres cosas
+del scorecard que **no se pueden deducir del texto**: "2 resueltas · 1 abierta",
+"2 cerradas, 1 en visita" y el bloque "Lo que hay que mirar" (saber que la subida
+del 6 % de un proveedor es lo importante de la semana es criterio, no
+agregación). De ahí los dos únicos campos estructurados, ambos **opcionales**:
+
+| Campo | Para qué |
+|---|---|
+| `status` (`abierta`/`resuelta`/`seguimiento`) | Alimenta el recuento de incidencias y "Sigue abierto" |
+| `highlight` (boolean) | Sube la entrada a "Lo que hay que mirar" |
+
+`highlight` es además **el puente al informe mensual**: lo destacado de las 4-5
+semanas del mes es el candidato natural a subir cuando jota valide el formato.
+
+### Semana laboral LUNES A VIERNES — y la trampa que evita
+
+`src/lib/bitacora/work-week.ts`. Hay **dos** conceptos de semana a propósito:
+
+- **Captura**: lunes → domingo. El filtro se queda completo para que una
+  urgencia atendida en fin de semana no caiga en un agujero entre semanas.
+- **Presentación**: lunes → viernes. Cabecera cerrando en viernes, gráfica de 5
+  barras, medias divididas entre 5. Lo del fin de semana sale aparte en
+  `offHours`.
+
+> ⚠️ **NO tocar `src/lib/reports/iso-week.ts`.** Lo consumen **9 ficheros** de la
+> feature de informes (listado, viewer, editor, los 3 exports, server actions y
+> el seed). Cambiar `formatWeekLabel` allí para que cerrara en viernes
+> **reetiquetaría los 9 informes históricos ya publicados** (W16-W19, W23, mayo
+> 2026). Hay un test en `work-week.test.ts` que falla si alguien iguala las dos
+> etiquetas.
+
+### Autor por email, SIN foreign key
+
+El plan original decía `author_id uuid` con FK a `portal_users`. Al leer el
+código se vio que **`getCurrentUser()` devuelve un id sintético
+`00000000-0000-0000-0000-000000000000` igual para todos los usuarios** (la
+sesión solo lleva email y rol), y que un admin del allowlist puede **no tener
+fila** en `portal_accounts` (bootstrap per-email de `0005`). Con el plan original
+todas las entradas habrían tenido el mismo autor.
+
+La identidad real del portal es **el email**. Por eso `author_email text not
+null` sin FK, más `author_name` como snapshot (leído de `portal_accounts` al
+escribir, para que una entrada histórica conserve quién la firmó).
+
+La regla "cada autor solo edita o borra lo suyo" se aplica **en el server
+action**, no en RLS: `portal_app` opera con `BYPASSRLS` (verificado:
+`rolbypassrls = true`) y `auth.uid()` no está poblado para las cuentas de
+`portal_accounts`.
+
+### Schema — `sql/0009_log_entries.sql` (YA APLICADO en prod)
+
+`portal.log_entries`. Detalles que importan:
+
+- `iso_year` / `iso_week` / `iso_dow` como **columnas GENERADAS**:
+  `extract(isoyear|week|isodow from entry_date)` es IMMUTABLE sobre `date`, así
+  que no pueden desincronizarse de `entry_date`.
+- `body` jsonb (documento TipTap) + `body_text` derivado para buscar con
+  `ILIKE` + índice **trigram**. Sin `unaccent()` — el pooler no lo soporta; los
+  diacríticos se normalizan en JS (`normalizeTag`).
+- 7 índices, 2 de ellos **parciales** (`where highlight`, `where status =
+  'abierta'`).
+- Trigger de `updated_at` reusando `portal.set_updated_at()` de `0001`.
+- RLS admin-only siguiendo el patrón de `0008`.
+
+### Incidente de producción: 504 en `/bitacora` (mismo día, resuelto)
+
+Tras el deploy, `/bitacora` daba **504 `FUNCTION_INVOCATION_TIMEOUT`** mientras
+el resto del portal iba bien.
+
+**Causa**: la página lanzaba sus 4 consultas con `Promise.all`, y era el único
+sitio del proyecto que paraleliza queries de BD. El cliente Drizzle usa `max: 1`
+(una sola conexión) contra el pooler Supavisor en transaction mode con
+`prepare: false`. Cuatro queries simultáneas se envían pipelined por esa única
+conexión y el pooler no las resuelve: las promesas se quedan colgadas y **las
+consultas no llegan a Postgres**.
+
+**La huella diagnóstica clave**: `pg_stat_activity` no mostraba **ninguna** query
+activa ni ningún lock mientras la página estaba bloqueada. Eso se interpretó
+primero como "el problema no está en la BD", cuando en realidad era la firma
+exacta de este fallo.
+
+**Fix** (`ebdf046`): las cuatro en serie. Cuestan milisegundos sobre una tabla
+pequeña. Documentado en `CLAUDE.md` → Common Issues.
+
+Descartado por el camino, para no repetir el trabajo: **no** era lock de la
+migración, **ni** recursión de RLS (`portal.is_admin()` es `security definer` +
+`stable`), **ni** SQL mal generado (se volcaron las 4 sentencias con `toSQL()`:
+triviales y válidas), **ni** privilegios.
+
+### Rendimiento: por qué hay un renderizador de TipTap propio
+
+`src/components/bitacora/rich-text.tsx` pinta documentos TipTap **sin
+ProseMirror**. Usar `TiptapEditor` en modo `readOnly` montaba una instancia de
+ProseMirror **por entrada**, y el diario puede pintar decenas. El bundle se
+queda parecido (el composer necesita TipTap igual), pero el runtime cambia
+bastante.
+
+### Ficheros
+
+```
+sql/0009_log_entries.sql
+src/lib/db/schema/log-entries.ts
+src/lib/bitacora/{tags,body-text,work-week,weekly-summary,to-markdown}.ts  (+ .test.ts cada uno)
+src/lib/validators/bitacora.ts
+src/server/{actions,queries}/bitacora.ts
+src/app/(portal)/bitacora/{page,error}.tsx
+src/app/(portal)/bitacora/semana/[weekKey]/page.tsx
+src/app/api/portal/bitacora/[weekKey]/export/{_shared.ts,markdown,notion,pdf}
+src/components/bitacora/*.tsx   (11 componentes)
+```
+
+Modificados: `schema/index.ts`, `sidebar-nav.tsx` (entrada admin-only),
+`middleware.ts` (`isAdminOnlyPath`), `CLAUDE.md`.
+
+**Explícitamente NO tocado**: `reportContentSchemaV1` y `iso-week.ts`.
+
+### Tests
+
+**91 nuevos** (142 en total; los 51 previos intactos). Los que más valen:
+`work-week.test.ts` (5 días exactos, media entre 5 y no entre 7, sábado que no
+se pierde, semanas a caballo entre años, y el de no-regresión contra
+`formatWeekLabel`) y `weekly-summary.test.ts` (28 casos).
+
+---
+
+## Próxima sesión — retomar el 2026-09-10
+
+Sesión cerrada el miércoles 2026-09-09. Todo en `main` (`ebdf046`), migración
+`sql/0009` **ya aplicada** en prod.
+
+### 1. Lo primero: ¿se arregló el 504?
+
+**No quedó verificado.** El fix se pusheó pero el user no llegó a confirmar que
+`/bitacora` cargue. Y ojo: **la causa se dedujo, no se observó** — nunca se vio
+la línea de log que lo confirmara. La evidencia era circunstancial aunque fuerte.
+
+- Confirmar en Vercel que el deploy de **`ebdf046`** está `Ready` y en producción.
+- Abrir `/bitacora` con sesión de admin.
+- **Si sigue bloqueándose**: ir a Vercel → Logs → filtrar `/bitacora` y leer la
+  invocación que expira. Alternativa ya ofrecida al user: pushear una versión
+  instrumentada con cada query envuelta en un timeout de 3 s + `console.error`
+  identificándola, para que la página renderice igual y el log cante cuál falla.
+
+### 2. Validar la feature en producción (nada de esto está probado con datos reales)
+
+Los MCP de Supabase dieron **401 (`JWT could not be decoded`)** toda la sesión,
+así que el schema no se pudo verificar contra la BD en vivo. Orden de pruebas:
+
+1. Dos o tres entradas de días distintos de la semana en curso.
+2. Una con fecha de la **semana anterior** → no debe salir en el recopilatorio
+   de esta (valida las columnas ISO generadas).
+3. Una en **sábado** → debe salir en "fuera de horario", sumar al total y **no**
+   añadir columna a la gráfica de 5 barras; la cabecera debe cerrar en viernes.
+4. Marcar una con `Destacar` y otra como `Abierta` → deben subir solas al
+   scorecard sin escribir nada.
+5. Editar y borrar una propia; comprobar que en las de otro autor no salen esos
+   botones.
+6. `?vista=temas` y `?vista=personas`.
+7. **Copiar para Notion y pegarlo de verdad en Notion** (divisores y listas), y
+   el PDF.
+
+Puntos donde más sorprendería un fallo: las tres columnas generadas con
+`extract(...)` y el índice `gin_trgm_ops` sobre `body_text`.
+
+### 3. Fases pendientes de la bitácora
+
+| Fase | Qué falta | Bloqueada por |
+|---|---|---|
+| 4 — Slack | Block Kit + `fetch` al webhook. Solo la capa C: cifras, abiertas y destacados. Nadie lee un diario de 14 entradas en Slack. | **`SLACK_WEBHOOK_URL`** (env var nueva) |
+| 5 — Google Doc | Dependencia `googleapis` + `batchUpdate` de la Docs API | **Service account** (`GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`, `GOOGLE_DOC_ID`) + compartir el Doc con esa cuenta |
+
+### 4. Integración en el informe MENSUAL — esperando a jota
+
+Decisión del user: la bitácora **almacena de forma independiente** hasta que jota
+valide si el formato encaja en su informe mensual. `summarizeWeek()` es una
+función pura que devuelve una estructura tipada, así que integrarla será añadir
+una sección que consuma ese mismo objeto, sin rehacer nada.
+
+### 5. Deuda técnica detectada, no arreglada
+
+- **Sin `statement_timeout` en el cliente de BD** (`src/lib/db/index.ts`). Una
+  query bloqueada se come el presupuesto entero de la función en vez de fallar
+  rápido con un error legible. Es superficie compartida por todo el portal, así
+  que no se tocó en caliente durante el incidente. **Propuesto al user, sin
+  hacer.**
+- **Client components importando el schema Drizzle**: `entry-composer.tsx` (que
+  es `"use client"`) importa `LOG_ENTRY_STATUSES` de
+  `@/lib/db/schema/log-entries`, lo que arrastra `drizzle-orm/pg-core` al bundle
+  cliente. Funciona, pero mover esas constantes a un módulo neutro adelgazaría
+  `/bitacora` (42 kB / 164 kB first load).
+- **Dos ramas remotas muertas sin borrar**: `claude/verify-plan-applied-ybwod1`
+  y `feat/user-management`. Ambas **100 % contenidas en `main`** (verificado con
+  `merge-base --is-ancestor`) — son punteros muertos, no trabajo perdido. El
+  `git push --delete` falla en el entorno remoto de Claude Code con `the remote
+  end hung up unexpectedly`; se borran desde la UI de GitHub o desde un terminal
+  local:
+  `git push origin --delete claude/verify-plan-applied-ybwod1 feat/user-management`
+
+### 6. Sigue abierto de sesiones anteriores
+
+- **Bug #10** — desfase 27 vs 28 configuraciones (`analytics-api` de HW Tool vs
+  app Toolbox). Escalado a Guille, sin respuesta. **No es bug del portal.**
+- **`proyecto_log.md` estuvo 2,5 meses desfasado** (26-jun → 9-sep). El trabajo
+  de julio (informes v2/v3, auth) y del 1-2 de septiembre (pestaña `/fuentes`,
+  inspector de conectores + `connector_fetch_log`, `sql/0008`) **no está
+  documentado en detalle** en este log. Está en los commits.
+
+> **Notas de continuidad para otro terminal**: `git pull` (todo está en
+> `origin/main`). Pedir al user el `.env.local` — no se commitea. `sql/0009` ya
+> está aplicada: **no re-aplicarla**, las dos policies de RLS fallarían al
+> segundo intento. **Norma de trabajo**: el user valida en producción, no en
+> local → tras cada cambio verificado (typecheck/lint/test/build) commit + push
+> a `main`, y Vercel despliega solo.
 
 ---
 
