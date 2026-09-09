@@ -6,7 +6,7 @@ import { verifySession, SESSION_COOKIE } from "@/lib/auth/session-cookie";
  * Middleware del portal — control de acceso por cookie de sesión firmada.
  *
  *   - Público: home `/`, `/login`, `/api/auth/*`.
- *   - Solo admin: `/admin/*`, `/fuentes/*`, `/lab/*`.
+ *   - Solo admin: `/admin/*`, `/fuentes/*`, `/bitacora/*`, `/lab/*`.
  *   - Autenticado (admin o viewer): `/reports/*`.
  *   - Dashboards (`/mainops`, `/hwtool`, `/hsm`): se gatean a nivel de página
  *     (requireDashboardAccess) según el toggle "guest dashboards".
@@ -21,6 +21,8 @@ function isAdminOnlyPath(pathname: string): boolean {
     pathname.startsWith("/admin/") ||
     pathname === "/fuentes" ||
     pathname.startsWith("/fuentes/") ||
+    pathname === "/bitacora" ||
+    pathname.startsWith("/bitacora/") ||
     pathname === "/lab" ||
     pathname.startsWith("/lab/")
   );

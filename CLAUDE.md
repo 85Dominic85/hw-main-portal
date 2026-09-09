@@ -121,9 +121,33 @@ docs/
 | `kpi_notes` | Notas/comentarios sobre métricas |
 | `kpi_goals` | Metas mensuales por KPI |
 | `manual_entries` | Métricas manuales que no viven en las herramientas |
+| `log_entries` | Bitácora del dpto — entrada diaria de texto libre + etiquetas opcionales |
 | `export_log` | Audit log de quién exportó qué y cuándo |
 
 **Sin `kpi_snapshots`**: las tendencias se calculan al vuelo.
+
+**Sin tabla de recopilatorios**: el resumen semanal de la bitácora se calcula
+al vuelo desde `log_entries` con `summarizeWeek()`, no se almacena.
+
+### Bitácora (`/bitacora`)
+
+Cuaderno de a bordo diario del departamento — sustituye al Google Doc donde se
+registraban llamadas, incidencias y configuraciones. Solo admin.
+
+- **Se rellena** por persona, día a día: texto libre (TipTap) + etiquetas
+  opcionales + dos marcas opcionales (`status`, `highlight`).
+- **Sale** un recopilatorio semanal en `/bitacora/semana/<W36-2026>`: scorecard
+  calculado arriba, diario completo debajo, con vistas conmutables
+  (`?vista=temas|personas`). Exports a Markdown, Notion (pegado manual) y PDF.
+- **Semana laboral L–V**: `src/lib/bitacora/work-week.ts`. El rango de captura
+  sigue siendo lunes→domingo para que una urgencia de fin de semana no se
+  pierda; la presentación y las medias van sobre 5 días. **No tocar
+  `src/lib/reports/iso-week.ts`** — lo consumen 9 ficheros de informes y
+  cambiarlo reetiquetaría los informes históricos ya publicados.
+- **Autor por email, sin FK**: `getCurrentUser()` devuelve un id sintético común
+  a todos, y un admin del allowlist puede no tener fila en `portal_accounts`.
+  La propiedad de una entrada (solo su autor la edita) se aplica en el server
+  action, no en RLS.
 
 ### RLS
 
