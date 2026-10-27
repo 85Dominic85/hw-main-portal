@@ -5,15 +5,24 @@ import { verifySession, SESSION_COOKIE } from "@/lib/auth/session-cookie";
 /**
  * Middleware del portal — control de acceso por cookie de sesión firmada.
  *
- *   - Público: home `/`, `/login`, `/api/auth/*`.
+ *   - Público: `/login` y `/api/*` (cada route valida la sesión por su cuenta).
  *   - Solo admin: `/admin/*`, `/fuentes/*`, `/bitacora/*`, `/lab/*`.
- *   - Autenticado (admin o viewer): `/reports/*`.
- *   - Dashboards (`/mainops`, `/hwtool`, `/hsm`): se gatean a nivel de página
- *     (requireDashboardAccess) según el toggle "guest dashboards".
+ *   - Todo lo demás (home y dashboards incluidos) exige sesión (admin o viewer):
+ *     sin sesión no se ve ningún dato, se aterriza en el login.
  *
  * El middleware solo VERIFICA la firma de la cookie (Edge, sin BD); el rol
  * efectivo se revalida contra la BD en getCurrentUser.
  */
+
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/login" ||
+    pathname.startsWith("/api/") ||
+    // Internos de Next (HMR, overlay de errores en dev).
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/__nextjs")
+  );
+}
 
 function isAdminOnlyPath(pathname: string): boolean {
   return (
@@ -28,16 +37,10 @@ function isAdminOnlyPath(pathname: string): boolean {
   );
 }
 
-function isReportsPath(pathname: string): boolean {
-  return pathname === "/reports" || pathname.startsWith("/reports/");
-}
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const adminOnly = isAdminOnlyPath(pathname);
-  const needsAuth = adminOnly || isReportsPath(pathname);
-  if (!needsAuth) return NextResponse.next();
+  if (isPublicPath(pathname)) return NextResponse.next();
 
   const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
 
@@ -47,7 +50,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (adminOnly && session.role !== "admin") {
+  if (isAdminOnlyPath(pathname) && session.role !== "admin") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

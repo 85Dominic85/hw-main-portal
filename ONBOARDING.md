@@ -59,7 +59,7 @@ solo**: scorecard arriba, diario completo debajo, vistas conmutables
 Todo pusheado a `main`:
 - **Resumen ejecutivo rediseñado**: scorecard curado de 11 KPIs (catálogo `report_kpi_definitions`, `sql/0006` ya aplicado) con columnas `KPI · Target · Actual · Semana anterior · Owner · Semáforo · Comentario`. El autofill trae actual + **semana anterior real** llamando a los 3 conectores para el rango actual y el previo. KPIs sin conector = fila vacía editable. Lógica en [`src/lib/reports/autofill.ts`](src/lib/reports/autofill.ts).
 - **9 informes históricos** publicados en BD (W16-W23 + Mayo 2026 mensual). Seed en `scripts/seed-reports.mjs` + `src/lib/reports/seed/` (soporta `type=monthly`).
-- **Auth**: login por formulario + cuentas propias `portal_accounts` (`sql/0005`), gestión en `/admin/users`, toggle dashboards invitados.
+- **Auth**: login por formulario + cuentas propias `portal_accounts` (`sql/0005`), gestión en `/admin/users`. Todo el portal (home incluida) exige sesión; sin login no se ve ningún dashboard.
 - 3 conectores (MainOps ✅, HW Tool ✅, HSM 🟡 espera endpoint). Home con 3 escudos + pestañas `/mainops`, `/hwtool`, `/hsm`.
 
 ## Cómo está construido (mapa rápido)

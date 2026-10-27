@@ -45,11 +45,11 @@ export async function login(
   return { ok: true, data: { email: session.email } };
 }
 
-/** Cierra la sesión (borra la cookie) y vuelve a la home. */
+/** Cierra la sesión (borra la cookie) y vuelve al login. */
 export async function logout(): Promise<never> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
-  redirect("/");
+  redirect("/login");
 }
 
 /**

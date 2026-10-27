@@ -7,6 +7,7 @@ import { ToolBannerSkeleton } from "@/components/connectors/tool-banner-skeleton
 import { HomePeriodSelector } from "@/components/home/period-selector";
 import { homePeriodToRange, rangeKey } from "@/lib/home/period";
 import { getTool } from "@/lib/tools";
+import { requireAuthPage } from "@/lib/auth/session";
 
 /**
  * Home del HW Main Portal — sección Resumen.
@@ -32,6 +33,7 @@ interface HomePageProps {
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
+  await requireAuthPage();
   const sp = await searchParams;
   const range = homePeriodToRange(
     sp.period as Parameters<typeof homePeriodToRange>[0],

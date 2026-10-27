@@ -24,14 +24,14 @@ import {
   periodToFilter,
   type HsmPeriod,
 } from "@/lib/hsm/period";
-import { requireDashboardAccess } from "@/lib/auth/dashboard-access";
+import { requireAuthPage } from "@/lib/auth/session";
 
 interface PageProps {
   searchParams: Promise<{ period?: string }>;
 }
 
 export default async function HsmPage({ searchParams }: PageProps) {
-  await requireDashboardAccess();
+  await requireAuthPage("/hsm");
   const params = await searchParams;
   const period: HsmPeriod = isValidPeriod(params.period)
     ? params.period

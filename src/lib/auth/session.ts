@@ -30,7 +30,7 @@ const GUEST: PortalSessionUser = {
 /**
  * Usuario actual a partir de la cookie de sesión firmada.
  *
- * - Sin cookie válida → invitado (solo ve la home).
+ * - Sin cookie válida → invitado (el portal lo manda a /login).
  * - Con cookie válida → revalida el rol contra la tabla de cuentas
  *   (`resolveRoleForEmail`): si la cuenta se desactivó o dejó de ser admin,
  *   el cambio aplica al instante (no se confía en el rol "horneado" en la cookie).
@@ -73,6 +73,21 @@ export async function requireAdmin(): Promise<PortalSessionUser> {
 }
 
 /**
+ * Guard para PÁGINAS que exigen sesión (admin o viewer): sin sesión →
+ * /login?next=... El layout del portal ya lo comprueba, pero en navegación
+ * cliente el layout no se re-renderiza; cada página lo revalida para que una
+ * cuenta revocada (cookie con firma válida) no siga navegando.
+ * En Server Actions usa `requireAuth` (ahí sí debe lanzar).
+ */
+export async function requireAuthPage(nextPath?: string): Promise<PortalSessionUser> {
+  const user = await getCurrentUser();
+  if (user.isGuest) {
+    redirect(`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`);
+  }
+  return user;
+}
+
+/**
  * Guard para PÁGINAS/LAYOUTS solo-admin. A diferencia de `requireAdmin` (que
  * lanza y dispara la pantalla de error técnica de error.tsx), redirige limpio:
  *   - sin sesión → /login?next=...
@@ -83,10 +98,7 @@ export async function requireAdmin(): Promise<PortalSessionUser> {
  * En Server Actions usa `requireAdmin` (ahí sí debe lanzar).
  */
 export async function requireAdminPage(nextPath?: string): Promise<PortalSessionUser> {
-  const user = await getCurrentUser();
-  if (user.isGuest) {
-    redirect(`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`);
-  }
+  const user = await requireAuthPage(nextPath);
   if (user.role !== "admin") {
     redirect("/");
   }

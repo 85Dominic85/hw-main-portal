@@ -24,18 +24,14 @@ interface NavItem {
   enabled: boolean;
   /** Solo visible para el rol especificado (si se omite, lo ven todos). */
   requiresRole?: "admin";
-  /** Requiere estar autenticado (admin o viewer); oculto a invitados. */
-  requiresAuth?: boolean;
-  /** Dashboard de detalle: visible a invitados solo si el toggle está activo. */
-  requiresDashboardAccess?: boolean;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Inicio", icon: Home, enabled: true },
-  { href: "/mainops", label: "Logística", icon: Package, enabled: true, requiresDashboardAccess: true },
-  { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true, requiresDashboardAccess: true },
-  { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true, requiresDashboardAccess: true },
-  { href: "/reports", label: "Informes", icon: FileText, enabled: true, requiresAuth: true },
+  { href: "/mainops", label: "Logística", icon: Package, enabled: true },
+  { href: "/hwtool", label: "Configuraciones", icon: Settings2, enabled: true },
+  { href: "/hsm", label: "HSM", icon: LifeBuoy, enabled: true },
+  { href: "/reports", label: "Informes", icon: FileText, enabled: true },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen, enabled: true, requiresRole: "admin" },
   { href: "/fuentes", label: "Fuentes", icon: Database, enabled: true, requiresRole: "admin" },
   { href: "/admin", label: "Admin", icon: ShieldCheck, enabled: true, requiresRole: "admin" },
@@ -43,20 +39,13 @@ const NAV_ITEMS: readonly NavItem[] = [
 
 interface SidebarNavProps {
   role: "admin" | "viewer";
-  /** True si es invitado anónimo (sin sesión). */
-  isGuest: boolean;
-  /** ¿Pueden los invitados ver los dashboards de detalle? (toggle admin). */
-  guestDashboardsEnabled: boolean;
 }
 
-export function SidebarNav({ role, isGuest, guestDashboardsEnabled }: SidebarNavProps) {
+export function SidebarNav({ role }: SidebarNavProps) {
   const pathname = usePathname();
-  const items = NAV_ITEMS.filter((item) => {
-    if (item.requiresRole === "admin" && role !== "admin") return false;
-    if (item.requiresAuth && isGuest) return false;
-    if (item.requiresDashboardAccess && isGuest && !guestDashboardsEnabled) return false;
-    return true;
-  });
+  const items = NAV_ITEMS.filter(
+    (item) => !(item.requiresRole === "admin" && role !== "admin"),
+  );
 
   return (
     <aside

@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { RefreshCw, LogIn } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
@@ -31,7 +30,6 @@ interface TopbarProps {
     email: string;
     fullName: string | null;
     role: "admin" | "viewer";
-    isGuest: boolean;
   };
 }
 
@@ -61,20 +59,11 @@ export function Topbar({ user }: TopbarProps) {
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Actualizar</span>
         </Button>
-        {user.isGuest && (
-          <Button variant="outline" size="sm" className="gap-2" asChild>
-            <Link href="/login">
-              <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Iniciar sesión</span>
-            </Link>
-          </Button>
-        )}
         <ThemeToggle />
         <UserMenu
           email={user.email}
           fullName={user.fullName}
           role={user.role}
-          isGuest={user.isGuest}
         />
       </div>
     </header>
