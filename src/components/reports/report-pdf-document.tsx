@@ -420,7 +420,7 @@ interface Props {
   };
   content: ReportContent;
   snapshot: KpiSnapshot | null;
-  /** Si false, se omite la sección Performance (exportador ≠ jj.gallego). */
+  /** Si false, se omite la sección Performance (ver canExportPerformancePdf). */
   showPerformance?: boolean;
 }
 
