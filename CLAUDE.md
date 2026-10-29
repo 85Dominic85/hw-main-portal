@@ -52,6 +52,7 @@ src/
     api/
       portal/               # Endpoints internos del portal
       connectors/           # Proxies a las APIs de las herramientas
+      external/             # API de lectura con X-API-Key para agentes (docs/api/)
       exports/              # Generación CSV
     layout.tsx
   components/
